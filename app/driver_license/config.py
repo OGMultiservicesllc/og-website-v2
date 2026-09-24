@@ -4,6 +4,7 @@ no tax-specific logic in it, only a declarative "step -> questions -> show condi
 copied a second time.
 """
 
+from app.driver_license import country_language as dl_country_lang
 from app.driver_license import rules as dl_rules
 from app.driver_license.countries import COUNTRIES
 from app.tax.questions import O, Opt, Q, Step, YN3
@@ -41,7 +42,45 @@ COUNTRY_OPTS = [O(en, en, es) for en, es in COUNTRIES]
 LANG_QUESTION_FOR = {"national_id": "lang_national_id", "birth_certificate": "lang_birth_certificate", "foreign_license": "fl_lang"}
 # "Other document" translation checks that are NOT part of the identity-document priority plan (item 4): NJ address
 # proof and ITIN evidence can also need translation, priced the SAME "configured price, else OG Review" way.
+# NJ Proof of Address deliberately has NO country-based inference (see LANG_COUNTRY_SOURCE below): the document
+# can be in English, Spanish, or another language independent of the customer's country of origin, so its
+# language question (`addr_lang`) is always asked — never skipped.
 OTHER_TRANSLATABLE = {"address_proof": ("addr_lang", "addr_long"), "itin_evidence": ("itin_lang", None)}
+
+# Which already-answered country question safely tells us a translatable document's language (item C): a
+# National ID / Cédula and a Birth Certificate are civil documents of the country of BIRTH; a foreign driver
+# license is a document of whatever country actually ISSUED it (`fl_country`), which is not always the same
+# country the customer was born in. NJ Proof of Address is intentionally absent — see the OTHER_TRANSLATABLE
+# comment above.
+LANG_COUNTRY_SOURCE = {"national_id": "a_birth_country", "birth_certificate": "a_birth_country", "foreign_license": "fl_country"}
+
+
+def doc_lang_value(c, doc_key):
+    """The effective language of a translatable identity document: the customer's own direct answer if the
+    language question was actually asked, otherwise a safe country-based inference, otherwise None (unknown).
+    The ONE function every consumer (the `show=` conditions below, pricing.py, summary.py) reads instead of the
+    raw stored answer, so an inferred-and-therefore-never-asked language is never silently treated as blank."""
+    q_key = LANG_QUESTION_FOR.get(doc_key)
+    direct = c.v(q_key) if q_key else None
+    if direct:
+        return direct
+    country_field = LANG_COUNTRY_SOURCE.get(doc_key)
+    country = c.v(country_field) if country_field else None
+    return dl_country_lang.infer_document_language(country)
+
+
+def _needs_lang_question(doc_key):
+    """Show doc_key's language question only when the document is selected AND its language can't be safely
+    inferred from a country the customer already gave (item C) — never a second, redundant question."""
+
+    def _pred(c):
+        if not c.has("documents", doc_key):
+            return False
+        country_field = LANG_COUNTRY_SOURCE.get(doc_key)
+        country = c.v(country_field) if country_field else None
+        return dl_country_lang.infer_document_language(country) is None
+
+    return _pred
 
 
 def _mvc_locations(ctx):
@@ -52,11 +91,12 @@ def _mvc_locations(ctx):
 
 
 def has_translatable_selection(c):
-    return any(c.has("documents", d) for d in LANG_QUESTION_FOR)
-
-
-def _needs_lang(doc_key):
-    return lambda c: c.has("documents", doc_key)
+    """Whether the "Document language" step has anything left to ask — a document whose language was safely
+    inferred (item C) no longer counts, so a customer whose only translatable document is fully inferred never
+    sees an empty step."""
+    if any(_needs_lang_question(d)(c) for d in LANG_QUESTION_FOR):
+        return True
+    return c.has("documents", "birth_certificate") and doc_lang_value(c, "birth_certificate") not in (None, "en")
 
 
 def yn(key, label, **kw):
@@ -107,17 +147,18 @@ STEPS = [
             "Es posible que puedas usar una declaración jurada si nunca te han emitido un SSN o ITIN y cumples con los requisitos aplicables del MVC. OG revisará esto contigo.")),
     ], show=lambda c: c.v("ssn_itin_path") == "neither"),
     Step("foreign_license_details", ("Your foreign driver license", "Tu licencia de conducir extranjera"), "🚗", [
-        Q("fl_country", "text", ("What country issued your license?", "¿Qué país emitió tu licencia?"), req=True, maxlen=80, miss=("the country.", "el país.")),
+        Q("fl_country", "select", ("What country issued your license?", "¿Qué país emitió tu licencia?"), req=True, options=COUNTRY_OPTS, miss=("the country.", "el país.")),
         yn("fl_valid", ("Is it currently valid?", "¿Está vigente actualmente?"), req=True, miss=("choose yes, no or not sure.", "elige sí, no o no estoy seguro.")),
-        Q("fl_lang", "choice", ("What language is it written in?", "¿En qué idioma está escrita?"), options=LANGUAGES, req=True, miss=("choose a language.", "elige un idioma.")),
+        Q("fl_lang", "choice", ("What language is it written in?", "¿En qué idioma está escrita?"), options=LANGUAGES, req=True,
+          show=_needs_lang_question("foreign_license"), miss=("choose a language.", "elige un idioma.")),
     ], show=lambda c: c.has("documents", "foreign_license")),
     Step("doc_languages", ("Document language", "Idioma del documento"), "🌐", [
         Q("lang_national_id", "choice", ("What language is your National ID / Cédula in?", "¿En qué idioma está tu identificación nacional / cédula?"), options=LANGUAGES, req=True,
-          show=_needs_lang("national_id"), miss=("choose a language.", "elige un idioma.")),
+          show=_needs_lang_question("national_id"), miss=("choose a language.", "elige un idioma.")),
         Q("lang_birth_certificate", "choice", ("What language is your Birth Certificate in?", "¿En qué idioma está tu Acta de Nacimiento?"), options=LANGUAGES, req=True,
-          show=_needs_lang("birth_certificate"), miss=("choose a language.", "elige un idioma.")),
+          show=_needs_lang_question("birth_certificate"), miss=("choose a language.", "elige un idioma.")),
         yn("bc_standard", ("Is it a standard, single-page birth certificate?", "¿Es un acta de nacimiento estándar de una sola página?"),
-           show=lambda c: c.has("documents", "birth_certificate") and c.v("lang_birth_certificate") not in (None, "en"), req=True,
+           show=lambda c: c.has("documents", "birth_certificate") and doc_lang_value(c, "birth_certificate") not in (None, "en"), req=True,
            miss=("choose yes, no or not sure.", "elige sí, no o no estoy seguro.")),
     ], show=has_translatable_selection),
     Step("address_proof", ("Proof of New Jersey address", "Comprobante de dirección de Nueva Jersey"), "🏠", [

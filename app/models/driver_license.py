@@ -66,7 +66,7 @@ class DlCaseData(db.Model):
     knowledge_test_state = db.Column(db.String(20), nullable=False, default="not_started", server_default="not_started")
     road_test_state = db.Column(db.String(20), nullable=False, default="to_be_determined", server_default="to_be_determined")
     appointment_json = db.Column(db.Text)  # {location_id, date, note} recorded by staff once scheduled — informational only, never a guarantee
-    rules_version = db.Column(db.String(20))  # the app.driver_license.rules RULES_VERSION in effect when documents were last assessed
+    rules_version = db.Column(db.String(64))  # the app.driver_license.rules RULES_VERSION in effect when documents were last assessed
     submitted_at = db.Column(db.DateTime)
     reopened_at = db.Column(db.DateTime)
     reopen_message = db.Column(db.Text)

@@ -3,7 +3,7 @@ structured Admin summary. Generated from structured data only. No AI. The custom
 see app/driver_license/rules.py's SOURCE NOTE — only "Good" / "Still needed" / "OG will review"."""
 
 from app.driver_license import docs, people, pricing, rules, service
-from app.driver_license.config import CONFIG
+from app.driver_license.config import CONFIG, doc_lang_value
 from app.tax.questions import pick
 
 
@@ -26,6 +26,19 @@ def label(key, value, lang):
 
 def _line(lab, val):
     return {"label": lab, "value": val} if val not in (None, "", []) else None
+
+
+def _lang_line(c, doc_key, question_key):
+    """Admin-facing language display for a translatable document: the customer's direct answer if they were
+    asked, otherwise the inferred value clearly marked as inferred (item C) — never silently blank just because
+    the question itself was skipped."""
+    direct = c.v(question_key)
+    if direct:
+        return label(question_key, direct, "en")
+    inferred = doc_lang_value(c, doc_key)
+    if not inferred:
+        return ""
+    return f"{label(question_key, inferred, 'en')} (inferred from country, not asked)"
 
 
 def review_cards(dl, lang):
@@ -96,9 +109,10 @@ def admin_summary(dl):
                                                     ("Has a primary document", "Yes" if a["has_primary"] else "No"), ("Meets minimum (unverified)", "Yes" if a["meets_minimum"] else "No"),
                                                     ("Rules version", a["rules_version"])])
     sec("SSN / ITIN / Affidavit", [("Path", label("ssn_itin_path", c.v("ssn_itin_path"), lang)), ("ITIN evidence", label("itin_evidence", c.v("itin_evidence"), lang))])
-    sec("Foreign Driver License", [("Country", c.v("fl_country")), ("Currently valid", label("fl_valid", c.v("fl_valid"), lang)), ("Language", label("fl_lang", c.v("fl_lang"), lang))])
+    sec("Foreign Driver License", [("Issuing country", label("fl_country", c.v("fl_country"), lang)), ("Currently valid", label("fl_valid", c.v("fl_valid"), lang)),
+                                    ("Language", _lang_line(c, "foreign_license", "fl_lang"))])
     sec("NJ Address Proof", [("Document", label("address_doc", c.v("address_doc"), lang))])
-    sec("Document Languages", [("National ID", label("lang_national_id", c.v("lang_national_id"), lang)), ("Birth Certificate", label("lang_birth_certificate", c.v("lang_birth_certificate"), lang)),
+    sec("Document Languages", [("National ID", _lang_line(c, "national_id", "lang_national_id")), ("Birth Certificate", _lang_line(c, "birth_certificate", "lang_birth_certificate")),
                                ("Standard single-page birth certificate", label("bc_standard", c.v("bc_standard"), lang))])
     loc_names = []
     from app.models import MvcLocation

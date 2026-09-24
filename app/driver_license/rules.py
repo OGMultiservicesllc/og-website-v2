@@ -12,7 +12,7 @@ Recording `RULES_VERSION` on every `DlCaseData` (`rules_version` column, set whe
 file does NOT silently rewrite the classification an already-submitted customer saw — see `service.snapshot_rules_version`.
 """
 
-RULES_VERSION = "unverified-2026-09-22"
+RULES_VERSION = "unverified-2026-09-24"
 RULES_SOURCE = "General public knowledge of the NJ 6-Point ID Verification program (no official MVC document supplied this session) — NEEDS OG VERIFICATION."
 
 # category: identity_primary (UNVERIFIED ~4 pts) | identity_secondary (UNVERIFIED ~1-3 pts) | nj_residence | ssn | itin | other
@@ -56,10 +56,13 @@ LANGUAGES = (("en", "English", "Inglés"), ("es", "Spanish", "Español"), ("pt",
 
 MIN_POINTS_REQUIRED = 6  # UNVERIFIED — the customer never sees this number (see SOURCE NOTE)
 
-# OG's preferred priority among the identity documents that need a translation — see PLAN_2026-09-22 correction:
-# the pricing engine used to translate every translatable document the customer selected. It should instead
-# translate the SMALLEST set that plausibly satisfies the identity requirement, in this order.
+# OG's preferred priority among the identity documents that need a translation — see PLAN_2026-09-22 correction,
+# refined 2026-09-24: OG recommends translating AT MOST MAX_TRANSLATABLE_NEEDED documents, chosen strictly in
+# this priority order among whichever of the three the customer actually selected — never a points/threshold
+# calculation. A passport (or another PRIMARY_KEYS document) never takes one of these slots: it isn't
+# translatable and lives in a completely separate loop below.
 PRIORITY_TRANSLATABLE = ("foreign_license", "national_id", "birth_certificate")
+MAX_TRANSLATABLE_NEEDED = 2
 PRIMARY_KEYS = ("passport", "permanent_resident_card", "ead_card")  # non-translatable, 4 pts each — any ONE is enough
 
 
@@ -70,29 +73,32 @@ def document_label(key, lang):
 
 def document_plan(selected_docs):
     """{doc_key: "needed" | "alternative"} for every selected identity document — the smallest useful combination,
-    not a blanket "everything is required". Walks PRIMARY_KEYS (only the first present one is needed — a second
-    primary document is a backup, not a second requirement) then PRIORITY_TRANSLATABLE in OG's stated priority
-    order, adding a document only while more points are still needed to reach MIN_POINTS_REQUIRED. Everything
-    past that point is "alternative": the customer HAS it and OG can still ask for it on review, but it is never
-    sold a translation or shown as mandatory just because they happen to have it. Never a legal/MVC eligibility
-    determination — see the module SOURCE NOTE; OG reviews the actual combination."""
+    not a blanket "everything is required". Two independent rules, never points-based:
+      - PRIMARY_KEYS: only the first present one is "needed" — a second primary document is a backup, not a
+        second requirement.
+      - PRIORITY_TRANSLATABLE: at most MAX_TRANSLATABLE_NEEDED are "needed", chosen strictly in OG's stated
+        priority order (foreign license, then national ID, then birth certificate) among whichever the customer
+        actually has — e.g. license+cédula+birth certificate selects license+cédula; license+birth certificate
+        (no cédula) selects both of those. A primary document's presence never changes this selection.
+    Everything past that point is "alternative": the customer HAS it and OG can still ask for it on review, but
+    it is never sold a translation or shown as mandatory just because they happen to have it. Never a legal/MVC
+    eligibility determination — see the module SOURCE NOTE; OG reviews the actual combination."""
     selected = list(dict.fromkeys(selected_docs))  # de-dup, keep order
     plan = {}
-    points = 0
     for key in PRIMARY_KEYS:
         if key not in selected:
             continue
         if not any(v == "needed" for k, v in plan.items() if k in PRIMARY_KEYS):
             plan[key] = "needed"
-            points += DOCUMENT_TYPES[key]["points"]
         else:
             plan[key] = "alternative"
+    translatable_needed = 0
     for key in PRIORITY_TRANSLATABLE:
         if key not in selected:
             continue
-        if points < MIN_POINTS_REQUIRED:
+        if translatable_needed < MAX_TRANSLATABLE_NEEDED:
             plan[key] = "needed"
-            points += DOCUMENT_TYPES[key]["points"]
+            translatable_needed += 1
         else:
             plan[key] = "alternative"
     for key in selected:

@@ -77,7 +77,7 @@ def estimate(dl, ctx):
     happens to have). A document marked "alternative" is never priced or sold a translation."""
     lines, total, review = [], 0, False
     from app.driver_license import rules as dl_rules
-    from app.driver_license.config import LANG_QUESTION_FOR, OTHER_TRANSLATABLE
+    from app.driver_license.config import OTHER_TRANSLATABLE, doc_lang_value
 
     docs = ctx.v("documents") or []
     plan = dl_rules.document_plan(docs)
@@ -102,7 +102,7 @@ def estimate(dl, ctx):
         info = dl_rules.DOCUMENT_TYPES.get(d)
         if not info or not info.get("translatable") or plan.get(d) != "needed":
             continue
-        lang = ctx.v(LANG_QUESTION_FOR.get(d, ""))
+        lang = doc_lang_value(ctx, d)
         add_line(d, lang, needs_review_extra=(d == "birth_certificate" and complex_bc))
 
     # "Other documents that may need translation" (item 4): NJ address proof, ITIN evidence — same configured-price-else-review
