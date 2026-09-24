@@ -14,8 +14,8 @@ CHOICE_LABEL = {"later": ("⏰ I'll upload it later", "⏰ Lo subiré después")
 
 def req_text_for(key, lang):
     en = lang != "es"
-    parts = key.split(".")  # ct.child.<record_id>.passport|birth_cert  |  ct.adult.<record_id>.id
-    kind = parts[2]
+    parts = key.split(".")  # ct.child.<record_id>.passport|birth_cert  |  ct.adult.<record_id>.id  |  ct.traveler.id
+    kind = parts[-1]  # the last segment is always the document kind, regardless of how many segments precede it
     if kind == "passport":
         return ("Passport" if en else "Pasaporte"), None
     if kind == "birth_cert":
