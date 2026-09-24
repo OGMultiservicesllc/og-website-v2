@@ -12,6 +12,9 @@ TRAVELING_WITH = [O("mother", "Mother", "Madre", "👩"), O("father", "Father", 
 YOUR_ROLE_ALL = [O("mother", "I am the mother", "Soy la madre"), O("father", "I am the father", "Soy el padre"),
                  O("accompanying", "I am the accompanying adult", "Soy el adulto acompañante"), O("arranging", "I am arranging this for someone else", "Estoy organizando esto para alguien más")]
 FATHER_ON_CERT = YN3
+# NOTE: this is the Q's list of CHOICE OPTIONS, not the address/metadata dict — that's
+# app.models.CT_LOCATIONS (models/consent_travel.py LOCATIONS, aliased on import to avoid the name clash
+# that caused a live 500 on the Review page: summary.py once imported THIS list by the same bare name).
 LOCATIONS = [O("nj", "New Jersey — Paterson", "Nueva Jersey — Paterson", "📍"), O("tx", "Texas — Spring", "Texas — Spring", "📍")]
 
 

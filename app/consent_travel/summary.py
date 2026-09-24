@@ -2,7 +2,8 @@
 legal conclusion) and the structured Admin summary. No AI, generated from structured data only."""
 
 from app.consent_travel import docs, people, pricing, service
-from app.consent_travel.config import CONFIG, LOCATIONS
+from app.consent_travel.config import CONFIG
+from app.models import CT_LOCATIONS as LOCATIONS
 from app.tax.questions import pick
 
 
