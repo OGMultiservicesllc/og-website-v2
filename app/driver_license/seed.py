@@ -113,6 +113,24 @@ def ensure_category_wiring():
     return True
 
 
+def ensure_documents_resync():
+    """One-time repair, safe to re-run: re-applies the current (narrower) upload-requirement rules to every
+    existing DL case, so a case that already went through `docs.sync()` under the old logic (which requested
+    every selected identity document, not just the ones OG actually needs) drops its now-unwanted requirements.
+    Uses the same non-destructive `sync_requirements` every save already goes through — withdraws, never
+    deletes, and never touches a document the customer already uploaded."""
+    from app.driver_license import docs, service
+    from app.models import DlCaseData
+
+    touched = False
+    for dl in DlCaseData.query.all():
+        before = {r.rule_key for r in docs.requirements(dl)}
+        docs.sync(dl, service.ctx(dl, "en"))
+        after = {r.rule_key for r in docs.requirements(dl)}
+        touched = touched or before != after
+    return touched
+
+
 def ensure_all():
     seeded = ensure_service()
     seeded = ensure_service_content() or seeded
@@ -121,4 +139,5 @@ def ensure_all():
     seeded = bool(locations.ensure_seed()) or seeded
     seeded = bool(pricing.ensure_seed()) or seeded
     seeded = bool(seed_questions.ensure_seed()) or seeded
+    seeded = ensure_documents_resync() or seeded
     return seeded

@@ -6,7 +6,7 @@ from flask import abort, flash, redirect, render_template, request, url_for
 from app.auth import admin_required, validate_csrf
 from app.blueprints.admin.routes import admin_bp
 from app.extensions import db
-from app.models import BlogMedia, BlogPost
+from app.models import BLOG_CATEGORIES, BlogMedia, BlogPost
 from app.uploads import delete_course_media, save_course_media
 
 
@@ -30,10 +30,6 @@ def _unique_slug(base_slug, post_id=None):
 
 def _next_sort_order(items):
     return (max((i.sort_order for i in items), default=0)) + 1
-
-
-def _existing_categories():
-    return sorted({p.category for p in BlogPost.query.all() if p.category})
 
 
 def _swap_sort_order(siblings, item, direction):
@@ -63,9 +59,13 @@ def blog_new():
             abort(400)
         title_en = request.form.get("title_en", "").strip()
         title_es = request.form.get("title_es", "").strip()
+        category = request.form.get("category", "").strip()
         if not title_en or not title_es:
             flash("Title (EN and ES) is required.", "error")
-            return render_template("admin/blog_form.html", post=None, existing_categories=_existing_categories())
+            return render_template("admin/blog_form.html", post=None, categories=BLOG_CATEGORIES)
+        if category not in BLOG_CATEGORIES:
+            flash("Choose a category.", "error")
+            return render_template("admin/blog_form.html", post=None, categories=BLOG_CATEGORIES)
 
         cover = request.files.get("cover_image")
         cover_filename = None
@@ -74,7 +74,7 @@ def blog_new():
                 cover_filename = save_course_media(cover, "image")
             except ValueError as exc:
                 flash(str(exc), "error")
-                return render_template("admin/blog_form.html", post=None, existing_categories=_existing_categories())
+                return render_template("admin/blog_form.html", post=None, categories=BLOG_CATEGORIES)
 
         is_published = request.form.get("is_published") == "on"
         post = BlogPost(
@@ -85,7 +85,7 @@ def blog_new():
             excerpt_es=request.form.get("excerpt_es", "").strip(),
             content_en=request.form.get("content_en", "").strip(),
             content_es=request.form.get("content_es", "").strip(),
-            category=request.form.get("category", "").strip() or None,
+            category=category,
             author_name=request.form.get("author_name", "").strip() or None,
             cover_image=cover_filename,
             is_published=is_published,
@@ -96,7 +96,7 @@ def blog_new():
         flash("Post created.", "success")
         return redirect(url_for("admin.blog_edit", post_id=post.id))
 
-    return render_template("admin/blog_form.html", post=None, existing_categories=_existing_categories())
+    return render_template("admin/blog_form.html", post=None, categories=BLOG_CATEGORIES)
 
 
 @admin_bp.route("/blog/<int:post_id>/edit", methods=["GET", "POST"])
@@ -109,9 +109,13 @@ def blog_edit(post_id):
             abort(400)
         title_en = request.form.get("title_en", "").strip()
         title_es = request.form.get("title_es", "").strip()
+        category = request.form.get("category", "").strip()
         if not title_en or not title_es:
             flash("Title (EN and ES) is required.", "error")
-            return render_template("admin/blog_form.html", post=post, existing_categories=_existing_categories())
+            return render_template("admin/blog_form.html", post=post, categories=BLOG_CATEGORIES)
+        if category not in BLOG_CATEGORIES:
+            flash("Choose a category.", "error")
+            return render_template("admin/blog_form.html", post=post, categories=BLOG_CATEGORIES)
 
         cover = request.files.get("cover_image")
         if cover and cover.filename:
@@ -119,7 +123,7 @@ def blog_edit(post_id):
                 new_cover = save_course_media(cover, "image")
             except ValueError as exc:
                 flash(str(exc), "error")
-                return render_template("admin/blog_form.html", post=post, existing_categories=_existing_categories())
+                return render_template("admin/blog_form.html", post=post, categories=BLOG_CATEGORIES)
             if post.cover_image:
                 delete_course_media(post.cover_image)
             post.cover_image = new_cover
@@ -131,7 +135,7 @@ def blog_edit(post_id):
         post.excerpt_es = request.form.get("excerpt_es", "").strip()
         post.content_en = request.form.get("content_en", "").strip()
         post.content_es = request.form.get("content_es", "").strip()
-        post.category = request.form.get("category", "").strip() or None
+        post.category = category
         post.author_name = request.form.get("author_name", "").strip() or None
         post.is_published = request.form.get("is_published") == "on"
         if post.is_published and not was_published:
@@ -140,7 +144,7 @@ def blog_edit(post_id):
         flash("Post updated.", "success")
         return redirect(url_for("admin.blog_edit", post_id=post.id))
 
-    return render_template("admin/blog_form.html", post=post, existing_categories=_existing_categories())
+    return render_template("admin/blog_form.html", post=post, categories=BLOG_CATEGORIES)
 
 
 @admin_bp.route("/blog/<int:post_id>/cover/delete", methods=["POST"])

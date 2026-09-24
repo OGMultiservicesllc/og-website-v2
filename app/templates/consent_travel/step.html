@@ -96,27 +96,29 @@
 </div>
 
 {% elif step.kind == 'docs' and step.key == 'traveler_docs' %}
-<div class="rounded-[20px] bg-white border border-slate-100 shadow-card p-5 sm:p-8">
+<form method="post" action="{{ url_for('public.ct_step', lang=lang, case_id=ct.case_id, step_key=step.key) }}" novalidate class="rounded-[20px] bg-white border border-slate-100 shadow-card p-5 sm:p-8">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <h1 class="text-[1.4rem] sm:text-2xl leading-tight font-extrabold tracking-tight text-brand-800">🪪 {{ title }}</h1>
     <p class="mt-2 text-[15px] text-slate-600">{{ 'The adult traveling with the child(ren) needs a photo ID — no address required.' if en else 'El adulto que viaja con el menor o los menores necesita una identificación con foto — no se requiere dirección.' }}</p>
     {{ m.doc_cards(doc_cards, lang, ct) }}
     <div class="mt-8 flex items-center gap-3">
-        <a href="{{ url_for('public.ct_step', lang=lang, case_id=ct.case_id, step_key='third_traveler_info') }}" class="min-h-[52px] inline-flex items-center px-5 rounded-[14px] border border-slate-200 bg-white text-[15px] font-semibold text-slate-700">← {{ 'Back' if en else 'Atrás' }}</a>
-        <a href="{{ url_for('public.ct_step', lang=lang, case_id=ct.case_id, step_key='children') }}" class="flex-1 min-h-[52px] inline-flex items-center justify-center rounded-[14px] bg-accent-600 text-white text-[16px] font-bold hover:bg-accent-700 transition">{{ 'Continue' if en else 'Continuar' }} →</a>
+        <button type="submit" name="nav" value="back" formnovalidate class="min-h-[52px] px-5 rounded-[14px] border border-slate-200 bg-white text-[15px] font-semibold text-slate-700">← {{ 'Back' if en else 'Atrás' }}</button>
+        <button type="submit" name="nav" value="next" class="flex-1 min-h-[52px] rounded-[14px] bg-accent-600 text-white text-[16px] font-bold hover:bg-accent-700 transition">{{ 'Continue' if en else 'Continuar' }} →</button>
     </div>
-</div>
+</form>
 
 {% elif step.key == 'documents_vault' %}
-<div class="rounded-[20px] bg-white border border-slate-100 shadow-card p-5 sm:p-8">
+<form method="post" action="{{ url_for('public.ct_step', lang=lang, case_id=ct.case_id, step_key=step.key) }}" novalidate class="rounded-[20px] bg-white border border-slate-100 shadow-card p-5 sm:p-8">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <h1 class="text-[1.4rem] sm:text-2xl leading-tight font-extrabold tracking-tight text-brand-800">📄 {{ title }}</h1>
     <p class="mt-2 text-[15px] text-slate-600">{{ 'Everything you have uploaded so far, in one place. Upload what you have now — anything missing can be sent later.' if en else 'Todo lo que has subido hasta ahora, en un solo lugar. Sube lo que tengas ahora — lo que falte puedes enviarlo después.' }}</p>
     <p class="mt-3 text-[14px] font-semibold text-brand-800">{{ ('%d received' % groups.have) if en else ('%d recibidos' % groups.have) }}{% if groups.missing %} · {{ ('%d pending' % groups.missing) if en else ('%d pendientes' % groups.missing) }}{% endif %}</p>
     {{ m.doc_cards(groups.cards, lang, ct) }}
     <div class="mt-8 flex items-center gap-3">
-        <a href="{{ url_for('public.ct_step', lang=lang, case_id=ct.case_id, step_key='notes') }}" class="min-h-[52px] inline-flex items-center px-5 rounded-[14px] border border-slate-200 bg-white text-[15px] font-semibold text-slate-700">← {{ 'Back' if en else 'Atrás' }}</a>
-        <a href="{{ url_for('public.ct_step', lang=lang, case_id=ct.case_id, step_key='price') }}" class="flex-1 min-h-[52px] inline-flex items-center justify-center rounded-[14px] bg-accent-600 text-white text-[16px] font-bold hover:bg-accent-700 transition">{{ 'Continue' if en else 'Continuar' }} →</a>
+        <button type="submit" name="nav" value="back" formnovalidate class="min-h-[52px] px-5 rounded-[14px] border border-slate-200 bg-white text-[15px] font-semibold text-slate-700">← {{ 'Back' if en else 'Atrás' }}</button>
+        <button type="submit" name="nav" value="next" class="flex-1 min-h-[52px] rounded-[14px] bg-accent-600 text-white text-[16px] font-bold hover:bg-accent-700 transition">{{ 'Continue' if en else 'Continuar' }} →</button>
     </div>
-</div>
+</form>
 
 {% elif step.key == 'send' %}
 <form method="post" action="{{ url_for('public.ct_send', lang=lang, case_id=ct.case_id) }}" class="rounded-[20px] bg-white border border-slate-100 shadow-card p-5 sm:p-8" novalidate>
@@ -141,7 +143,7 @@
     </div>
     <p class="mt-4 text-[13px] text-slate-500">{{ 'Sending your information to OG is not an appointment and does not notarize anything. OG will review and confirm your price before requesting payment.' if en else 'Enviar tu información a OG no es una cita y no notariza nada. OG revisará y confirmará tu precio antes de solicitar el pago.' }}</p>
     <div class="mt-6 flex items-center gap-3">
-        <a href="{{ url_for('public.ct_step', lang=lang, case_id=ct.case_id, step_key='review') }}" class="min-h-[52px] inline-flex items-center px-5 rounded-[14px] border border-slate-200 bg-white text-[15px] font-semibold text-slate-700">← {{ 'Back' if en else 'Atrás' }}</a>
+        <button type="submit" formaction="{{ url_for('public.ct_step', lang=lang, case_id=ct.case_id, step_key=step.key) }}" formnovalidate name="nav" value="back" class="min-h-[52px] px-5 rounded-[14px] border border-slate-200 bg-white text-[15px] font-semibold text-slate-700">← {{ 'Back' if en else 'Atrás' }}</button>
         <button type="submit" class="flex-1 min-h-[52px] rounded-[14px] bg-accent-600 text-white text-[16px] font-bold hover:bg-accent-700 transition">{{ 'Send my information to OG' if en else 'Enviar mi información a OG' }}</button>
     </div>
 </form>

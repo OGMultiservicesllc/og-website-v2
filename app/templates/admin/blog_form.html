@@ -53,16 +53,15 @@
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-            <label class="block text-sm font-medium text-slate-700 mb-1">Category</label>
-            <input type="text" name="category" value="{{ post.category if post else '' }}" placeholder="e.g. Immigration, Taxes, Notary"
-                   list="category-suggestions"
-                   class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
-            <datalist id="category-suggestions">
-                {% for cat in existing_categories %}
-                <option value="{{ cat }}">
+            <label class="block text-sm font-medium text-slate-700 mb-1">Category <span class="text-red-500">*</span></label>
+            <select name="category" required
+                    class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+                <option value="" disabled {{ 'selected' if not (post and post.category) else '' }}>Choose a category…</option>
+                {% for cat in categories %}
+                <option value="{{ cat }}" {{ 'selected' if post and post.category == cat else '' }}>{{ cat }}</option>
                 {% endfor %}
-            </datalist>
-            <p class="mt-1 text-xs text-slate-400">Type a new category name or pick an existing one — it's created automatically when you save.</p>
+            </select>
+            <p class="mt-1 text-xs text-slate-400">Shown as a filter on the public blog page — pick the closest match.</p>
         </div>
         <div>
             <label class="block text-sm font-medium text-slate-700 mb-1">Author</label>

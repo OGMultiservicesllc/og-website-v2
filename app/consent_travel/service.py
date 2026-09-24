@@ -101,8 +101,18 @@ def neighbour(c, key, delta):
 def progress(c, key):
     steps = visible_steps(c)
     keys = [s.key for s in steps]
-    n = keys.index(key) + 1 if key in keys else 1
-    return {"step": n, "total": len(keys), "percent": int(round(100 * n / max(1, len(keys))))}
+    if key in keys:
+        n, total = keys.index(key) + 1, len(keys)
+        return {"step": n, "total": total, "percent": int(round(100 * n / max(1, total)))}
+    for kind, flow in CONFIG.record_flows.items():
+        fkeys = [s.key for s in flow]
+        if key in fkeys:
+            anchor = "children" if kind == "child" else "adults"
+            base = keys.index(anchor) if anchor in keys else len(keys) - 1
+            total = len(keys) + len(flow) - 1
+            n = min(base + 1 + fkeys.index(key), total)
+            return {"step": n, "total": total, "percent": int(round(100 * n / max(1, total)))}
+    return {"step": 1, "total": len(keys), "percent": int(round(100 / max(1, len(keys))))}
 
 
 def _questions(step):

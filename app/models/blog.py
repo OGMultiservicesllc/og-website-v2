@@ -2,6 +2,11 @@ from datetime import datetime
 
 from app.extensions import db
 
+# The fixed set of categories a post can be filed under (Admin picks one, required). Free text was tried
+# first and let "Taxes"/"taxes"/"Tax" fragment into different filters — a closed list keeps every post's
+# category matching one of the public filter chips.
+BLOG_CATEGORIES = ["Taxes", "ITIN", "Immigration", "Notary", "Apostille", "NJ Driver License", "OG Academy", "General"]
+
 
 class BlogPost(db.Model):
     __tablename__ = "blog_posts"

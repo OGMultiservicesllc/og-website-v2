@@ -83,11 +83,13 @@ def req_text(req, lang):
 
 
 def desired(dl, ctx):
-    """[{rule_key, title, person, category, customer_message, doc_basis, reuse}]. Every selected identity document still
-    gets a requirement (so the customer and OG can see it and its status), but which ones split into Front/Back or
-    multiple pages depends on `rules.document_plan()`'s role: only a "needed" document is asked for two-sided /
-    multi-page — an "alternative" one the customer merely has gets a single plain requirement, never a mandatory-
-    looking multi-part one (item 8/9/10)."""
+    """[{rule_key, title, person, category, customer_message, doc_basis, reuse}] — only what OG actually needs the
+    customer to UPLOAD, never a checklist of everything the MVC 6-Point worksheet mentions. An identity document
+    `rules.document_plan()` marks "alternative" (the customer has it, but it's not one of the top documents OG is
+    translating/using) gets NO requirement at all — not shown, not even as "not currently needed" — so a passport
+    the customer selected is always requested (it's always "needed" per `document_plan`, see its own docstring),
+    while a birth certificate that isn't one of the priority translations never is. Proof of NJ address is the same
+    rule as its price (see `pricing.estimate`): only requested when OG will actually translate it."""
     from app import cases as case_svc
     from app.driver_license import rules as dl_rules
 
@@ -101,21 +103,20 @@ def desired(dl, ctx):
     selected = ctx.v("documents") or []
     plan = dl_rules.document_plan(selected)
     for d in selected:
-        if d in ("other", "unsure"):
+        if d in ("other", "unsure") or plan.get(d) != "needed":
             continue
         category = CATEGORY_FOR.get(d, "other")
-        needed = plan.get(d) == "needed"
-        if needed and d in TWO_SIDED:
+        if d in TWO_SIDED:
             add(f"dl.doc.{d}.front", category, reuse=d in REUSABLE)
             add(f"dl.doc.{d}.back", category, reuse=d in REUSABLE)
-        elif needed and d == "birth_certificate":
+        elif d == "birth_certificate":
             for n in range(1, BC_MAX_PAGES + 1):
                 add(f"dl.doc.{d}.p{n}", category, reuse=(n == 1 and d in REUSABLE))
         else:
             add(f"dl.doc.{d}", category, reuse=d in REUSABLE)
     if ctx.v("ssn_itin_path") == "itin":
         add("dl.itin_evidence", "ssn_itin_document")
-    if ctx.v("address_doc"):
+    if ctx.v("address_doc") and ctx.v("addr_lang") not in (None, "en"):
         add("dl.address_proof", "nj_address_proof")
     return out
 

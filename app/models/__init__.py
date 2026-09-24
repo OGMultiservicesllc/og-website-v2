@@ -93,7 +93,7 @@ from app.models.progress import (
 from app.models.page import Page, NAV_SECTIONS
 from app.models.custom_form import CustomForm, CustomFormField, FIELD_TYPES
 from app.models.page_section import PageSection, BLOCK_TYPES
-from app.models.blog import BlogPost, BlogMedia
+from app.models.blog import BlogPost, BlogMedia, BLOG_CATEGORIES
 from app.models.inquiry import Inquiry
 from app.models.content_block import PageBlock
 from app.models.settings import SiteSettings
@@ -230,6 +230,7 @@ __all__ = [
     "BLOCK_TYPES",
     "BlogPost",
     "BlogMedia",
+    "BLOG_CATEGORIES",
     "Inquiry",
     "PageBlock",
     "SiteSettings",

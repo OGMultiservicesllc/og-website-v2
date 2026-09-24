@@ -199,7 +199,7 @@ def _seed_services(cat, pages):
     by_slug = {}
     for order, page in enumerate(pages, 1):
         svc = Service(
-            slug=page["slug"], icon=page.get("icon") or cat.icon, sort_order=order * 10, is_published=True,
+            slug=page["slug"], icon=page.get("icon") or cat.icon, sort_order=order * 10, is_published=page.get("is_published", True),
             title_en="", title_es="", admin_name=_loc(page["title"])[0],
         )
         title = _loc(page["title"])
@@ -276,6 +276,33 @@ def ensure_about_nav_item():
     return True
 
 
+def ensure_blog_categories():
+    """One-time data reconciliation, safe to re-run: the ITIN articles were filed under 'Taxes' back when
+    the Admin blog form only had a free-text category box (no real selector). Content/EN/ES/images are
+    never touched — only the `category` column, and only when it isn't already a valid, closed-list value."""
+    from app.models import BLOG_CATEGORIES, BlogPost
+
+    by_lower = {c.lower(): c for c in BLOG_CATEGORIES}
+    changed = False
+    for post in BlogPost.query.all():
+        is_itin = "itin" in (post.slug or "").lower() or "itin" in (post.title_en or "").lower()
+        if is_itin:
+            new_cat = "ITIN"  # was generically filed under Taxes before Admin had a real category selector
+        elif post.category in BLOG_CATEGORIES:
+            continue  # already a valid, non-ITIN category — leave as the admin set it
+        elif (post.category or "").strip().lower() in by_lower:
+            new_cat = by_lower[(post.category or "").strip().lower()]  # e.g. "taxes"/"Tax " -> the canonical spelling
+        else:
+            new_cat = "General"
+        if post.category == new_cat:
+            continue
+        post.category = new_cat
+        changed = True
+    if changed:
+        db.session.commit()
+    return changed
+
+
 def ensure_seeded():
     """Safe to call on every start: a no-op once categories exist, and silent
     if the tables haven't been created yet (migration not run)."""
@@ -329,6 +356,7 @@ def ensure_seeded():
         from app.consent_travel.seed import ensure_all as ensure_ct
 
         seeded = ensure_ct() or seeded
+        seeded = ensure_blog_categories() or seeded
         from app.cases import backfill_cases
 
         return bool(backfill_cases()) or seeded

@@ -8,6 +8,9 @@ from app.models import Service, ServiceCategory, ServiceContentItem
 
 SERVICE_SLUG = "consent-to-travel-authorization"
 CATEGORY_SLUG = "notary"
+# The old, pre-Smart-Intake service page this one replaces — kept in the DB (never deleted) but
+# unpublished so /notary shows only one Consent to Travel entry, the one wired to the real intake.
+OLD_DUPLICATE_SLUG = "minor-travel-consent"
 
 WHEN_NEEDED = [
     ("A minor is traveling without both parents", "Un menor viaja sin ambos padres"),
@@ -58,7 +61,20 @@ def ensure_service():
     return True
 
 
+def ensure_no_duplicate():
+    """Unpublish the old 'Minor Travel Consent Notarization' service page now that the real Smart Intake
+    ('Consent to Travel Authorization for Minors') replaces it — non-destructive (row/content kept, Admin
+    can republish it), idempotent (no-op once already unpublished)."""
+    old = Service.query.filter_by(slug=OLD_DUPLICATE_SLUG).first()
+    if old is not None and old.is_published:
+        old.is_published = False
+        db.session.commit()
+        return True
+    return False
+
+
 def ensure_all():
     seeded = ensure_service()
     seeded = bool(pricing.ensure_seed()) or seeded
+    seeded = ensure_no_duplicate() or seeded
     return seeded

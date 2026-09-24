@@ -1329,6 +1329,11 @@ SUBPAGES = {
         {
             "slug": "minor-travel-consent",
             "icon": "notary",
+            # Superseded by the Smart Intake service "consent-to-travel-authorization" (app/consent_travel/seed.py) —
+            # kept only as seed history; never published on a fresh install so /notary never shows two equivalent
+            # entries. Same non-destructive guard `consent_travel.seed.ensure_no_duplicate()` also applies to any
+            # already-seeded database.
+            "is_published": False,
             "title": _loc("Minor Travel Consent Notarization", "Notarización de Autorización de Viaje para Menores"),
             "meta_description": _loc(
                 "Notarized travel consent letters for minors traveling without both parents or legal guardians.",
