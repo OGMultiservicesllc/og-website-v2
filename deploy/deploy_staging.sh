@@ -93,7 +93,9 @@ if ! systemctl is-active --quiet "$SERVICE"; then
 fi
 
 echo "==> [7/7] Smoke test"
-HTTP_CODE="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$HEALTH_URL" || echo "000")"
+# -L: the site's own root "/" is a normal 301 to "/en/" (bilingual routing) — that redirect itself is a
+# healthy response, not a failure; only a final non-200 (after following it) is worth flagging.
+HTTP_CODE="$(curl -s -L -o /dev/null -w '%{http_code}' --max-time 10 "$HEALTH_URL" || echo "000")"
 if [ "$HTTP_CODE" != "200" ]; then
     echo "WARNING: $HEALTH_URL returned HTTP $HTTP_CODE (expected 200)."
     echo "Last 30 log lines:"
