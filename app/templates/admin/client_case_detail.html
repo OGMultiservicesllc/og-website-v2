@@ -1,0 +1,252 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}{{ case.case_number }} — {{ case.title }}{% endblock %}
+{% block content %}
+<a href="{{ url_for('admin.ocase_list') }}" class="text-sm text-slate-500 hover:text-accent-600">&larr; Cases</a>
+
+<div class="flex items-start justify-between mt-2 mb-5 flex-wrap gap-3">
+    <div>
+        <div class="flex items-center gap-3 flex-wrap">
+            <h1 class="text-2xl font-bold text-brand-800">{{ case.title }}</h1>
+            <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold bg-accent-50 text-accent-700">{{ case.status_label }}</span>
+        </div>
+        <p class="text-sm text-slate-500 mt-1"><span class="font-mono">{{ case.case_number }}</span> · {{ types.get(case.case_type, types['other']).en }} · <a href="{{ url_for('admin.customer_detail', student_id=case.customer_id, tab='cases') }}" class="text-accent-700 hover:underline">{{ case.customer.name }}</a> · {{ case.customer.email }}
+            · <a href="{{ url_for('admin.customer_detail', student_id=case.customer_id, tab='files', prefill_category='immigration', prefill_case_id=case.id) }}" class="text-accent-700 hover:underline font-semibold">Release a file to the customer</a></p>
+    </div>
+    {% if case.case_type == 'itin_application' %}<a href="{{ url_for('admin.itin_case', case_id=case.id) }}" class="rounded-lg bg-accent-600 text-white font-semibold px-4 py-2 text-sm hover:bg-accent-700 transition">ITIN case view</a>{% endif %}
+    <form method="POST" action="{{ url_for('admin.ocase_status', case_id=case.id) }}" class="flex items-center gap-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <select name="status" aria-label="Case status" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">{% for k, l in statuses %}<option value="{{ k }}" {{ 'selected' if case.status == k else '' }}>{{ l }}</option>{% endfor %}</select>
+        <button class="rounded-lg bg-accent-600 text-white font-semibold px-4 py-2 text-sm">Update</button>
+    </form>
+</div>
+
+<nav class="flex gap-1 border-b border-slate-200 mb-6 overflow-x-auto" aria-label="Case sections">
+    {% for key, label in tabs %}
+    <a href="{{ url_for('admin.ocase_detail', case_id=case.id, tab=key) }}" {% if tab == key %}aria-current="page"{% endif %}
+       class="shrink-0 px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition {{ 'border-accent-600 text-accent-700' if tab == key else 'border-transparent text-slate-500 hover:text-slate-800' }}">{{ label }}{% if key == 'applications' %} <span class="text-xs text-slate-400">{{ apps|length }}</span>{% elif key == 'people' %} <span class="text-xs text-slate-400">{{ people|length }}</span>{% elif key == 'documents' and open_actions %} <span class="text-xs text-amber-700">{{ open_actions }}</span>{% endif %}</a>
+    {% endfor %}
+</nav>
+
+{% if tab == 'overview' %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 space-y-4">
+        <div class="bg-white border border-slate-100 rounded-2xl p-5 grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+            <div><p class="text-xs font-bold uppercase tracking-wide text-slate-400">Case</p><p class="font-mono text-slate-800">{{ case.case_number }}</p></div>
+            <div><p class="text-xs font-bold uppercase tracking-wide text-slate-400">Type</p><p class="text-slate-800">{{ types.get(case.case_type, types['other']).en }}</p></div>
+            <div><p class="text-xs font-bold uppercase tracking-wide text-slate-400">Created</p><p class="text-slate-800">{{ case.created_at.strftime('%b %d, %Y') }}{% if case.origin == 'migrated' %} <span class="text-xs text-slate-400">(migrated)</span>{% endif %}</p></div>
+            <div><p class="text-xs font-bold uppercase tracking-wide text-slate-400">Last activity</p><p class="text-slate-800">{{ last_activity.strftime('%b %d, %Y %H:%M') if last_activity else '—' }}</p></div>
+            <div><p class="text-xs font-bold uppercase tracking-wide text-slate-400">Preferred language</p><p class="text-slate-800">{{ (case.preferred_language or '—')|upper }}</p></div>
+            <div><p class="text-xs font-bold uppercase tracking-wide text-slate-400">Closed</p><p class="text-slate-800">{{ case.closed_at.strftime('%b %d, %Y') if case.closed_at else '—' }}</p></div>
+        </div>
+        <div class="bg-white border border-slate-100 rounded-2xl p-5 text-sm">
+            <p class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Summary</p>
+            <p class="text-slate-700">{{ apps|length }} application(s) · {{ people|length }} person(s) · {{ counts.values()|sum }} document request(s)
+                {% if open_actions %}· <span class="text-amber-700 font-semibold">{{ open_actions }} waiting on the customer</span>{% endif %}
+                {% if counts.get('uploaded', 0) + counts.get('under_review', 0) %}· <span class="text-accent-700 font-semibold">{{ counts.get('uploaded', 0) + counts.get('under_review', 0) }} to review</span>{% endif %}</p>
+            <ul class="mt-3 flex flex-wrap gap-2">{% for k, l in [('needed', 'Needed'), ('requested', 'Requested'), ('uploaded', 'Uploaded'), ('under_review', 'Under Review'), ('accepted', 'Accepted'), ('needs_replacement', 'Needs Replacement')] if counts.get(k) %}<li class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ req_status_tone[k] }}">{{ l }} {{ counts[k] }}</li>{% endfor %}</ul>
+        </div>
+    </div>
+    <div class="bg-white border border-slate-100 rounded-2xl p-5">
+        <p class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-3">Recent activity</p>
+        <ul class="space-y-2 text-sm">{% for e, text in events %}<li><span class="text-slate-700">{{ text }}</span><span class="block text-xs text-slate-400">{{ e.created_at.strftime('%b %d, %Y %H:%M') }}</span></li>{% else %}<li class="text-slate-400">No activity yet.</li>{% endfor %}</ul>
+    </div>
+</div>
+
+{% elif tab == 'people' %}
+<div class="space-y-4">
+    <p class="text-xs text-slate-500">People are part of the case, not separate accounts. Only the customer has an OG login; listing a person here gives them no access. The same person keeps one record across applications and only gains roles.</p>
+    {% for pr in people %}
+    {% set p = pr.p %}
+    <div class="bg-white border border-slate-100 rounded-2xl p-5" id="person-{{ p.id }}">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+                <h2 class="font-semibold text-slate-900">{{ p.full_name }}{% if p.is_customer %} <span class="ml-1 text-[10px] font-bold uppercase tracking-wide text-accent-700 bg-accent-50 px-1.5 py-0.5 rounded">Customer · has OG login</span>{% else %} <span class="ml-1 text-[10px] font-bold uppercase tracking-wide text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">No OG login</span>{% endif %}</h2>
+                <p class="text-xs text-slate-500 mt-0.5">{{ relationships[p.relationship_key].en }}</p>
+                <p class="mt-2 text-sm text-slate-700">{% for sub, role in pr.roles %}<span class="inline-flex items-center rounded-full bg-fog-100 px-2.5 py-1 text-xs font-semibold text-slate-700 mr-1 mb-1">{{ sub.form.source_form_name or sub.form.name_admin }} → {{ roles.get(role, roles['other']).en }}</span>{% else %}<span class="text-slate-400 text-sm">No application roles yet.</span>{% endfor %}</p>
+            </div>
+            <details class="text-sm">
+                <summary class="cursor-pointer font-semibold text-accent-700">Edit</summary>
+                <form method="POST" action="{{ url_for('admin.ocase_person_edit', case_id=case.id, person_id=p.id) }}" class="mt-2 flex flex-wrap gap-2 items-end">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input name="given_name" value="{{ p.given_name or '' }}" placeholder="Given name" aria-label="Given name" class="rounded-lg border border-slate-200 px-3 py-2 text-sm w-36">
+                    <input name="family_name" value="{{ p.family_name or '' }}" placeholder="Family name" aria-label="Family name" class="rounded-lg border border-slate-200 px-3 py-2 text-sm w-36">
+                    {% if not p.is_customer %}<select name="relationship_key" aria-label="Relationship" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">{% for k, v in relationships.items() if k != 'self' %}<option value="{{ k }}" {{ 'selected' if p.relationship_key == k else '' }}>{{ v.en }}</option>{% endfor %}</select>{% endif %}
+                    <button class="rounded-lg bg-accent-600 text-white font-semibold px-3 py-2 text-sm">Save</button>
+                </form>
+            </details>
+        </div>
+        <div class="mt-4">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Shared person data</p>
+                {% if pr.facts %}
+                <form method="POST" action="{{ url_for('admin.ocase_facts_confirm', case_id=case.id, person_id=p.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button class="text-xs font-semibold text-accent-700 hover:underline">Mark all as confirmed</button>
+                </form>
+                {% endif %}
+            </div>
+            {% if pr.facts %}
+            <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left">
+                <thead class="text-xs text-slate-400"><tr><th class="py-1.5 pr-3 font-semibold">Fact</th><th class="py-1.5 pr-3 font-semibold">Value</th><th class="py-1.5 pr-3 font-semibold">Source</th><th class="py-1.5 pr-3 font-semibold">Used by</th><th class="py-1.5 font-semibold">Status</th></tr></thead>
+                <tbody class="divide-y divide-slate-100">
+                {% for f in pr.facts %}
+                <tr>
+                    <td class="py-2 pr-3 text-slate-500 whitespace-nowrap">{{ f.label }}</td>
+                    <td class="py-2 pr-3 text-slate-800 break-words">{{ f.display }}{% if f.pending %}<span class="block text-xs text-amber-700">A later application says: {{ f.pending }}</span>{% endif %}</td>
+                    <td class="py-2 pr-3 text-xs text-slate-500">{{ f.source_form or '—' }}{% if f.source_code %} · <span class="font-mono">{{ f.source_code }}</span>{% endif %}</td>
+                    <td class="py-2 pr-3 text-xs text-slate-500 font-mono">{{ f.used_by|join(', ') }}</td>
+                    <td class="py-2 whitespace-nowrap">{% if f.status == 'confirmed' %}<span class="text-xs font-semibold text-emerald-700">Confirmed {{ f.last_confirmed_at.strftime('%b %d, %Y') }}</span>{% elif f.status == 'needs_review' %}<span class="text-xs font-semibold text-amber-700">Needs review</span>{% else %}<span class="text-xs text-slate-400">Not yet confirmed</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+            {% else %}<p class="text-sm text-slate-400">No shared facts recorded yet. They are recorded when an application that maps this person is submitted.</p>{% endif %}
+        </div>
+    </div>
+    {% endfor %}
+    <details class="bg-white border border-slate-100 rounded-2xl p-5">
+        <summary class="cursor-pointer text-sm font-semibold text-accent-700">+ Add a person</summary>
+        <form method="POST" action="{{ url_for('admin.ocase_person_new', case_id=case.id) }}" class="mt-3 flex flex-wrap gap-2 items-end">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input name="given_name" placeholder="Given name" aria-label="Given name" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+            <input name="family_name" placeholder="Family name" aria-label="Family name" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+            <select name="relationship_key" aria-label="Relationship" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">{% for k, v in relationships.items() if k != 'self' %}<option value="{{ k }}">{{ v.en }}</option>{% endfor %}</select>
+            <button class="rounded-lg bg-accent-600 text-white font-semibold px-4 py-2 text-sm">Add person</button>
+        </form>
+    </details>
+</div>
+
+{% elif tab == 'applications' %}
+<div class="bg-white border border-slate-100 rounded-2xl overflow-x-auto">
+    <table class="w-full text-sm text-left">
+        <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th class="px-4 py-3 font-semibold">Form</th><th class="px-4 py-3 font-semibold">Application</th><th class="px-4 py-3 font-semibold">Status</th><th class="px-4 py-3 font-semibold">Progress</th><th class="px-4 py-3 font-semibold">People / roles</th><th class="px-4 py-3 font-semibold">Updated</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+            {% for a in apps %}
+            <tr>
+                <td class="px-4 py-3 font-semibold text-slate-800">{{ a.s.form.source_form_name or a.s.form.name_admin }}<span class="block text-xs font-normal text-slate-400">{% if a.s.source_edition_snapshot %}ed. {{ a.s.source_edition_snapshot }} · {% endif %}v{{ a.s.form_version }}</span></td>
+                <td class="px-4 py-3"><a href="{{ url_for('admin.form_submission_detail', submission_id=a.s.id) }}" class="font-mono text-accent-700 hover:underline">{{ a.s.code }}</a></td>
+                <td class="px-4 py-3">{{ a.label }}</td>
+                <td class="px-4 py-3 text-slate-600">{{ a.percent ~ '%' if a.percent is not none else '—' }}</td>
+                <td class="px-4 py-3 text-xs text-slate-600">{% for person, role in a.roles %}<span class="block">{{ person.full_name }} → {{ roles.get(role, roles['other']).en }}</span>{% else %}—{% endfor %}</td>
+                <td class="px-4 py-3 text-slate-500 whitespace-nowrap">{{ a.s.updated_at.strftime('%b %d, %Y') if a.s.updated_at else '—' }}</td>
+            </tr>
+            {% else %}<tr><td colspan="6" class="px-4 py-10 text-center text-slate-500">No applications in this case yet.</td></tr>{% endfor %}
+        </tbody>
+    </table>
+</div>
+{% if unassigned %}
+<form method="POST" action="{{ url_for('admin.ocase_application_add', case_id=case.id) }}" class="mt-5 bg-white border border-slate-100 rounded-2xl p-5 flex flex-wrap gap-2 items-end">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label class="text-xs font-semibold text-slate-500">Add or move one of this customer's applications into this case
+        <select name="submission_id" class="mt-1 block w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal text-slate-800">
+            {% for s in unassigned %}<option value="{{ s.id }}">{{ s.code }} — {{ s.form.source_form_name or s.form.name_admin }}{% if s.case %} (now in {{ s.case.case_number }}){% endif %}</option>{% endfor %}
+        </select></label>
+    <button class="rounded-lg bg-accent-600 text-white font-semibold px-4 py-2 text-sm">Add to case</button>
+    <p class="w-full text-xs text-slate-400">Only the grouping changes: the application keeps its ID, answers, files, notes and history.</p>
+</form>
+{% endif %}
+
+{% elif tab == 'documents' %}
+<div class="space-y-6">
+    <details class="bg-white border border-slate-100 rounded-2xl p-5" {{ 'open' if not groups else '' }}>
+        <summary class="cursor-pointer text-sm font-semibold text-accent-700">+ Request Document</summary>
+        <form method="POST" action="{{ url_for('admin.ocase_requirement_new', case_id=case.id) }}" class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <label class="text-xs font-semibold text-slate-500">Person
+                <select name="person_id" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal text-slate-800"><option value="">No specific person (relationship / general)</option>{% for pr in people %}<option value="{{ pr.p.id }}">{{ pr.p.full_name }}</option>{% endfor %}</select></label>
+            <label class="text-xs font-semibold text-slate-500">Document type
+                <select name="category" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal text-slate-800">{% for k, v in categories.items() %}<option value="{{ k }}">{{ v.en }}</option>{% endfor %}</select></label>
+            <label class="text-xs font-semibold text-slate-500 sm:col-span-2">Document name shown to the customer
+                <input name="title" maxlength="200" required placeholder="e.g. Certified English translation of birth certificate" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal text-slate-800"></label>
+            <fieldset class="sm:col-span-2"><legend class="text-xs font-semibold text-slate-500">Related applications</legend>
+                <div class="mt-1 flex flex-wrap gap-x-4 gap-y-1">{% for a in apps %}<label class="text-sm text-slate-700 inline-flex items-center gap-1.5"><input type="checkbox" name="application_ids" value="{{ a.s.id }}"> {{ a.s.form.source_form_name or a.s.form.name_admin }} <span class="font-mono text-xs text-slate-400">{{ a.s.code }}</span></label>{% else %}<span class="text-sm text-slate-400">No applications in this case.</span>{% endfor %}</div></fieldset>
+            <label class="text-xs font-semibold text-slate-500 sm:col-span-2">Message to the customer
+                <textarea name="customer_message" rows="3" maxlength="2000" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal text-slate-800" placeholder="Please upload the certified English translation of your birth certificate."></textarea></label>
+            <label class="text-xs font-semibold text-slate-500 sm:col-span-2">Internal note (never shown to the customer)
+                <input name="internal_note" maxlength="500" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal text-slate-800"></label>
+            <div class="sm:col-span-2"><button class="rounded-lg bg-accent-600 text-white font-semibold px-4 py-2 text-sm">Send Request</button></div>
+        </form>
+    </details>
+
+    {% for g in groups %}
+    <div>
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">{% if g.person %}{{ g.person.full_name }}{% if g.person.is_customer %} (customer){% endif %}{% else %}Relationship and general documents{% endif %}</h2>
+        <div class="space-y-3">
+            {% for r in g.requirements %}
+            <div class="bg-white border {{ 'border-red-200' if r.status == 'needs_replacement' else 'border-slate-100' }} rounded-2xl p-4" id="req-{{ r.id }}">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="font-semibold text-slate-900 break-words">{{ r.title }}</p>
+                        <p class="text-xs text-slate-500 mt-0.5">{{ categories.get(r.category, categories['other']).en }} · {{ 'Requested by OG' if r.source == 'admin' else 'System rule' }}{% if r.doc_basis %} ({{ {'source': 'stated on the official form', 'workflow': 'OG workflow request', 'answer': 'triggered by an answer', 'admin': 'requested by OG', 'dos_nvc': 'Department of State / NVC document list', 'customer': 'added by the customer'}.get(r.doc_basis, r.doc_basis) }}){% endif %}{% if r.reused_at %} · <span class="text-emerald-700 font-semibold">already in the case vault</span>{% endif %}{% if r.requested_at %} · {{ r.requested_at.strftime('%b %d, %Y') }}{% endif %}{% if r.applications %} · for {% for s in r.applications %}<span class="font-mono">{{ s.code }}</span>{{ ', ' if not loop.last }}{% endfor %}{% endif %}</p>
+                    </div>
+                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ req_status_tone[r.status] }}">{{ r.status_label }}</span>
+                </div>
+                {% if r.customer_message %}<p class="mt-2 text-sm text-slate-600 whitespace-pre-line break-words">{{ r.customer_message }}</p>{% endif %}
+                {% if r.internal_note %}<p class="mt-1 text-xs text-slate-500 italic">Internal: {{ r.internal_note }}</p>{% endif %}
+                {% if r.status == 'needs_replacement' and r.review_message %}<p class="mt-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-800 whitespace-pre-line">Sent to customer: {{ r.review_message }}</p>{% endif %}
+                {% set cur = r.current_document %}
+                {% if cur %}
+                <p class="mt-3 text-sm"><span class="text-slate-400 text-xs">Current file:</span> <a href="{{ url_for('admin.ocase_document_file', case_id=case.id, document_id=cur.id) }}" class="font-semibold text-accent-700 hover:underline break-all">{{ cur.original_filename }}</a>
+                    <a href="{{ url_for('admin.ocase_document_file', case_id=case.id, document_id=cur.id, inline=1) }}" target="_blank" rel="noopener" class="ml-2 text-xs text-slate-500 hover:underline">view</a>
+                    <span class="text-xs text-slate-400 ml-2">uploaded {{ cur.uploaded_at.strftime('%b %d, %Y') }} by {{ cur.uploaded_by }}</span></p>
+                {% endif %}
+                {% set prev = r.attachments|selectattr('superseded_at')|list %}
+                {% if prev %}
+                <details class="mt-2 text-xs text-slate-500"><summary class="cursor-pointer">Earlier versions ({{ prev|length }})</summary>
+                    <ul class="mt-1 space-y-0.5">{% for a in prev %}<li><a href="{{ url_for('admin.ocase_document_file', case_id=case.id, document_id=a.document.id) }}" class="hover:underline break-all">{{ a.document.original_filename }}</a> — {{ a.superseded_reason|replace('_', ' ') }} {{ a.superseded_at.strftime('%b %d, %Y') }}</li>{% endfor %}</ul></details>
+                {% endif %}
+                <div class="mt-3 flex flex-wrap gap-2 items-start">
+                    {% if cur and r.status in ('uploaded', 'under_review') %}
+                    {% if r.status == 'uploaded' %}<form method="POST" action="{{ url_for('admin.ocase_requirement_action', case_id=case.id, requirement_id=r.id, action='review') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-accent-300">Mark under review</button></form>{% endif %}
+                    <form method="POST" action="{{ url_for('admin.ocase_requirement_action', case_id=case.id, requirement_id=r.id, action='accept') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="rounded-lg bg-emerald-600 text-white px-3 py-1.5 text-xs font-semibold hover:bg-emerald-700">Accept</button></form>
+                    {% endif %}
+                    {% if cur and r.status in ('uploaded', 'under_review', 'accepted') %}
+                    <details class="text-xs"><summary class="cursor-pointer rounded-lg border border-red-200 px-3 py-1.5 font-semibold text-red-700 inline-block">Needs replacement</summary>
+                        <form method="POST" action="{{ url_for('admin.ocase_requirement_action', case_id=case.id, requirement_id=r.id, action='replace') }}" class="mt-2 space-y-2 w-72 max-w-full">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <textarea name="message" required rows="3" maxlength="1000" placeholder="Tell the customer what to fix (they will see this)" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"></textarea>
+                            <button class="rounded-lg bg-red-600 text-white px-3 py-1.5 text-xs font-semibold">Send to customer</button>
+                        </form></details>
+                    {% endif %}
+                    <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin.ocase_requirement_action', case_id=case.id, requirement_id=r.id, action='upload') }}" class="flex items-center gap-1.5"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="file" name="file" required accept=".pdf,.jpg,.jpeg,.png,.webp" class="text-xs w-44" aria-label="Upload on behalf of the customer"><button class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-accent-300">Upload for customer</button></form>
+                    <form method="POST" action="{{ url_for('admin.ocase_requirement_action', case_id=case.id, requirement_id=r.id, action='withdraw') }}" data-confirm="Withdraw this request? The customer will no longer see it."><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 hover:text-red-700">Withdraw</button></form>
+                    {% if cur %}<form method="POST" action="{{ url_for('admin.ocase_document_delete', case_id=case.id, document_id=cur.id) }}" data-confirm="Permanently delete this file?"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 hover:text-red-700">Delete file</button></form>{% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <p class="text-sm text-slate-500">No document requests yet. Use “+ Request Document” above.</p>
+    {% endfor %}
+
+    {% if app_files %}
+    <div>
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Uploaded inside the applications</h2>
+        <ul class="bg-white border border-slate-100 rounded-2xl divide-y divide-slate-100">
+            {% for f in app_files %}<li class="px-4 py-2.5 text-sm flex flex-wrap gap-x-3"><a href="{{ url_for('admin.submission_file', file_id=f.id) }}" class="font-semibold text-accent-700 hover:underline break-all">{{ f.original_filename }}</a><span class="text-xs text-slate-400">{{ f.field.label('en') if f.field else '' }} · <span class="font-mono">{{ f.submission.code }}</span></span></li>{% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+
+{% elif tab == 'activity' %}
+<ul class="bg-white border border-slate-100 rounded-2xl divide-y divide-slate-100">
+    {% for e, text in events %}<li class="px-4 py-3 text-sm flex flex-wrap justify-between gap-x-4"><span class="text-slate-700">{{ text }}</span><span class="text-xs text-slate-400 whitespace-nowrap">{{ e.actor_type }} · {{ e.created_at.strftime('%b %d, %Y %H:%M') }}</span></li>
+    {% else %}<li class="px-4 py-8 text-center text-slate-400">No activity yet.</li>{% endfor %}
+</ul>
+
+{% elif tab == 'notes' %}
+<div class="max-w-2xl space-y-4">
+    <form method="POST" action="{{ url_for('admin.ocase_note', case_id=case.id) }}" class="bg-white border border-slate-100 rounded-2xl p-4">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <textarea name="body" required rows="3" maxlength="4000" placeholder="Internal case note (never shown to the customer)" aria-label="Internal case note" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"></textarea>
+        <button class="mt-2 rounded-lg bg-accent-600 text-white font-semibold px-4 py-2 text-sm">Add note</button>
+        <p class="mt-2 text-xs text-slate-400">Application notes stay on each application.</p>
+    </form>
+    {% for n in case.notes|reverse %}<div class="bg-white border border-slate-100 rounded-2xl p-4"><p class="text-sm text-slate-800 whitespace-pre-line break-words">{{ n.body }}</p><p class="mt-1 text-xs text-slate-400">{{ n.author_name }} · {{ n.created_at.strftime('%b %d, %Y %H:%M') }}</p></div>{% else %}<p class="text-sm text-slate-400">No case notes yet.</p>{% endfor %}
+</div>
+{% endif %}
+{% endblock %}

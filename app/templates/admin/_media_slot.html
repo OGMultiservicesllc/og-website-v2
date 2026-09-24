@@ -1,0 +1,37 @@
+{# Reusable image slot: shows the current image from the Media Library and lets the
+   admin choose, change or remove it. The chosen asset id is submitted as `name`.
+   Usage:  {% from "admin/_media_slot.html" import image_slot %}
+           {{ image_slot("hero_image_id", "Hero Image", category.hero_image, "16:9",
+                         focus_name="hero_focus", focus=category.hero_focus) }}      #}
+{% macro image_slot(name, label, asset, ratio, focus_name=None, focus='center', hint=None, value=None) -%}
+{%- set current_id = asset.id if asset else (value or '') -%}
+<div class="og-slot rounded-xl border border-slate-200 bg-white p-3" data-slot data-slot-ratio="{{ ratio }}">
+    <div class="flex items-center justify-between gap-2 mb-2">
+        <span class="text-xs font-semibold text-slate-700">{{ label }}</span>
+        <span class="text-[11px] text-slate-400">Recommended {{ ratio }}</span>
+    </div>
+    <div class="relative rounded-lg overflow-hidden bg-slate-100 border border-slate-100 {{ 'aspect-video' if ratio == '16:9' else ('aspect-[4/3]' if ratio == '4:3' else ('aspect-[3/2]' if ratio == '3:2' else 'aspect-[1200/630]')) }}" data-slot-preview>
+        {% if asset %}
+        <img src="{{ media_url(asset, 480) }}" alt="" class="w-full h-full object-cover" style="object-position: {{ {'top':'center top','bottom':'center bottom','left':'left center','right':'right center'}.get(focus, 'center') }}">
+        {% else %}
+        <div class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 text-xs gap-1" data-slot-empty>
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.6-4.6a2 2 0 012.8 0L16 16m-2-2l1.6-1.6a2 2 0 012.8 0L20 14M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2zm8-12h.01"/></svg>
+            Placeholder shown on the site
+        </div>
+        {% endif %}
+    </div>
+    <input type="hidden" name="{{ name }}" value="{{ current_id }}" data-slot-input>
+    <div class="mt-2 flex flex-wrap items-center gap-2">
+        <button type="button" data-slot-pick class="rounded-lg bg-accent-600 text-white text-xs font-semibold px-3 py-1.5 hover:bg-accent-700 transition">{{ 'Change' if asset else 'Choose from Library' }}</button>
+        <button type="button" data-slot-clear class="rounded-lg border border-slate-200 text-xs font-medium px-3 py-1.5 hover:bg-slate-50 transition {{ '' if asset else 'hidden' }}">Remove</button>
+        {% if focus_name %}
+        <label class="ml-auto flex items-center gap-1.5 text-[11px] text-slate-500">Focus
+            <select name="{{ focus_name }}" class="rounded-md border border-slate-200 px-1.5 py-1 text-[11px]">
+                {% for f in ['center', 'top', 'bottom', 'left', 'right'] %}<option value="{{ f }}" {{ 'selected' if f == focus else '' }}>{{ f|capitalize }}</option>{% endfor %}
+            </select>
+        </label>
+        {% endif %}
+    </div>
+    {% if hint %}<p class="mt-1.5 text-[11px] text-slate-400">{{ hint }}</p>{% endif %}
+</div>
+{%- endmacro %}

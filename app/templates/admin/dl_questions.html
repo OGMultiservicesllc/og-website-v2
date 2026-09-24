@@ -1,0 +1,30 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Knowledge Test questions{% endblock %}
+{% block content %}
+<a href="{{ url_for('admin.dl_list') }}" class="text-sm text-slate-500 hover:text-accent-600">&larr; Driver License cases</a>
+<h1 class="text-2xl font-bold text-brand-800 mt-2">Knowledge Test questions</h1>
+<p class="text-sm text-slate-500 mt-1 mb-5">Original practice questions, not the official MVC exam. Edit or deactivate without a deployment.</p>
+<div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+    <form method="get" class="flex gap-2 text-sm">
+        <select name="topic" class="rounded-lg border border-slate-200 px-2 py-2 bg-white"><option value="">All topics</option>{% for t in topics %}<option value="{{ t }}" {{ 'selected' if topic == t else '' }}>{{ t|replace('_',' ')|title }}</option>{% endfor %}</select>
+        <button class="rounded-lg border border-slate-200 font-semibold px-4 py-2 hover:border-accent-300">Filter</button>
+    </form>
+    <form method="post" action="{{ url_for('admin.dl_question_new') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="topic" value="{{ topic or topics[0] }}"><button class="rounded-lg bg-accent-600 text-white font-semibold px-4 py-2 text-sm hover:bg-accent-700">+ New question</button></form>
+</div>
+<div class="bg-white border border-slate-100 rounded-2xl overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead class="text-left text-[11px] uppercase tracking-wide text-slate-400"><tr><th class="px-4 py-3">Question</th><th class="px-4 py-3">Topic</th><th class="px-4 py-3">Difficulty</th><th class="px-4 py-3">Status</th><th class="px-4 py-3"></th></tr></thead>
+        <tbody>
+        {% for q in rows %}
+        <tr class="border-t border-slate-100">
+            <td class="px-4 py-3 max-w-md"><a href="{{ url_for('admin.dl_question_edit', q_id=q.id) }}" class="text-accent-700 hover:underline">{{ q.question_en[:80] }}{% if q.question_en|length > 80 %}…{% endif %}</a></td>
+            <td class="px-4 py-3">{{ q.topic|replace('_',' ')|title }}</td>
+            <td class="px-4 py-3">{{ q.difficulty }}</td>
+            <td class="px-4 py-3">{{ 'Active' if q.active else 'Inactive' }}</td>
+            <td class="px-4 py-3 text-right"><form method="post" action="{{ url_for('admin.dl_question_toggle', q_id=q.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="topic" value="{{ topic }}"><button class="text-accent-700 font-semibold hover:underline">{{ 'Deactivate' if q.active else 'Activate' }}</button></form></td>
+        </tr>
+        {% else %}<tr><td colspan="5" class="px-4 py-8 text-center text-slate-400">No questions yet.</td></tr>{% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

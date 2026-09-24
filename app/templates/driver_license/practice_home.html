@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% from "partials/ui.html" import page_hero, section_header %}
+{% set en = lang == 'en' %}
+{% block title %}{{ 'NJ Knowledge Test Practice' if en else 'Práctica del Examen Teórico de NJ' }}{% endblock %}
+{% block content %}
+{{ page_hero(
+    ('NJ Knowledge Test Practice — Free' if en else 'Práctica del Examen Teórico de NJ — Gratis'),
+    ('Practice with original questions organized by topic, or take a full 50-question simulation. Free with your OG account.' if en else 'Practica con preguntas originales organizadas por tema, o toma una simulación completa de 50 preguntas. Gratis con tu cuenta de OG.'),
+    icon_name='license',
+    primary={'label': ('Start Free Practice' if en else 'Comenzar Práctica Gratis'), 'href': url_for('public.dl_practice_modes', lang=lang)},
+) }}
+<section class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+    <div class="grid sm:grid-cols-3 gap-4">
+        <div class="rounded-card bg-white border border-slate-100 shadow-card p-5">
+            <p class="text-2xl">⚡</p><p class="mt-2 font-bold text-brand-800">{{ 'Quick Practice' if en else 'Práctica Rápida' }}</p>
+            <p class="mt-1 text-sm text-slate-500">{{ '10 questions to warm up.' if en else '10 preguntas para calentar.' }}</p>
+        </div>
+        <div class="rounded-card bg-white border border-slate-100 shadow-card p-5">
+            <p class="text-2xl">🎯</p><p class="mt-2 font-bold text-brand-800">{{ 'Practice by Topic' if en else 'Práctica por Tema' }}</p>
+            <p class="mt-1 text-sm text-slate-500">{{ 'Focus on road signs, right of way, and more.' if en else 'Enfócate en señales, derecho de paso y más.' }}</p>
+        </div>
+        <div class="rounded-card bg-white border border-slate-100 shadow-card p-5">
+            <p class="text-2xl">📝</p><p class="mt-2 font-bold text-brand-800">{{ 'Full Exam Simulation' if en else 'Simulación Completa' }}</p>
+            <p class="mt-1 text-sm text-slate-500">{{ '50 questions, exam-style — 80% to pass.' if en else '50 preguntas, estilo examen — 80% para aprobar.' }}</p>
+        </div>
+    </div>
+    <p class="mt-8 text-sm text-slate-500 leading-relaxed">{{ 'This is a practice tool provided by OG Multiservices LLC. It is not the official NJ MVC knowledge test.' if en else 'Esta es una herramienta de práctica proporcionada por OG Multiservices LLC. No es el examen teórico oficial del MVC de NJ.' }}</p>
+    <p class="mt-2 text-sm text-slate-500">{{ 'An OG account is required to start (free to create).' if en else 'Se requiere una cuenta de OG para comenzar (gratis crearla).' }}</p>
+</section>
+{% endblock %}

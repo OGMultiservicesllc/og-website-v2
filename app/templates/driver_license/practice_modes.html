@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% from "partials/ui.html" import empty_state %}
+{% set en = lang == 'en' %}
+{% block title %}{{ 'NJ Knowledge Test Practice' if en else 'Práctica del Examen Teórico de NJ' }}{% endblock %}
+{% block content %}
+<section class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10 sm:pb-16">
+    <h1 class="text-2xl font-extrabold tracking-tight text-brand-800 mb-1">🚗 {{ 'NJ Knowledge Test Practice' if en else 'Práctica del Examen Teórico de NJ' }}</h1>
+    <p class="text-sm text-slate-500 mb-6">{{ 'This is a practice tool provided by OG Multiservices LLC. It is not the official NJ MVC knowledge test.' if en else 'Esta es una herramienta de práctica de OG Multiservices LLC. No es el examen teórico oficial del MVC de NJ.' }}</p>
+
+    {% if best is not none %}
+    <div class="mb-6 rounded-card bg-white border border-slate-100 shadow-card p-4 flex flex-wrap items-center gap-4">
+        <div><p class="text-xs font-bold uppercase tracking-wide text-slate-400">{{ 'Best Score' if en else 'Mejor Puntaje' }}</p><p class="text-2xl font-extrabold text-brand-800">{{ best }}%</p></div>
+        {% if history %}<div><p class="text-xs font-bold uppercase tracking-wide text-slate-400">{{ 'Last Score' if en else 'Último Puntaje' }}</p><p class="text-2xl font-extrabold text-brand-800">{{ history[0].percent }}%</p></div>{% endif %}
+        <div><p class="text-xs font-bold uppercase tracking-wide text-slate-400">{{ 'Tests Completed' if en else 'Pruebas Completadas' }}</p><p class="text-2xl font-extrabold text-brand-800">{{ history|length }}</p></div>
+    </div>
+    {% endif %}
+
+    <form method="post" action="{{ url_for('public.dl_practice_start', lang=lang) }}" class="grid sm:grid-cols-3 gap-3 mb-6">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button name="mode" value="quick" class="text-left rounded-card bg-white border-2 border-slate-200 hover:border-accent-400 shadow-card p-5 transition">
+            <p class="text-2xl">⚡</p><p class="mt-2 font-bold text-brand-800">{{ 'Quick Practice' if en else 'Práctica Rápida' }}</p><p class="mt-1 text-sm text-slate-500">{{ quick_n }} {{ 'questions' if en else 'preguntas' }}</p>
+        </button>
+        <button name="mode" value="full" class="text-left rounded-card bg-white border-2 border-slate-200 hover:border-accent-400 shadow-card p-5 transition">
+            <p class="text-2xl">📝</p><p class="mt-2 font-bold text-brand-800">{{ 'Full Exam Simulation' if en else 'Simulación Completa' }}</p><p class="mt-1 text-sm text-slate-500">{{ full_n }} {{ 'questions' if en else 'preguntas' }} · {{ pass_pct }}% {{ 'to pass' if en else 'para aprobar' }}</p>
+        </button>
+        <div class="rounded-card bg-white border-2 border-slate-200 shadow-card p-5">
+            <p class="text-2xl">🎯</p><p class="mt-2 font-bold text-brand-800">{{ 'By Topic' if en else 'Por Tema' }}</p>
+            <select name="topic" class="mt-2 w-full min-h-[44px] rounded-lg border border-slate-200 px-2 text-sm bg-white">
+                {% for t in topics %}<option value="{{ t.key }}">{{ t.label }} ({{ t.count }})</option>{% endfor %}
+            </select>
+            <button type="submit" name="mode" value="topic" class="mt-2 w-full min-h-[40px] rounded-lg bg-accent-600 text-white text-sm font-semibold hover:bg-accent-700 transition">{{ 'Start' if en else 'Comenzar' }}</button>
+        </div>
+    </form>
+
+    {% if not has_case %}
+    <div class="rounded-card bg-mist-50 border border-mist-200 p-5">
+        <p class="font-semibold text-brand-800">{{ "Need help starting your NJ Driver License process?" if en else '¿Necesitas ayuda para comenzar tu proceso de Licencia de Conducir de NJ?' }}</p>
+        <p class="mt-1 text-sm text-slate-600">{{ 'OG can help you prepare your documents and understand your next steps.' if en else 'OG puede ayudarte a preparar tus documentos y entender tus próximos pasos.' }}</p>
+        <a href="{{ url_for('public.dl_start', lang=lang) }}" class="mt-3 inline-flex items-center justify-center min-h-[44px] px-5 rounded-xl bg-accent-600 text-white text-sm font-semibold hover:bg-accent-700 transition">{{ 'Check What I Need' if en else 'Ver Qué Necesito' }}</a>
+    </div>
+    {% endif %}
+
+    {% if history %}
+    <h2 class="mt-8 mb-2 text-sm font-bold uppercase tracking-wide text-slate-400">{{ 'Recent Practice' if en else 'Práctica Reciente' }}</h2>
+    <ul class="space-y-2">
+        {% for a in history %}
+        <li class="flex items-center justify-between rounded-xl bg-white border border-slate-100 shadow-card px-4 py-3">
+            <span class="text-sm text-slate-700">{{ a.completed_at.strftime('%b %d, %Y') }} · {{ {'quick': ('Quick' if en else 'Rápida'), 'topic': ('Topic' if en else 'Tema'), 'full': ('Full' if en else 'Completa')}[a.mode] }}</span>
+            <span class="text-sm font-bold {{ 'text-emerald-700' if a.passed else 'text-amber-700' }}">{{ a.correct }}/{{ a.total }} · {{ a.percent }}%</span>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+</section>
+{% endblock %}

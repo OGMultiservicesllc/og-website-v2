@@ -1,0 +1,36 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold text-brand-800 mb-6">Dashboard</h1>
+
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="rounded-2xl border border-slate-100 bg-white p-6">
+        <p class="text-sm text-slate-500">Total Courses</p>
+        <p class="text-3xl font-bold text-brand-800 mt-1">{{ course_count }}</p>
+    </div>
+    <div class="rounded-2xl border border-slate-100 bg-white p-6">
+        <p class="text-sm text-slate-500">Published</p>
+        <p class="text-3xl font-bold text-accent-600 mt-1">{{ published_count }}</p>
+    </div>
+    <div class="rounded-2xl border border-slate-100 bg-white p-6">
+        <p class="text-sm text-slate-500">Students</p>
+        <p class="text-3xl font-bold text-brand-800 mt-1">{{ student_count }}</p>
+    </div>
+    <div class="rounded-2xl border border-slate-100 bg-white p-6">
+        <p class="text-sm text-slate-500">Enrollments</p>
+        <p class="text-3xl font-bold text-academy-600 mt-1">{{ enrollment_count }}</p>
+    </div>
+</div>
+
+<div class="flex flex-wrap gap-3">
+    <a href="{{ url_for('admin.courses_list') }}"
+       class="inline-flex items-center rounded-lg bg-accent-600 text-white font-semibold px-5 py-2.5 text-sm hover:bg-accent-700 transition">
+        Go to OG Academy Courses →
+    </a>
+    <a href="{{ url_for('admin.students_list') }}"
+       class="inline-flex items-center rounded-lg border border-slate-200 text-slate-700 font-semibold px-5 py-2.5 text-sm hover:border-accent-300 transition">
+        Manage Students →
+    </a>
+</div>
+{% endblock %}

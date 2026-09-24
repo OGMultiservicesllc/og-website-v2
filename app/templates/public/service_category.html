@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% from "partials/ui.html" import btn, pill, page_hero, section_header, service_card, info_panel, cta_block, check_item, chips, faq_list, steps_row %}
+{% from "partials/icons.html" import icon %}
+{% block title %}{{ page_title }} — OG Multiservices LLC{% endblock %}
+
+{# One layout for every service category (Immigration, Taxes & ITIN, Translations, ...).
+   Order matters on phones: what the visitor can DO comes first — the services —
+   and process/FAQ/long-form content follow. All text comes from the category record. #}
+{% block content %}
+{% set wa = {'label': t('mobilebar_whatsapp'), 'href': biz.WHATSAPP_LINK, 'icon': 'whatsapp', 'variant': 'whatsapp', 'external': True} if category.whatsapp_enabled else None %}
+{{ page_hero(
+    category.hero_title(lang),
+    category.hero_text(lang),
+    badge=category.hero_badge(lang) or None,
+    icon_name=category.icon,
+    primary=cta,
+    secondary=wa,
+    tertiary=secondary_cta,
+    image_url=hero_url,
+    mobile_image_url=hero_mobile_url,
+    focus=category.hero_focus,
+    notice=category.disclaimer(lang) or None,
+    breadcrumbs=[{'label': t('breadcrumb_home'), 'href': url_for('public.home', lang=lang)}, {'label': category.title(lang)}]
+) }}
+
+<!-- Services -->
+<section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-10" aria-labelledby="services-heading">
+    {{ section_header(t('svc_services_title'), None, tag='h2') }}
+    {% if cards %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
+        {% for c in cards %}
+        {{ service_card(c.icon, c.title, c.text, c.url, 'row', c.badge or None) }}
+        {% endfor %}
+    </div>
+    {% endif %}
+</section>
+
+{% if category.info_body(lang) %}
+<section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-10">
+    {% if checklist %}
+    <div class="rounded-panel bg-mist-50 border border-mist-200 p-5 sm:p-7">
+        <h2 class="text-xl font-extrabold tracking-tight text-brand-800">{{ category.info_title(lang) or t('svc_important_title') }}</h2>
+        <p class="mt-1.5 text-sm text-slate-600 max-w-2xl">{{ category.info_body(lang) }}</p>
+        <ol class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {% for i in checklist %}
+            <li class="flex items-start gap-3 rounded-card bg-white border border-slate-100 px-3.5 py-3">
+                <span class="w-6 h-6 rounded-full bg-accent-600 text-white text-xs font-bold flex items-center justify-center shrink-0">{{ loop.index }}</span>
+                <span class="text-sm text-slate-700 leading-snug">{{ i.title(lang) }}</span>
+            </li>
+            {% endfor %}
+        </ol>
+    </div>
+    {% else %}
+    {{ info_panel(category.info_title(lang) or t('svc_important_title'), category.info_body(lang), 'info') }}
+    {% endif %}
+</section>
+{% elif checklist %}
+<section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-10">
+    {% if category.checklist_title(lang) %}{{ section_header(category.checklist_title(lang), None) }}{% endif %}
+    {{ chips(checklist, lang) }}
+</section>
+{% endif %}
+
+{% if included %}
+<section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12">
+    <div class="rounded-panel bg-white border border-slate-100 shadow-card p-5 sm:p-7">
+        <h2 class="text-xl font-extrabold tracking-tight text-brand-800 mb-4">{{ category.included_title(lang) or t('svc_included_title') }}</h2>
+        <ul class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">{% for i in included %}{{ check_item(i.title(lang)) }}{% endfor %}</ul>
+    </div>
+</section>
+{% endif %}
+
+{% if features %}
+<section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12">
+    {% if category.features_title(lang) %}{{ section_header(category.features_title(lang), None) }}{% endif %}
+    {% if features|selectattr('body_en')|list %}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {% for f in features %}
+        <div class="rounded-panel bg-white border border-slate-100 shadow-card p-5">
+            <h3 class="font-bold text-brand-800 text-[17px]">{{ f.title(lang) }}</h3>
+            {% if f.body(lang) %}<p class="mt-2 text-sm text-slate-600 leading-relaxed whitespace-pre-line">{{ f.body(lang) }}</p>{% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <ul class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+        {% for f in features %}
+        <li class="rounded-card border border-slate-100 bg-white shadow-card py-3.5 px-2 text-center text-[13px] font-semibold text-brand-700">{{ f.title(lang) }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+</section>
+{% endif %}
+
+<!-- Not sure which one? short inquiry (public, no account needed) -->
+{% if category.slug == 'immigration' %}
+<section id="inquiry" class="scroll-mt-20 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12">
+    <div class="rounded-panel bg-mist-100 border border-mist-200 p-5 sm:p-8 grid grid-cols-1 lg:grid-cols-[.9fr_1.1fr] gap-6 lg:gap-10">
+        <div>
+            <h2 class="text-xl sm:text-2xl font-extrabold tracking-tight text-brand-800">{{ t('ig_form_title') }}</h2>
+            <p class="mt-1.5 text-sm sm:text-[15px] text-slate-600">{{ t('ig_form_subtitle') }}</p>
+            <ul class="mt-4 hidden lg:block space-y-2">
+                {{ check_item(t('trust_bilingual')) }}
+                {{ check_item(t('trust_confidential')) }}
+            </ul>
+        </div>
+        <form method="POST" action="{{ url_for('public.immigration_inquiry', lang=lang) }}" class="space-y-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div>
+                <label for="ig-service" class="block text-[13px] font-semibold text-brand-800 mb-1">{{ t('ig_form_service_label') }}</label>
+                <select id="ig-service" name="service" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-[15px] focus:outline-none focus:ring-2 focus:ring-accent-500">
+                    {% for c in cards %}<option value="{{ c.title }}">{{ c.title }}</option>{% endfor %}
+                    <option value="other">{{ t('tr_quote_lang_other') }}</option>
+                </select>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label for="ig-name" class="sr-only">{{ t('contact_name') }}</label>
+                    <input id="ig-name" type="text" name="name" required autocomplete="name" placeholder="{{ t('contact_name') }}" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-[15px] focus:outline-none focus:ring-2 focus:ring-accent-500">
+                </div>
+                <div>
+                    <label for="ig-email" class="sr-only">{{ t('contact_email') }}</label>
+                    <input id="ig-email" type="email" name="email" required autocomplete="email" placeholder="{{ t('contact_email') }}" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-[15px] focus:outline-none focus:ring-2 focus:ring-accent-500">
+                </div>
+            </div>
+            <div>
+                <label for="ig-phone" class="sr-only">{{ t('contact_phone') }}</label>
+                <input id="ig-phone" type="tel" name="phone" autocomplete="tel" placeholder="{{ t('contact_phone') }}" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-[15px] focus:outline-none focus:ring-2 focus:ring-accent-500">
+            </div>
+            <div>
+                <label for="ig-message" class="sr-only">{{ t('tr_quote_notes') }}</label>
+                <textarea id="ig-message" name="message" rows="3" placeholder="{{ t('tr_quote_notes') }}" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-[15px] focus:outline-none focus:ring-2 focus:ring-accent-500"></textarea>
+            </div>
+            <button type="submit" class="w-full rounded-xl bg-accent-600 text-white font-semibold py-3.5 text-[15px] hover:bg-accent-700 transition shadow-sm shadow-accent-600/25">{{ t('ig_form_submit') }}</button>
+        </form>
+    </div>
+</section>
+{% endif %}
+
+{% if category.slug == 'certified-translations' %}{% include "partials/translation_quote.html" %}{% endif %}
+
+<!-- Process: kept, but compact and AFTER the services -->
+{% if steps %}
+<section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12">
+    {{ section_header(t('svc_process_title'), None) }}
+    {{ steps_row(steps, lang) }}
+</section>
+{% endif %}
+
+{% if faq %}
+<section class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12">
+    {{ section_header(t('svc_faq_title'), None) }}
+    {{ faq_list(faq, lang) }}
+</section>
+{% endif %}
+
+{% if content_paragraphs %}
+<section class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 text-[15px] text-slate-600 leading-relaxed space-y-3">
+    {% for p in content_paragraphs %}<p>{{ p }}</p>{% endfor %}
+</section>
+{% endif %}
+
+<section class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 sm:pt-14 pb-10">
+    {{ cta_block(
+        category.final_cta_title(lang) or t('svc_final_cta_title'),
+        category.final_cta_body(lang) or t('svc_final_cta_body'),
+        cta,
+        wa
+    ) }}
+</section>
+
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+    {"@type": "ListItem", "position": 1, "name": {{ t('breadcrumb_home')|tojson }}, "item": {{ url_for('public.home', lang=lang, _external=True)|tojson }}},
+    {"@type": "ListItem", "position": 2, "name": {{ category.title(lang)|tojson }}, "item": {{ request.url|tojson }}}
+]}
+</script>
+{% if faq_jsonld %}
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": {{ faq_jsonld|tojson }}}
+</script>
+{% endif %}
+{% endblock %}

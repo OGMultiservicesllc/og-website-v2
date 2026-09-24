@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}{{ t('lp_quiz_result_title') }} — {{ lesson.title(lang) }}{% endblock %}
+
+{% block content %}
+<section class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <a href="{{ url_for('public.lesson_view', lang=lang, slug=lesson.section.course.slug, lesson_id=lesson.id) }}" class="text-sm text-slate-500 hover:text-accent-600">&larr; {{ lesson.title(lang) }}</a>
+
+    <div class="mt-6 rounded-2xl border border-slate-100 p-8 text-center">
+        <h1 class="text-xl font-bold text-brand-800 mb-1">{{ t('lp_quiz_result_title') }}</h1>
+
+        {% if attempt.status == 'needs_review' %}
+        <p class="text-sm text-amber-700 bg-amber-50 rounded-lg px-4 py-3 mt-4">{{ t('lp_quiz_pending_note') }}</p>
+        {% endif %}
+
+        {% if lesson.quiz_kind == 'formative' %}
+        <p class="mt-4 text-4xl font-extrabold text-brand-800">{{ correct_count }} / {{ lesson.quiz_questions|length }}</p>
+        <p class="text-sm text-slate-500 mt-1">{{ t('lp_quiz_correct_suffix') }}</p>
+        <p class="text-xs text-slate-400 mt-3 max-w-sm mx-auto">{{ t('lp_quiz_review_note') }}</p>
+        {% else %}
+        <p class="mt-4 text-4xl font-extrabold text-brand-800">{{ attempt.score_percent }}%</p>
+        {% if attempt.score_points is not none %}
+        <p class="text-sm text-slate-500 mt-1">{{ attempt.score_points }} / {{ attempt.max_score_points }} {{ t('lp_quiz_points') }}</p>
+        {% endif %}
+        <p class="text-xs text-slate-400 mt-1">{{ t('lp_quiz_passing_score') }}: {{ lesson.quiz_passing_percentage }}%</p>
+
+        <span class="inline-flex items-center rounded-full px-5 py-2 mt-4 text-lg font-extrabold
+            {% if attempt.status == 'needs_review' %}bg-amber-50 text-amber-700
+            {% elif attempt.passed %}bg-emerald-50 text-emerald-700
+            {% else %}bg-red-50 text-red-600{% endif %}">
+            {% if attempt.status == 'needs_review' %}{{ t('lp_quiz_needs_review') }}
+            {% elif attempt.passed %}{{ t('lp_passed') }}
+            {% else %}{{ t('lp_quiz_not_passed') }}{% endif %}
+        </span>
+        {% endif %}
+    </div>
+
+    <div class="mt-8 space-y-3">
+        {% for q in lesson.quiz_questions %}
+        {% set r = responses_by_question_id.get(q.id) %}
+        <div class="rounded-xl border border-slate-100 p-4 sm:p-5">
+            <div class="flex items-start justify-between gap-3">
+                <p class="font-medium text-slate-900">{{ loop.index }}. {{ q.question(lang) }}</p>
+                <span class="shrink-0 text-xs font-bold uppercase tracking-wide px-2 py-0.5 rounded-full
+                    {% if q.question_type in ('long_answer', 'file_upload') %}
+                        {% if r and r.reviewed_by_admin %}bg-accent-50 text-accent-700{% else %}bg-amber-50 text-amber-700{% endif %}
+                    {% elif r and r.is_correct %}bg-emerald-50 text-emerald-700
+                    {% else %}bg-red-50 text-red-600{% endif %}">
+                    {% if q.question_type in ('long_answer', 'file_upload') %}
+                        {{ (r.points_awarded if r else 0) }} / {{ q.points }}
+                    {% elif r and r.is_correct %}{{ t('case_correct') }}
+                    {% else %}{{ t('case_incorrect') }}{% endif %}
+                </span>
+            </div>
+
+            <!-- student's answer -->
+            {% if q.question_type in ('single_choice', 'true_false', 'image_choice') %}
+            <p class="text-sm text-slate-500 mt-2">{{ t('case_your_answer_label') }} {{ r.selected_option.text(lang) if r and r.selected_option else '—' }}</p>
+            {% elif q.question_type == 'multi_select' %}
+            <p class="text-sm text-slate-500 mt-2">{{ t('case_your_answer_label') }} {{ (r.selected_options|map(attribute='text_' + lang)|list|join(', ')) if r and r.selected_options else '—' }}</p>
+            {% elif q.question_type == 'number' %}
+            <p class="text-sm text-slate-600 mt-2">{{ r.response_number if r and r.response_number is not none else '—' }}</p>
+            {% elif r and r.response_text %}
+            <p class="text-sm text-slate-600 mt-2 bg-slate-50 rounded-lg p-3 whitespace-pre-wrap">{{ r.response_text }}</p>
+            {% elif q.question_type == 'file_upload' and r and r.file_filename %}
+            <a href="{{ url_for('admin.media', stored_path=r.file_filename) }}" target="_blank" class="text-sm text-accent-600 hover:underline">{{ t('lp_assignment_your_file') }}</a>
+            {% endif %}
+
+            <!-- correct answer / explanation, only if the lesson setting allows -->
+            {% if lesson.quiz_show_correct_answers and q.question_type not in ('long_answer', 'file_upload') %}
+                {% if q.question_type in ('single_choice', 'true_false', 'image_choice') %}
+                {% set correct_opt = q.options|selectattr('is_correct')|first %}
+                <p class="text-xs text-slate-500 mt-2">{{ t('case_result_explanation_label') }} {{ correct_opt.text(lang) if correct_opt else '—' }}</p>
+                {% elif q.question_type == 'multi_select' %}
+                <p class="text-xs text-slate-500 mt-2">{{ t('case_result_explanation_label') }} {{ q.options|selectattr('is_correct')|map(attribute='text_' + lang)|list|join(', ') }}</p>
+                {% elif q.question_type == 'short_answer' %}
+                <p class="text-xs text-slate-500 mt-2">{{ t('case_result_explanation_label') }} {{ q.accepted_answers|map(attribute='answer_' + lang)|select|list|join(', ') }}</p>
+                {% elif q.question_type == 'number' %}
+                <p class="text-xs text-slate-500 mt-2">{{ t('case_result_explanation_label') }} {{ q.correct_number }}</p>
+                {% endif %}
+            {% endif %}
+
+            {% if r and r.is_correct and q.feedback_correct(lang) %}
+            <p class="text-xs text-emerald-700 mt-2 bg-emerald-50 rounded-lg p-3">{{ q.feedback_correct(lang) }}</p>
+            {% elif r and r.is_correct is sameas false and q.feedback_incorrect(lang) %}
+            <p class="text-xs text-red-600 mt-2 bg-red-50 rounded-lg p-3">{{ q.feedback_incorrect(lang) }}</p>
+            {% endif %}
+
+            {% if q.question_type in ('long_answer', 'file_upload') %}
+                {% if r and r.reviewed_by_admin %}
+                {% if r.admin_feedback %}<p class="text-xs text-slate-600 mt-2 bg-accent-50 rounded-lg p-3"><span class="font-medium">{{ t('case_result_ai_feedback_label') }}</span> {{ r.admin_feedback }}</p>{% endif %}
+                {% else %}
+                <p class="text-xs font-medium text-amber-700 mt-2">{{ t('case_result_pending') }}</p>
+                {% endif %}
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if certificate and not certificate.is_revoked %}
+    <div class="mt-8">
+        <a href="{{ url_for('account.certificate', lang=lang, slug=course.slug) }}"
+           class="block text-center rounded-lg bg-academy-500 text-white font-semibold px-5 py-2.5 text-sm hover:bg-academy-600 transition">
+            {{ t('lp_quiz_download_certificate') }}
+        </a>
+    </div>
+    {% endif %}
+
+    {% if lesson.quiz_kind == 'formative' or lesson.quiz_allow_retry %}
+    <div class="mt-3">
+        <a href="{{ url_for('public.lesson_view', lang=lang, slug=lesson.section.course.slug, lesson_id=lesson.id) }}"
+           class="block text-center rounded-lg {{ 'border border-slate-200 text-slate-600 hover:border-accent-300' if certificate else 'bg-accent-600 text-white hover:bg-accent-700' }} font-semibold px-5 py-2.5 text-sm transition">
+            {{ t('case_try_again_cta') }}
+        </a>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% from "partials/ui.html" import btn, page_hero, section_header, service_card, cta_block %}
+{% block title %}{{ st('sv_title') }} — OG Multiservices LLC{% endblock %}
+{% set page_description = st('sv_subtitle') %}
+
+{% block content %}
+{{ page_hero(
+    st('sv_title'),
+    st('sv_subtitle'),
+    icon_name='documents',
+    primary={'label': t('nav_get_started'), 'href': url_for('public.contact', lang=lang)},
+    secondary={'label': t('mobilebar_whatsapp'), 'href': biz.WHATSAPP_LINK, 'icon': 'whatsapp', 'variant': 'whatsapp', 'external': True},
+    breadcrumbs=[{'label': t('breadcrumb_home'), 'href': url_for('public.home', lang=lang)}, {'label': st('sv_title')}]
+) }}
+
+<section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-10">
+    {{ section_header(st('home_card_title'), st('home_card_subtitle')) }}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
+        {% for c in featured %}{{ service_card(c.icon, c.title, c.text, c.url, 'row') }}{% endfor %}
+    </div>
+</section>
+
+{% if more %}
+<section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12">
+    {{ section_header(st('sv_secondary_title'), None) }}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
+        {% for c in more %}{{ service_card(c.icon, c.title, c.text, c.url, 'row') }}{% endfor %}
+        {{ service_card('academy', t('home_add_academy_title'), t('home_add_academy_desc'), url_for('public.courses', lang=lang), 'row') }}
+    </div>
+</section>
+{% endif %}
+
+<section class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 sm:pt-16 pb-10">
+    {{ cta_block(t('svc_final_cta_title'), t('svc_final_cta_body'),
+        {'label': t('nav_get_started'), 'href': url_for('public.contact', lang=lang)},
+        {'label': t('svc_send_whatsapp'), 'href': biz.WHATSAPP_LINK, 'icon': 'whatsapp', 'variant': 'whatsapp', 'external': True}) }}
+</section>
+{% endblock %}

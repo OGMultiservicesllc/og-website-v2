@@ -1,0 +1,65 @@
+<div class="bg-white border border-slate-100 rounded-2xl p-5" id="ds260-panel">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400">Immigrant Visa Application (DS-260) summary</h2>
+        <a href="{{ url_for('admin.ds260_prep', submission_id=submission.id) }}" class="rounded-lg bg-accent-600 text-white font-semibold px-3.5 py-2 text-sm hover:bg-accent-700 transition">Open CEAC Preparation View</a>
+    </div>
+    {% if ds260.warning_after_submit %}
+    <p class="mb-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-[13px] text-amber-900" role="alert">This OG record can be updated, but the submitted CEAC application may require reopening by the appropriate government office before changes can be entered there.</p>
+    {% endif %}
+    <div class="grid sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+        <div>
+            <h3 class="text-[11px] font-bold uppercase tracking-wide text-slate-400">Visa applicant</h3>
+            <p class="font-semibold text-slate-800">{% if ds260.applicant %}<a href="{{ url_for('admin.person_detail', person_id=ds260.applicant.id) }}" class="text-accent-700 hover:underline">{{ ds260.applicant.full_name }}</a>{% else %}&mdash;{% endif %}
+                <span class="ml-1 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold uppercase px-2 py-0.5">{{ 'Principal' if ds260.role == 'principal' else 'Derivative' }}</span></p>
+            <p class="text-slate-600">Petitioner: {% if ds260.petitioner %}<a href="{{ url_for('admin.person_detail', person_id=ds260.petitioner.id) }}" class="text-accent-700 hover:underline">{{ ds260.petitioner.full_name }}</a>{% else %}an employer / organization or not set{% endif %}{% if ds260.pt_relation %} &middot; {{ ds260.pt_relation }}{% endif %}</p>
+            {% if ds260.underlying %}<p class="text-slate-600">Linked petition: <a href="{{ url_for('admin.form_submission_detail', submission_id=ds260.underlying.id) }}" class="text-accent-700 hover:underline">Form {{ ds260.underlying.form.source_form_name }} {{ ds260.underlying.code }}</a> <span class="text-slate-400">(in its own case; linked, not moved)</span></p>{% endif %}
+            {% if ds260.siblings %}<p class="text-slate-600">Other applicants in this case: {% for x in ds260.siblings %}<a href="{{ url_for('admin.form_submission_detail', submission_id=x.submission.id) }}" class="text-accent-700 hover:underline">{{ x.person.full_name if x.person else x.submission.code }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+        </div>
+        <div>
+            <h3 class="text-[11px] font-bold uppercase tracking-wide text-slate-400">Status (two separate things)</h3>
+            <p class="text-slate-700">OG: <span class="font-semibold">{{ status_label }}</span></p>
+            <p class="text-slate-700">CEAC (recorded by staff): <span class="font-semibold">{{ {'not_started': 'Not started', 'incomplete': 'Incomplete', 'submitted': 'Submitted / completed in CEAC', 'reopened': 'Re-opened'}.get(ds260.ceac_status, ds260.ceac_status) }}</span></p>
+            {% if ds260.ready_at %}<p class="text-slate-600 text-[13px]">Ready for CEAC since {{ ds260.ready_at.strftime('%b %d, %Y') }} by {{ ds260.ready_by }} (not a submission)</p>{% endif %}
+        </div>
+        <div>
+            <h3 class="text-[11px] font-bold uppercase tracking-wide text-slate-400">Consular case data <span class="normal-case font-normal text-slate-400">(private)</span></h3>
+            {% if ds260.consular %}
+            <p class="text-slate-700">NVC case: <span class="font-mono">{{ ds260.consular.nvc or '—' }}</span> &middot; Invoice: <span class="font-mono">{{ ds260.consular.invoice or '—' }}</span></p>
+            <p class="text-slate-600">Post: {{ ds260.consular.post or '—' }} &middot; Visa class: {{ ds260.consular.visa_class or '—' }} &middot; Priority date: {{ ds260.consular.priority.strftime('%b %d, %Y') if ds260.consular.priority else '—' }}</p>
+            {% endif %}
+            <details class="mt-1"><summary class="cursor-pointer text-[12px] text-accent-700">Edit case data</summary>
+                <form method="post" action="{{ url_for('admin.ds260_case_data', submission_id=submission.id) }}" class="mt-2 grid grid-cols-2 gap-2" autocomplete="off">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input name="nvc_case_number" placeholder="NVC case number (blank = keep)" maxlength="40" autocomplete="off" class="rounded border border-slate-200 px-2 py-1.5 text-xs">
+                    <input name="invoice_id" placeholder="Invoice ID (blank = keep)" maxlength="40" autocomplete="off" class="rounded border border-slate-200 px-2 py-1.5 text-xs">
+                    <input name="post" placeholder="Embassy / consulate" maxlength="120" class="rounded border border-slate-200 px-2 py-1.5 text-xs">
+                    <input name="visa_class" placeholder="Visa class" maxlength="20" class="rounded border border-slate-200 px-2 py-1.5 text-xs">
+                    <label class="text-[10px] text-slate-500">Priority date<input type="date" name="priority_date" class="mt-0.5 w-full rounded border border-slate-200 px-2 py-1 text-xs"></label>
+                    <label class="text-[10px] text-slate-500">Interview date<input type="date" name="interview_date" class="mt-0.5 w-full rounded border border-slate-200 px-2 py-1 text-xs"></label>
+                    <button type="submit" class="col-span-2 rounded-lg border border-slate-200 text-slate-700 font-semibold px-3 py-1.5 text-xs hover:border-accent-300">Save case data</button>
+                </form>
+            </details>
+        </div>
+        <div>
+            <h3 class="text-[11px] font-bold uppercase tracking-wide text-slate-400">Source snapshot</h3>
+            {% if ds260.source %}<p class="text-slate-700 font-mono text-[12px]">{{ ds260.source.code }}{% if not ds260.source.is_current %} <span class="text-amber-700">(older than the current snapshot; this application keeps it)</span>{% endif %}</p>
+            <p class="text-slate-600 text-[12px]">Sample {{ ds260.source.sample }} &middot; verified {{ ds260.source.verified }} &middot; hash {{ ds260.source.hash }}</p>{% endif %}
+            <p class="text-[12px]"><a href="{{ url_for('admin.ds260_snapshots') }}" class="text-accent-700 hover:underline">All snapshots and differences</a></p>
+        </div>
+    </div>
+    <h3 class="mt-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Workflow flags <span class="normal-case font-normal">(counts only — content is in the private CEAC sections)</span></h3>
+    {% if ds260.flags %}
+    <ul class="mt-1 space-y-0.5 text-[13px] text-amber-800 list-disc pl-4">
+        {% for g, n in ds260.sec_counts.items() if n %}<li>Security &amp; Background — {{ g }}: {{ n }} answer(s) to review with the applicant (not a conclusion)</li>{% endfor %}
+        {% for k in ds260.flags if k in ('t_refused', 'aw_skills', 'aw_para', 'aw_mil') %}<li>Answered Yes: {{ {'t_refused': 'earlier U.S. visa / admission matter', 'aw_skills': 'specialized skills or training', 'aw_para': 'organization question', 'aw_mil': 'military service'}[k] }}</li>{% endfor %}
+    </ul>
+    {% else %}<p class="text-[13px] text-slate-500">No answers currently flagged for review.</p>{% endif %}
+    {% if ds260.children %}
+    <h3 class="mt-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Children listed</h3>
+    <ul class="mt-1 space-y-0.5 text-[13px] text-slate-700">{% for k in ds260.children %}<li>{{ k.name }} &middot; applying: {{ {'now': 'with the applicant now', 'later': 'later', 'no': 'no', 'unsure': 'not sure'}.get(k.immigrating, '—') }}{% if k.own_ds260 %} &middot; <a href="{{ url_for('admin.form_submission_detail', submission_id=k.own_ds260.id) }}" class="text-accent-700 hover:underline">their own DS-260 {{ k.own_ds260.code }}</a>{% elif k.person %} &middot; linked Person{% endif %}</li>{% endfor %}</ul>
+    {% endif %}
+    <h3 class="mt-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Which CEAC sections the 2019 sample showed <span class="normal-case font-normal">(hint only — unverified for the current system)</span></h3>
+    <ul class="mt-1 space-y-0.5 text-[13px] text-slate-600 list-disc pl-4">{% for h in ds260.hints %}<li>{{ h.section }}: {{ 'likely shown' if h.shown else ('unknown' if h.shown is none else 'not shown') }} — {{ h.why }}</li>{% endfor %}</ul>
+    <p class="mt-4 text-[11px] text-slate-500">“Reopen for Customer Editing” unlocks only the OG record. It does not reopen anything in CEAC: after the DS-260 is submitted in CEAC, only the appropriate government office can reopen it.</p>
+    <p class="mt-1 text-[11px] text-slate-400">Information only. OG does not decide admissibility or eligibility here, does not sign or submit for the applicant, and “Ready for CEAC” never means submitted.</p>
+</div>

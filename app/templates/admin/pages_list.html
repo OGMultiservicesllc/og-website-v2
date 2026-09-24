@@ -1,0 +1,76 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Custom Pages{% endblock %}
+
+{% macro page_row(p, depth) %}
+<div class="flex items-center justify-between gap-3 px-4 py-2.5 {{ 'border-t border-slate-50' if depth == 0 else '' }}" style="padding-left: {{ 16 + depth * 24 }}px">
+    <a href="{{ url_for('admin.page_edit', page_id=p.id) }}" class="flex items-center gap-2.5 min-w-0 flex-1 group">
+        <span class="text-sm text-slate-800 truncate group-hover:text-accent-600 transition">{{ p.title_en }}</span>
+        <span class="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 {{ 'bg-emerald-50 text-emerald-700' if p.is_published else 'bg-slate-100 text-slate-500' }}">
+            {{ 'Published' if p.is_published else 'Draft' }}
+        </span>
+        {% if not p.show_in_menu %}
+        <span class="text-xs text-slate-400 shrink-0">hidden from menu</span>
+        {% endif %}
+    </a>
+    <div class="flex items-center gap-1 shrink-0">
+        <form method="POST" action="{{ url_for('admin.page_move', page_id=p.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="direction" value="up">
+            <button type="submit" class="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-400 text-sm">↑</button>
+        </form>
+        <form method="POST" action="{{ url_for('admin.page_move', page_id=p.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="direction" value="down">
+            <button type="submit" class="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-400 text-sm">↓</button>
+        </form>
+        <form method="POST" action="{{ url_for('admin.page_duplicate', page_id=p.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-400 text-sm" title="Duplicate">⧉</button>
+        </form>
+        <form method="POST" action="{{ url_for('admin.page_delete', page_id=p.id) }}" data-confirm="Delete this page?">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="w-7 h-7 rounded-lg hover:bg-red-50 text-red-400 text-sm">✕</button>
+        </form>
+    </div>
+</div>
+{% for child in p.children %}
+{{ page_row(child, depth + 1) }}
+{% endfor %}
+{% endmacro %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-brand-800">Custom Pages</h1>
+    <a href="{{ url_for('admin.page_new') }}"
+       class="inline-flex items-center rounded-lg bg-accent-600 text-white font-semibold px-4 py-2.5 text-sm hover:bg-accent-700 transition">
+        + New Custom Page
+    </a>
+</div>
+<p class="text-sm text-slate-500 mb-6">
+    Standalone pages such as Privacy Policy, Terms, About, announcements or temporary campaigns. Service pages (Immigration, Taxes &amp; ITIN, Translations, Notary…) are not managed here — edit them under <a href="{{ url_for('admin.services_list') }}" class="text-accent-700 font-medium hover:underline">Services</a>. You can list a custom page in a menu section or keep it standalone, and nest pages under other pages.
+</p>
+
+<div class="space-y-6">
+    {% if top_level %}
+    <div class="bg-white border border-slate-100 rounded-2xl overflow-hidden">
+        <div class="px-4 py-2.5 bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">Standalone Pages</div>
+        {% for p in top_level %}
+        {{ page_row(p, 0) }}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% for key, label in nav_sections.items() %}
+    <div class="bg-white border border-slate-100 rounded-2xl overflow-hidden">
+        <div class="px-4 py-2.5 bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">{{ label }}</div>
+        {% if by_section[key] %}
+        {% for p in by_section[key] %}
+        {{ page_row(p, 0) }}
+        {% endfor %}
+        {% else %}
+        <p class="px-4 py-3 text-sm text-slate-400">No pages under {{ label }} yet.</p>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

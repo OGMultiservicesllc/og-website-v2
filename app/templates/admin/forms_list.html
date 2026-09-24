@@ -1,0 +1,91 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Forms{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-brand-800">OG Forms Builder</h1>
+    <button type="button" id="new-form-btn" class="rounded-lg bg-accent-600 text-white font-semibold px-5 py-2.5 text-sm hover:bg-accent-700 transition">+ New Form</button>
+</div>
+
+{% if forms %}
+<div class="space-y-3">
+    {% for f in forms %}
+    <div class="bg-white border border-slate-100 rounded-2xl p-5 flex items-center justify-between gap-4 flex-wrap">
+        <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+                <a href="{{ url_for('admin.form_builder', form_id=f.id) }}" class="font-semibold text-slate-900 hover:text-accent-600">{{ f.name_admin }}</a>
+                <span class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded
+                    {{ 'bg-emerald-50 text-emerald-600' if f.status == 'published' else ('bg-slate-100 text-slate-500' if f.status == 'archived' else 'bg-amber-50 text-amber-600') }}">
+                    {{ f.status }}
+                </span>
+                <span class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded {{ 'bg-brand-800 text-white' if f.form_type == 'service_intake' else 'bg-slate-100 text-slate-600' }}">
+                    {{ 'Service intake' if f.form_type == 'service_intake' else 'Public inquiry' }}
+                </span>
+                {% if draft_counts.get(f.id) %}
+                <a href="{{ url_for('admin.form_submissions', form_id=f.id, drafts=1) }}" class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 hover:bg-amber-100">{{ draft_counts.get(f.id) }} in progress</a>
+                {% endif %}
+                {% if new_counts.get(f.id) %}
+                <span class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-accent-50 text-accent-700">{{ new_counts.get(f.id) }} new</span>
+                {% endif %}
+            </div>
+            <p class="text-xs text-slate-500 mt-1">{{ f.title_en }} · {{ f.pages|length }} page(s) · /f/{{ f.slug }}</p>
+        </div>
+        <div class="flex items-center gap-3 shrink-0 text-sm">
+            <a href="{{ url_for('admin.form_submissions', form_id=f.id) }}" class="text-slate-500 hover:text-accent-600 font-medium">{{ submission_counts.get(f.id, 0) }} submission(s)</a>
+            <a href="{{ url_for('admin.form_builder', form_id=f.id) }}" class="text-accent-600 hover:text-accent-700 font-semibold">Edit</a>
+            <form method="POST" action="{{ url_for('admin.form_duplicate', form_id=f.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="text-slate-400 hover:text-slate-600 font-medium">Duplicate</button></form>
+            <form method="POST" action="{{ url_for('admin.form_delete', form_id=f.id) }}" data-confirm="Delete this form and all its submissions? This cannot be undone."><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="text-red-400 hover:text-red-600 font-medium">Delete</button></form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="rounded-2xl border-2 border-dashed border-slate-200 p-16 text-center">
+    <p class="text-slate-600 mb-4">No forms yet — build your first one.</p>
+</div>
+{% endif %}
+
+<div id="new-form-modal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 sm:p-8">
+        <h2 class="text-lg font-bold text-brand-800 mb-4">New Form</h2>
+        <form method="POST" action="{{ url_for('admin.form_new') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <label class="block text-sm font-medium text-slate-700 mb-1">Internal Form Name</label>
+            <input type="text" name="name_admin" required placeholder="e.g. Request a Quote" class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-accent-500">
+            <label class="block text-sm font-medium text-slate-700 mb-2">What kind of form is this?</label>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
+                <label class="rounded-lg border border-slate-200 px-3 py-2.5 text-sm cursor-pointer has-[:checked]:border-accent-500 has-[:checked]:bg-accent-50">
+                    <input type="radio" name="form_type" value="inquiry" checked class="mr-1.5 text-accent-600 focus:ring-accent-500"><span class="font-medium">Public inquiry</span>
+                    <span class="block text-xs text-slate-500 mt-0.5 ml-5">Contact, quote, callback. No account needed.</span>
+                </label>
+                <label class="rounded-lg border border-slate-200 px-3 py-2.5 text-sm cursor-pointer has-[:checked]:border-accent-500 has-[:checked]:bg-accent-50">
+                    <input type="radio" name="form_type" value="service_intake" class="mr-1.5 text-accent-600 focus:ring-accent-500"><span class="font-medium">Service intake</span>
+                    <span class="block text-xs text-slate-500 mt-0.5 ml-5">For one OG service. Requires an account; autosaves; resumable.</span>
+                </label>
+            </div>
+            <label class="block text-sm font-medium text-slate-700 mb-2">Start from a template</label>
+            <div class="grid grid-cols-2 gap-2 mb-5">
+                {% for key, tpl in templates.items() %}
+                <label class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm cursor-pointer has-[:checked]:border-accent-500 has-[:checked]:bg-accent-50">
+                    <input type="radio" name="template" value="{{ key }}" {{ 'checked' if key == 'blank' else '' }} class="text-accent-600 focus:ring-accent-500">
+                    {{ tpl.name }}
+                </label>
+                {% endfor %}
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="submit" class="rounded-lg bg-accent-600 text-white font-semibold px-5 py-2.5 text-sm hover:bg-accent-700 transition">Create Form</button>
+                <button type="button" id="cancel-new-form" class="rounded-lg border border-slate-200 text-slate-600 font-semibold px-5 py-2.5 text-sm hover:bg-slate-50 transition">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.getElementById('new-form-btn').addEventListener('click', function () {
+        document.getElementById('new-form-modal').classList.remove('hidden');
+    });
+    document.getElementById('cancel-new-form').addEventListener('click', function () {
+        document.getElementById('new-form-modal').classList.add('hidden');
+    });
+</script>
+{% endblock %}

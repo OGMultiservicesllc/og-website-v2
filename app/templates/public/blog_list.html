@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}{{ t('blog_title') }} — OG Multiservices LLC{% endblock %}
+{% set page_description = t('blog_meta_description') %}
+
+{% block content %}
+<section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <div class="max-w-2xl mb-8">
+        <h1 class="text-4xl font-extrabold text-brand-800">{{ t('blog_title') }}</h1>
+        <p class="mt-3 text-lg text-slate-600">{{ t('blog_subtitle') }}</p>
+    </div>
+
+    {% if categories %}
+    <div class="flex flex-wrap gap-2 mb-8">
+        <a href="{{ url_for('public.blog', lang=lang) }}" class="text-sm font-medium px-3 py-1.5 rounded-full {{ 'bg-accent-600 text-white' if not active_category else 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}">{{ t('blog_all_categories') }}</a>
+        {% for cat in categories %}
+        <a href="{{ url_for('public.blog', lang=lang, category=cat) }}" class="text-sm font-medium px-3 py-1.5 rounded-full {{ 'bg-accent-600 text-white' if active_category == cat else 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}">{{ cat }}</a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if posts %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for post in posts %}
+        <a href="{{ url_for('public.blog_post', lang=lang, slug=post.slug) }}" class="rounded-2xl border border-slate-100 overflow-hidden hover:shadow-lg transition flex flex-col">
+            {% if post.cover_image %}
+            <img src="{{ url_for('public.blog_asset', lang=lang, post_id=post.id, stored_path=post.cover_image) }}" alt="{{ post.title(lang) }}" class="w-full h-40 object-cover" loading="lazy" width="400" height="160">
+            {% else %}
+            <div class="w-full h-40 bg-brand-50 flex items-center justify-center">
+                <span class="text-brand-700 font-bold text-lg">OG</span>
+            </div>
+            {% endif %}
+            <div class="p-5 flex flex-col flex-1">
+                {% if post.category %}
+                <span class="text-[10px] font-semibold uppercase tracking-wide text-accent-600 mb-1">{{ post.category }}</span>
+                {% endif %}
+                <h3 class="font-semibold text-slate-900">{{ post.title(lang) }}</h3>
+                <p class="mt-2 text-sm text-slate-600 flex-1">{{ post.excerpt(lang) }}</p>
+                <span class="mt-3 text-sm font-semibold text-accent-600">{{ t('blog_read_more') }} &rarr;</span>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="rounded-2xl border-2 border-dashed border-slate-200 p-16 text-center">
+        <p class="text-slate-600">{{ t('blog_no_posts') }}</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% from "partials/custom_form.html" import render_custom_form %}
+{% block title %}{{ page.seo_title(lang) }} — OG Multiservices LLC{% endblock %}
+{% set page_description = page.seo_description(lang) or t('seo_default_description') %}
+
+{% block content %}
+<section class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    {% if breadcrumbs %}
+    <nav class="text-sm text-slate-400 mb-4 flex flex-wrap items-center gap-1.5">
+        <a href="{{ url_for('public.home', lang=lang) }}" class="hover:text-accent-600">{{ t('breadcrumb_home') }}</a>
+        {% for crumb in breadcrumbs %}
+        <span>/</span>
+        <a href="{{ url_for('public.page_view', lang=lang, slug=crumb.slug) }}" class="hover:text-accent-600">{{ crumb.title(lang) }}</a>
+        {% endfor %}
+        <span>/</span>
+        <span class="text-slate-600">{{ page.title(lang) }}</span>
+    </nav>
+    {% elif page.parent_section %}
+    {% set section_nav_keys = {'services': 'nav_services', 'translations': 'nav_translations', 'taxes_itin': 'nav_taxes_itin', 'academy': 'nav_academy', 'resources': 'nav_resources'} %}
+    <nav class="text-sm text-slate-400 mb-4">
+        <span>{{ t(section_nav_keys[page.parent_section]) }}</span> <span>/</span> <span class="text-slate-600">{{ page.title(lang) }}</span>
+    </nav>
+    {% endif %}
+
+    <h1 class="text-3xl sm:text-4xl font-extrabold text-brand-800 mb-6">{{ page.title(lang) }}</h1>
+
+    {% if page.sections %}
+    <div class="space-y-8">
+        {% for s in page.sections %}
+            {% if s.block_type == 'heading' %}
+            <h2 class="text-2xl font-bold text-brand-800">{{ s.heading(lang) }}</h2>
+            {% elif s.block_type == 'text' %}
+            <div class="prose prose-slate max-w-none">{{ s.text(lang)|safe }}</div>
+            {% elif s.block_type == 'image' %}
+            <figure>
+                <img src="{{ url_for('public.page_section_asset', lang=lang, section_id=s.id, stored_path=s.image_filename) }}" alt="{{ s.text(lang) }}" class="w-full rounded-2xl">
+                {% if s.text(lang) %}
+                <figcaption class="mt-2 text-sm text-slate-500 text-center">{{ s.text(lang) }}</figcaption>
+                {% endif %}
+            </figure>
+            {% elif s.block_type == 'button' %}
+            <a href="{{ url_for('public.page_view', lang=lang, slug=s.link_page.slug) if s.link_page else (s.link_url or '#') }}"
+               class="inline-flex items-center rounded-lg bg-accent-600 text-white font-semibold px-6 py-3 hover:bg-accent-700 transition">
+                {{ s.button_label(lang) }}
+            </a>
+            {% elif s.block_type == 'divider' %}
+            <hr class="border-slate-100">
+            {% elif s.block_type == 'form' and s.custom_form and s.custom_form.is_active %}
+            {{ render_custom_form(s.custom_form, lang, csrf_token, url_for('public.form_submit', lang=lang, slug=s.custom_form.slug)) }}
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="prose prose-slate max-w-none">
+        {{ page.content(lang)|safe }}
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

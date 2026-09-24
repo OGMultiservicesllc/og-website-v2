@@ -1,0 +1,69 @@
+{% extends "account/base_account.html" %}
+{% from "partials/ui.html" import empty_state %}
+{% from "partials/icons.html" import icon %}
+{% set en = lang == 'en' %}
+{% block title %}{{ 'Payments' if en else 'Pagos' }}{% endblock %}
+
+{% block account_body %}
+<section class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10 sm:pb-16">
+    <h1 class="text-2xl font-extrabold tracking-tight text-brand-800 mb-1">{{ 'Payments' if en else 'Pagos' }}</h1>
+
+    {% if amount_due_cents %}
+    <div class="mt-4 rounded-card bg-amber-50 border border-amber-200 p-5">
+        <p class="text-[12px] font-bold uppercase tracking-wide text-amber-800">{{ 'Amount Due' if en else 'Monto Pendiente' }}</p>
+        <p class="mt-1 text-3xl font-extrabold text-amber-900 tabular-nums">{{ amount_due }}</p>
+    </div>
+    {% else %}
+    <p class="mt-2 text-slate-500 text-[15px]">{{ "You're all caught up — no payments needed right now." if en else 'Estás al día — no se necesitan pagos por ahora.' }}</p>
+    {% endif %}
+
+    {% if needed %}
+    <h2 class="mt-8 text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">{{ 'Payments Needed' if en else 'Pagos Necesarios' }}</h2>
+    <ul class="space-y-3">
+        {% for row in needed %}
+        <li class="rounded-card bg-white border border-amber-200 shadow-card p-4 sm:p-5">
+            <div class="flex items-start justify-between gap-3 flex-wrap">
+                <div class="min-w-0">
+                    <p class="font-bold text-brand-800">{{ row.description }}</p>
+                    {% if row.context_title and row.context_title != row.description %}<p class="text-[12px] text-slate-500">{{ row.context_title }}</p>{% endif %}
+                </div>
+                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold border {{ {'action': 'bg-amber-50 text-amber-800 border-amber-200'}.get(row.tone, 'bg-fog-100 text-slate-600 border-slate-200') }}">{{ row.label }}</span>
+            </div>
+            <dl class="mt-3 grid grid-cols-3 gap-2 text-center max-w-xs">
+                <div><dt class="text-[11px] text-slate-400 font-semibold uppercase">{{ 'Total' if en else 'Total' }}</dt><dd class="font-bold text-brand-800 tabular-nums">{{ row.total }}</dd></div>
+                <div><dt class="text-[11px] text-slate-400 font-semibold uppercase">{{ 'Paid' if en else 'Pagado' }}</dt><dd class="font-bold text-emerald-700 tabular-nums">{{ row.paid }}</dd></div>
+                <div><dt class="text-[11px] text-slate-400 font-semibold uppercase">{{ 'Balance' if en else 'Saldo' }}</dt><dd class="font-bold text-brand-800 tabular-nums">{{ row.balance }}</dd></div>
+            </dl>
+            {% if row.pay_url %}
+            <a href="{{ row.pay_url }}" class="mt-4 inline-flex items-center justify-center min-h-[46px] px-6 rounded-xl bg-accent-600 text-white text-[15px] font-bold hover:bg-accent-700 transition">
+                {{ 'Make a Payment' if en else 'Realizar un Pago' }}{% if row.requested %} — {{ row.requested }}{% endif %}
+            </a>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    <h2 class="mt-8 text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">{{ 'Payment History' if en else 'Historial de Pagos' }}</h2>
+    {% if history %}
+    <ul class="space-y-2.5">
+        {% for row in history %}
+        <li class="flex flex-wrap items-center gap-3 rounded-card bg-white border border-slate-100 shadow-card p-3.5">
+            <span class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 {{ 'bg-emerald-50 text-emerald-600' if row.payment.status == 'completed' else 'bg-red-50 text-red-600' }}">{{ icon('card', 'w-5 h-5') }}</span>
+            <div class="min-w-0 flex-1 basis-48">
+                <p class="font-semibold text-sm text-brand-800 truncate">{{ row.service }}</p>
+                <p class="text-[12px] text-slate-500 mt-0.5">{{ row.date.strftime('%b %d, %Y') if row.date else '' }} · {{ row.method_text }}</p>
+            </div>
+            <div class="text-right shrink-0">
+                <p class="font-bold tabular-nums {{ 'text-emerald-700' if row.payment.status == 'completed' else 'text-red-600' }}">{{ row.amount }}</p>
+                <p class="text-[12px] font-semibold {{ 'text-emerald-700' if row.payment.status == 'completed' else 'text-red-600' }}">{{ row.status_text }}{% if row.refunded %} · {{ 'refunded' if en else 'reembolsado' }}{% endif %}</p>
+            </div>
+            <a href="{{ row.receipt_url }}" class="text-[13px] font-semibold text-accent-700 hover:underline shrink-0 basis-full sm:basis-auto">{{ 'View Receipt' if en else 'Ver Recibo' }}</a>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    {{ empty_state(('No payments yet.' if en else 'Todavía no hay pagos.'), ('Your payments to OG will appear here.' if en else 'Tus pagos a OG aparecerán aquí.'), 'card') }}
+    {% endif %}
+</section>
+{% endblock %}

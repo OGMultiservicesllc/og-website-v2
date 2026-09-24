@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{ form.title(lang) }} — OG Multiservices LLC{% endblock %}
+
+{% block content %}
+<section class="max-w-lg mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+    <span class="w-14 h-14 mx-auto rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-5">
+        <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+    </span>
+    {% if form.success_message(lang) %}
+    <p class="text-slate-700 leading-relaxed">{{ form.success_message(lang) }}</p>
+    {% else %}
+    <h1 class="text-xl font-bold text-brand-800">{{ 'Thank you!' if lang == 'en' else '¡Gracias!' }}</h1>
+    <p class="mt-2 text-slate-500 text-sm">{{ 'Your submission has been received.' if lang == 'en' else 'Tu envío ha sido recibido.' }}</p>
+    {% endif %}
+    <p class="mt-6 text-xs text-slate-400">{{ 'Reference' if lang == 'en' else 'Referencia' }}: <span class="font-mono">{{ submission.code }}</span></p>
+</section>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "intake_base.html" %}
+{% from "partials/ui.html" import info_panel %}
+{% block title %}{{ 'We found different information' if lang == 'en' else 'Encontramos información diferente' }} — {{ form.title(lang) }}{% endblock %}
+
+{% block header_actions %}
+<a href="{{ url_for('account.applications', lang=lang) }}" class="min-h-[40px] inline-flex items-center px-3 rounded-full text-sm font-semibold text-slate-600 hover:text-brand-800 hover:bg-mist-100 transition">{{ t('intake_save_exit') }}</a>
+{% endblock %}
+
+{% block content %}
+<p class="text-xs font-bold uppercase tracking-wider text-accent-700">{{ service.title(lang) if service else form.title(lang) }}{% if form.source_form_name %} · Form {{ form.source_form_name }}{% endif %}</p>
+<h1 class="mt-1 text-[1.6rem] sm:text-3xl leading-tight font-extrabold tracking-tight text-brand-800">{{ 'We found different information' if lang == 'en' else 'Encontramos información diferente' }}</h1>
+<p class="mt-1.5 text-[15px] text-slate-600">{{ 'Different applications say different things about ' ~ (person_name or 'this person') ~ '. Please choose the correct one. We will not change what you already submitted; we keep both as history.' if lang == 'en' else 'Distintas solicitudes dicen cosas diferentes sobre ' ~ (person_name or 'esta persona') ~ '. Elige la correcta. No cambiaremos lo que ya enviaste; conservamos ambas como historial.' }}</p>
+
+<form method="post" action="{{ url_for('public.og_form_conflicts', lang=lang, slug=form.slug, t=submission.resume_token, block=block_key) }}" class="mt-5 space-y-4" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {% for r in rows %}
+    <fieldset class="rounded-card bg-white border {{ 'border-red-300' if r.error else 'border-slate-100' }} shadow-card p-4 sm:p-5">
+        <legend class="text-[15px] font-bold text-brand-800">{{ r.label }}</legend>
+        <div class="mt-3 space-y-2">
+            {% for o in r.options %}
+            <label class="flex items-start gap-3 rounded-xl border border-slate-200 hover:border-accent-300 px-3.5 py-3 min-h-[52px] cursor-pointer">
+                <input type="radio" name="c_{{ r.key }}" value="opt:{{ loop.index0 }}" class="mt-1 h-5 w-5 shrink-0 accent-accent-600" {{ 'checked' if r.choice == 'opt:' ~ loop.index0 }}>
+                <span class="min-w-0"><span class="block text-[15px] font-semibold text-brand-800 break-words">{{ o.display }}</span>
+                    <span class="block text-[12px] text-slate-500">
+                        {% for s in o.sources %}{{ ('Previously provided in Form ' if lang == 'en' else 'Indicado antes en el Formulario ') ~ (s.form or '—') }}{% if s.at %} · {{ s.at.strftime('%b %d, %Y') if lang == 'en' else s.at.strftime('%d/%m/%Y') }}{% endif %}{% if s.state in ('draft', 'reopened') %} ({{ 'unfinished' if lang == 'en' else 'sin terminar' }}){% endif %}{% if not loop.last %}<br>{% endif %}{% endfor %}
+                    </span></span>
+            </label>
+            {% endfor %}
+            <label class="flex items-start gap-3 rounded-xl border border-slate-200 hover:border-accent-300 px-3.5 py-3 min-h-[52px] cursor-pointer">
+                <input type="radio" name="c_{{ r.key }}" value="custom" class="mt-1 h-5 w-5 shrink-0 accent-accent-600" {{ 'checked' if r.choice == 'custom' }}>
+                <span class="min-w-0 flex-1"><span class="block text-[15px] font-semibold text-brand-800">{{ 'Enter a different value' if lang == 'en' else 'Escribir un valor diferente' }}</span>
+                    {% if r.kind == 'date' %}<input type="date" name="v_{{ r.key }}" value="{{ r.custom }}" max="{{ today }}" class="mt-2 w-full min-h-[48px] rounded-xl border border-slate-200 px-3.5 text-[15px]">
+                    {% elif r.kind == 'choice' %}<select name="v_{{ r.key }}" class="mt-2 w-full min-h-[48px] rounded-xl border border-slate-200 px-3.5 text-[15px]"><option value=""></option>{% for k, v in r.choices.items() %}<option value="{{ k }}" {{ 'selected' if r.custom == k }}>{{ v[0] if lang == 'en' else v[1] }}</option>{% endfor %}</select>
+                    {% else %}<input type="text" name="v_{{ r.key }}" value="{{ r.custom }}" maxlength="120" autocomplete="off" class="mt-2 w-full min-h-[48px] rounded-xl border border-slate-200 px-3.5 text-[15px]">{% endif %}
+                </span>
+            </label>
+        </div>
+        {% if r.error %}<p class="mt-2 text-[13px] font-medium text-red-700" role="alert">{{ r.error }}</p>{% endif %}
+    </fieldset>
+    {% endfor %}
+    <div class="flex flex-col sm:flex-row gap-2.5">
+        <button type="submit" class="inline-flex items-center justify-center min-h-[52px] rounded-[14px] bg-accent-600 text-white font-semibold px-8 hover:bg-accent-700 transition">{{ 'Confirm' if lang == 'en' else 'Confirmar' }}</button>
+        <a href="{{ back }}" class="inline-flex items-center justify-center min-h-[52px] rounded-[14px] border border-slate-200 font-semibold text-brand-800 px-8 hover:border-accent-300 transition">{{ t('intake_back') if False else ('Back' if lang == 'en' else 'Volver') }}</a>
+    </div>
+</form>
+{% endblock %}

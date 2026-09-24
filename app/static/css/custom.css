@@ -1,0 +1,121 @@
+/* OG design system — base styles that Tailwind utilities can't express.
+   Tokens themselves live in the Tailwind config (partials/tailwind_head.html);
+   structure lives in the Jinja macros (partials/ui.html). */
+
+:root {
+    --og-bottom-nav-h: 3.75rem;
+    --og-safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+}
+
+/* Reserve room for the fixed mobile bottom bar (+ iPhone home indicator) so it
+   never covers page content. Desktop has no bottom bar. */
+.og-body-pad {
+    padding-bottom: calc(var(--og-bottom-nav-h) + var(--og-safe-bottom));
+}
+@media (min-width: 768px) {
+    .og-body-pad { padding-bottom: 0; }
+}
+
+.og-bottom-nav {
+    padding-bottom: var(--og-safe-bottom);
+}
+
+/* Floating helpers sit above the mobile bottom bar. */
+.og-float-above-nav {
+    bottom: calc(var(--og-bottom-nav-h) + var(--og-safe-bottom) + 0.75rem);
+}
+@media (min-width: 768px) {
+    .og-float-above-nav { bottom: 1.5rem; }
+    .og-float-chat { bottom: 5rem !important; }
+}
+
+/* Visible keyboard focus everywhere. */
+:where(a, button, input, select, textarea, summary):focus-visible {
+    outline: 2px solid #0aa3cf;
+    outline-offset: 2px;
+}
+
+/* Controlled image slots: fixed aspect ratio, cover-cropped, focal point. */
+.og-media {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, #e8f6fb 0%, #f4fbfd 60%, #ffffff 100%);
+}
+.og-media > img,
+.og-media > picture,
+.og-media > picture > img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.og-focus-center > img, .og-focus-center picture > img { object-position: center; }
+.og-focus-top > img, .og-focus-top picture > img { object-position: center top; }
+.og-focus-bottom > img, .og-focus-bottom picture > img { object-position: center bottom; }
+.og-focus-left > img, .og-focus-left picture > img { object-position: left center; }
+.og-focus-right > img, .og-focus-right picture > img { object-position: right center; }
+.og-ratio-16-9 { aspect-ratio: 16 / 9; }
+.og-ratio-21-9 { aspect-ratio: 21 / 9; }
+.og-ratio-4-3 { aspect-ratio: 4 / 3; }
+.og-ratio-1-1 { aspect-ratio: 1 / 1; }
+.og-ratio-3-2 { aspect-ratio: 3 / 2; }
+
+/* Horizontal scroller without a visible scrollbar (chips / quick actions). */
+.og-scroll-x {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+}
+.og-scroll-x::-webkit-scrollbar { display: none; }
+.og-scroll-x > * { scroll-snap-align: start; flex: none; }
+
+.og-line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Save-state indicator used by autosaving forms. */
+.og-save-status { transition: opacity .2s ease; }
+
+/* Floating WhatsApp button — gentle highlight on service pages, where messaging
+   us is the primary call to action. */
+@keyframes og-wa-pulse-ring {
+    0% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.55); }
+    70% { box-shadow: 0 0 0 12px rgba(37, 211, 102, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); }
+}
+.og-wa-pulse {
+    animation: og-wa-pulse-ring 2.2s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .og-wa-pulse { animation: none; }
+    * { transition-duration: 0.01ms !important; }
+}
+
+/* Forms: touch-friendly controls. 16px text prevents iOS Safari zooming on focus. */
+.og-form-shell #og-form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]),
+.og-form-shell #og-form select,
+.og-form-shell #og-form textarea {
+    font-size: 16px;
+    min-height: 48px;
+    border-radius: 12px;
+}
+.og-form-shell #og-form input:focus-visible,
+.og-form-shell #og-form select:focus-visible,
+.og-form-shell #og-form textarea:focus-visible {
+    outline: 2px solid var(--form-accent, #0aa3cf);
+    outline-offset: 1px;
+}

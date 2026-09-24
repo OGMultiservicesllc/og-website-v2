@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% import "forms/_field_macros.html" as fm with context %}
+{% block title %}{{ form.title(lang) }} — OG Multiservices LLC{% endblock %}
+
+{% block content %}
+{% set accent = form.accent_color or '#0aa3cf' %}
+{% set radius = {'sharp': '4px', 'rounded': '16px', 'pill': '28px'}[form.border_radius] %}
+{% set btn_radius = {'sharp': '4px', 'rounded': '12px', 'pill': '999px'}[form.border_radius] %}
+{% set pad = 'p-5 sm:p-6' if form.spacing == 'compact' else 'p-5 sm:p-9' %}
+{% set gap = 'gap-3' if form.spacing == 'compact' else 'gap-4 sm:gap-5' %}
+{% set pct = ((page_number / total_pages) * 100)|round|int %}
+{% set is_intake = form.is_service_intake %}
+<div class="og-form-shell bg-gradient-to-b from-mist-100 to-white" style="--form-accent: {{ accent }}; --form-radius: {{ radius }}; --form-btn-radius: {{ btn_radius }}">
+<section class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10 sm:pt-10 sm:pb-14">
+
+    <div class="flex items-start justify-between gap-4 mb-4">
+        <div class="min-w-0">
+            {% if is_intake and submission and submission.service %}
+            <a href="{{ url_for(submission.service.category.subpage_endpoint, lang=lang, slug=submission.service.slug) }}" class="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-accent-700 mb-1.5">&larr; {{ submission.service.title(lang) }}</a>
+            {% endif %}
+            <h1 class="text-[1.6rem] leading-tight sm:text-3xl font-extrabold tracking-tight text-brand-800 text-balance">{{ form.title(lang) }}</h1>
+            {% if form.description(lang) %}<p class="text-sm sm:text-[15px] text-slate-600 mt-1.5">{{ form.description(lang) }}</p>{% endif %}
+        </div>
+        <div class="flex items-center gap-0.5 rounded-full border border-slate-200 bg-white p-0.5 text-xs font-bold shrink-0" role="group" aria-label="Language">
+            {% for code in ('en', 'es') %}
+            <a href="{{ url_for('public.og_form_view', lang=code, slug=form.slug, page=page_number, t=submission.resume_token if submission else none) }}" data-lang-switch
+               class="px-2.5 py-1.5 rounded-full {{ 'text-white' if lang == code else 'text-slate-500 hover:text-slate-800' }}" style="{{ 'background-color: var(--form-accent)' if lang == code else '' }}"
+               {% if lang == code %}aria-current="true"{% endif %}>{{ code|upper }}</a>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% if form.show_progress and total_pages > 1 %}
+    <div class="mb-5" aria-label="Progress">
+        <div class="flex items-center justify-between text-xs font-semibold text-slate-500 mb-1.5">
+            <span>{{ t('intake_step_of') % (page_number, total_pages) }}</span>
+            <span class="flex items-center gap-3">
+                {% if autosave_enabled %}
+                <span id="og-save-status" class="og-save-status inline-flex items-center gap-1.5 font-medium text-slate-400" aria-live="polite" data-saving="{{ t('intake_saving') }}" data-saved="{{ t('intake_saved') }}" data-failed="{{ t('intake_save_failed') }}"></span>
+                {% endif %}
+                <span>{{ pct }}%</span>
+            </span>
+        </div>
+        <div class="h-2 rounded-full bg-fog-200 overflow-hidden" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ pct }}">
+            <div class="h-full rounded-full transition-all" style="width: {{ pct }}%; background-color: var(--form-accent)"></div>
+        </div>
+    </div>
+    {% elif autosave_enabled %}
+    <p class="mb-3 text-right"><span id="og-save-status" class="og-save-status inline-flex items-center gap-1.5 text-xs font-medium text-slate-400" aria-live="polite" data-saving="{{ t('intake_saving') }}" data-saved="{{ t('intake_saved') }}" data-failed="{{ t('intake_save_failed') }}"></span></p>
+    {% endif %}
+
+    {% if errors %}
+    <div class="mb-4 rounded-card border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+        {{ 'Please fix the highlighted fields to continue.' if lang == 'en' else 'Corrige los campos marcados para continuar.' }}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('public.og_form_submit', lang=lang, slug=form.slug) }}" enctype="multipart/form-data"
+          id="og-form" data-prior-values="{{ prior_values_json|e }}" data-rules="{{ page_rules_json|e }}" data-other-answers="{{ other_answers_json|e }}"
+          {% if autosave_enabled %}data-autosave="{{ url_for('public.og_form_autosave', lang=lang, slug=form.slug) }}"{% endif %}
+          class="{{ 'bg-white border border-slate-100 shadow-card' if form.background_style == 'card' else '' }} {{ pad }}" style="border-radius: var(--form-radius)" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="page_number" value="{{ page_number }}">
+        <input type="hidden" name="resume_token" value="{{ submission.resume_token if submission else '' }}">
+
+        {% if page.title(lang) %}<h2 class="text-lg font-bold text-brand-800 mb-1">{{ page.title(lang) }}</h2>{% endif %}
+        {% if page.description(lang) %}<p class="text-sm text-slate-500 mb-4">{{ page.description(lang) }}</p>{% endif %}
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 {{ gap }} mt-4">
+            {% for field in page.fields %}
+            {% set visible = field_effects.get(field.id, {}).get('visible', true) %}
+            {{ fm.render_field(field, lang, visible, errors.get(field.id)) }}
+            {% endfor %}
+        </div>
+
+        <div class="mt-7 pt-5 border-t border-slate-100 flex flex-wrap items-center gap-3">
+            {% if page_number > 1 %}
+            <button type="submit" formnovalidate name="nav" value="back" class="order-2 sm:order-1 min-h-[48px] px-4 text-sm font-semibold text-slate-600 hover:text-slate-900">
+                &larr; {{ t('intake_back') }}
+            </button>
+            {% endif %}
+            {% if autosave_enabled %}
+            <button type="submit" formnovalidate name="nav" value="exit" class="order-3 sm:order-2 min-h-[48px] px-4 text-sm font-semibold text-slate-500 hover:text-slate-800 sm:ml-auto">
+                {{ t('intake_save_exit') }}
+            </button>
+            {% endif %}
+            <button type="submit"
+                    class="order-1 sm:order-3 w-full sm:w-auto {{ '' if autosave_enabled else 'sm:ml-auto' }} min-h-[52px] text-white font-semibold px-8 text-[15px] transition {{ 'border-2' if form.button_style == 'outline' else '' }}"
+                    style="{{ 'background-color: var(--form-accent)' if form.button_style == 'solid' else 'background: transparent; border-color: var(--form-accent); color: var(--form-accent)' }}; border-radius: var(--form-btn-radius)">
+                {% if page_number < total_pages %}{{ t('intake_continue') }} &rarr;{% else %}{{ form.submit_label(lang) }}{% endif %}
+            </button>
+        </div>
+    </form>
+</section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/4.1.7/signature_pad.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/og_form.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Submissions — {{ form.name_admin }}{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('admin.form_builder', form_id=form.id) }}" class="text-sm text-slate-500 hover:text-accent-600">&larr; {{ form.name_admin }}</a>
+
+<div class="flex items-center justify-between mt-2 mb-6 flex-wrap gap-3">
+    <h1 class="text-2xl font-bold text-brand-800">Submissions</h1>
+    <a href="{{ url_for('admin.form_submissions_export', form_id=form.id) }}" class="rounded-lg border border-slate-200 text-slate-600 font-semibold px-4 py-2 text-sm hover:border-accent-300 transition">Export CSV</a>
+</div>
+
+<div class="flex gap-2 mb-4">
+    <a href="{{ url_for('admin.form_submissions', form_id=form.id) }}" class="rounded-full px-3.5 py-1.5 text-sm font-medium {{ 'bg-brand-800 text-white' if not show_drafts else 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300' }}">Submitted</a>
+    <a href="{{ url_for('admin.form_submissions', form_id=form.id, drafts=1) }}" class="rounded-full px-3.5 py-1.5 text-sm font-medium {{ 'bg-brand-800 text-white' if show_drafts else 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300' }}">In progress{% if draft_total %} ({{ draft_total }}){% endif %}</a>
+</div>
+
+<form method="GET" class="flex flex-wrap items-center gap-2 mb-5">
+    {% if show_drafts %}<input type="hidden" name="drafts" value="1">{% endif %}
+    <input type="text" name="q" value="{{ q }}" placeholder="Search name, email, phone, ID…" class="rounded-lg border border-slate-200 px-3 py-2 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-accent-500">
+    <select name="status" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+        <option value="">All statuses</option>
+        {% for s in statuses %}<option value="{{ s }}" {{ 'selected' if status == s else '' }}>{{ s.replace('_', ' ')|title }}</option>{% endfor %}
+    </select>
+    <select name="sort" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+        <option value="newest" {{ 'selected' if sort == 'newest' else '' }}>Newest first</option>
+        <option value="oldest" {{ 'selected' if sort == 'oldest' else '' }}>Oldest first</option>
+    </select>
+    <button type="submit" class="rounded-lg bg-accent-600 text-white font-semibold px-4 py-2 text-sm hover:bg-accent-700 transition">Filter</button>
+</form>
+
+{% if submissions %}
+<div class="bg-white border border-slate-100 rounded-2xl overflow-hidden">
+    <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-xs text-slate-500 uppercase tracking-wide">
+            <tr>
+                <th class="text-left px-4 py-2.5">ID</th>
+                <th class="text-left px-4 py-2.5">Date</th>
+                <th class="text-left px-4 py-2.5">Name</th>
+                <th class="text-left px-4 py-2.5">Email</th>
+                <th class="text-left px-4 py-2.5">Phone</th>
+                <th class="text-left px-4 py-2.5">Lang</th>
+                <th class="text-left px-4 py-2.5">Status</th>
+                <th class="text-left px-4 py-2.5"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-50">
+            {% for s in submissions %}
+            <tr class="hover:bg-slate-50">
+                <td class="px-4 py-2.5 font-mono text-xs">{{ s.code }}</td>
+                <td class="px-4 py-2.5 text-slate-500 text-xs">{{ s.submitted_at.strftime('%b %d, %Y %H:%M') if s.submitted_at else '—' }}</td>
+                <td class="px-4 py-2.5">{{ s.display_name or '—' }}</td>
+                <td class="px-4 py-2.5">{{ s.display_email or '—' }}</td>
+                <td class="px-4 py-2.5">{{ s.display_phone or '—' }}</td>
+                <td class="px-4 py-2.5 uppercase text-xs text-slate-400">{{ s.language }}</td>
+                <td class="px-4 py-2.5">
+                    <span class="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded
+                        {% if s.status == 'new' %}bg-accent-50 text-accent-700
+                        {% elif s.status in ('in_review', 'reopened') %}bg-amber-50 text-amber-700
+                        {% elif s.status == 'waiting_client' %}bg-purple-50 text-purple-700
+                        {% elif s.status == 'completed' %}bg-emerald-50 text-emerald-700
+                        {% else %}bg-slate-100 text-slate-500{% endif %}">
+                        {{ s.status.replace('_', ' ') }}
+                    </span>
+                </td>
+                <td class="px-4 py-2.5 text-right"><a href="{{ url_for('admin.form_submission_detail', submission_id=s.id) }}" class="text-accent-600 hover:text-accent-700 font-semibold text-xs">Open →</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="rounded-2xl border-2 border-dashed border-slate-200 p-16 text-center">
+    <p class="text-slate-600">No submissions{{ ' match your filters' if q or status else ' yet' }}.</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends "intake_base.html" %}
+{% from "partials/ui.html" import info_panel %}
+{% set heading_en = 'Who is applying for employment authorization?' if form.source_form_name == 'I-765' else 'Who is this application for?' %}
+{% set heading_es = '¿Quién solicita la autorización de empleo?' if form.source_form_name == 'I-765' else '¿Para quién es esta solicitud?' %}
+{% block title %}{{ heading_en if lang == 'en' else heading_es }} — {{ form.title(lang) }}{% endblock %}
+
+{% block header_actions %}
+<div class="flex items-center gap-0.5 rounded-full border border-slate-200 bg-white p-0.5 text-xs font-bold" role="group" aria-label="Language">
+    {% for code in ('en', 'es') %}
+    <a href="{{ url_for('public.og_form_setup', lang=code, slug=form.slug, t=submission.resume_token) }}" class="px-2.5 py-1.5 rounded-full {{ 'text-white bg-accent-600' if lang == code else 'text-slate-500 hover:text-slate-800' }}" {% if lang == code %}aria-current="true"{% endif %}>{{ code|upper }}</a>
+    {% endfor %}
+</div>
+<a href="{{ url_for('account.applications', lang=lang) }}" class="min-h-[40px] inline-flex items-center px-3 rounded-full text-sm font-semibold text-slate-600 hover:text-brand-800 hover:bg-mist-100 transition">{{ t('intake_save_exit') }}</a>
+{% endblock %}
+
+{% block content %}
+<p class="text-xs font-bold uppercase tracking-wider text-accent-700">{{ service.title(lang) if service else form.title(lang) }}{% if form.source_form_name %} · Form {{ form.source_form_name }}{% endif %}</p>
+<h1 class="mt-1 text-[1.6rem] sm:text-3xl leading-tight font-extrabold tracking-tight text-brand-800">{{ heading_en if lang == 'en' else heading_es }}</h1>
+<p class="mt-1.5 text-[15px] text-slate-600">{{ 'The person applying is the applicant. Pick them below — if they are already part of one of your cases, we will reuse what we already know about them instead of asking again.' if lang == 'en' else 'La persona que solicita es el solicitante. Elígela abajo: si ya forma parte de uno de tus casos, reutilizaremos lo que ya sabemos en lugar de preguntarlo de nuevo.' }}</p>
+
+{% if error %}<div class="mt-4" role="alert">{{ info_panel(None, error, 'notice') }}</div>{% endif %}
+
+<form method="post" action="{{ url_for('public.og_form_setup', lang=lang, slug=form.slug, t=submission.resume_token) }}" class="mt-5 space-y-5" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {% for group in groups %}
+    <fieldset class="rounded-card bg-white border border-slate-100 shadow-card p-4 sm:p-5">
+        <legend class="sr-only">{{ group.case.case_number }}</legend>
+        <p class="text-xs font-bold uppercase tracking-wider text-slate-500">{{ 'In your case' if lang == 'en' else 'En tu caso' }} <span class="font-mono">{{ group.case.case_number }}</span> &middot; {{ group.case.title }}</p>
+        {% if group.applications %}<p class="mt-0.5 text-[12px] text-slate-500">{{ 'Already in this case' if lang == 'en' else 'Ya en este caso' }}: {{ group.applications|join(' · ') }}</p>{% endif %}
+        <div class="mt-3 space-y-2">
+            {% for c in group.choices %}
+            <label class="flex items-start gap-3 rounded-xl border px-3.5 py-3 min-h-[52px] {{ 'border-slate-100 bg-slate-50 opacity-70' if c.disabled else 'border-slate-200 hover:border-accent-300 cursor-pointer' }}">
+                <input type="radio" name="choice" value="{{ c.value }}" class="mt-1 h-5 w-5 shrink-0 accent-accent-600" {% if c.disabled %}disabled{% endif %} {% if selected == c.value %}checked{% endif %} required>
+                <span class="min-w-0"><span class="block text-[15px] font-semibold text-brand-800 break-words">{{ c.label }}</span>
+                    <span class="block text-[12px] text-slate-500">{{ c.sub }}{% if c.disabled %} &middot; {{ c.reason }}{% endif %}</span></span>
+            </label>
+            {% endfor %}
+        </div>
+    </fieldset>
+    {% endfor %}
+    <fieldset class="rounded-card bg-white border border-slate-100 shadow-card p-4 sm:p-5">
+        <legend class="sr-only">{{ 'New case' if lang == 'en' else 'Caso nuevo' }}</legend>
+        <p class="text-xs font-bold uppercase tracking-wider text-slate-500">{{ 'Start a new case' if lang == 'en' else 'Empezar un caso nuevo' }}</p>
+        <div class="mt-3 space-y-2">
+            {% for c in new_choices %}
+            <label class="flex items-start gap-3 rounded-xl border px-3.5 py-3 min-h-[52px] {{ 'border-slate-100 bg-slate-50 opacity-70' if c.disabled else 'border-slate-200 hover:border-accent-300 cursor-pointer' }}">
+                <input type="radio" name="choice" value="{{ c.value }}" class="mt-1 h-5 w-5 shrink-0 accent-accent-600" {% if c.disabled %}disabled{% endif %} {% if selected == c.value %}checked{% endif %} required>
+                <span class="min-w-0"><span class="block text-[15px] font-semibold text-brand-800 break-words">{{ c.label }}</span>
+                    {% if c.sub or c.disabled %}<span class="block text-[12px] text-slate-500">{{ c.sub }}{% if c.disabled %} &middot; {{ c.reason }}{% endif %}</span>{% endif %}</span>
+            </label>
+            {% endfor %}
+        </div>
+    </fieldset>
+    <fieldset class="rounded-card bg-white border border-slate-100 shadow-card p-4 sm:p-5">
+        <legend class="text-[15px] font-bold text-brand-800">{{ 'If it is for someone who is not in your case yet' if lang == 'en' else 'Si es para alguien que aún no está en tu caso' }}</legend>
+        <p class="mt-1 text-[13px] text-slate-500">{{ 'Type their legal name. They do not get a login; you answer for them.' if lang == 'en' else 'Escribe su nombre legal. No recibe un acceso; tú respondes por esa persona.' }}</p>
+        <div class="mt-3 grid sm:grid-cols-2 gap-3">
+            <label class="block"><span class="block text-xs font-semibold text-slate-500">{{ 'Given name (first name)' if lang == 'en' else 'Nombre(s)' }}</span>
+                <input type="text" name="new_given" value="{{ new_given }}" maxlength="120" autocomplete="off" class="mt-1 w-full min-h-[48px] rounded-xl border border-slate-200 px-3.5 text-[15px]"></label>
+            <label class="block"><span class="block text-xs font-semibold text-slate-500">{{ 'Family name (last name)' if lang == 'en' else 'Apellido' }}</span>
+                <input type="text" name="new_family" value="{{ new_family }}" maxlength="120" autocomplete="off" class="mt-1 w-full min-h-[48px] rounded-xl border border-slate-200 px-3.5 text-[15px]"></label>
+        </div>
+    </fieldset>
+    <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center min-h-[52px] rounded-[14px] bg-accent-600 text-white font-semibold px-8 hover:bg-accent-700 transition">{{ 'Continue' if lang == 'en' else 'Continuar' }}</button>
+</form>
+{% endblock %}

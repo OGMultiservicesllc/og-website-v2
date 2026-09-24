@@ -1,0 +1,220 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Case Builder — {{ case.title_en }}{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex items-start justify-between gap-4 flex-wrap">
+    <div>
+        <a href="{{ url_for('admin.course_builder', course_id=lesson.section.course_id) }}" class="text-sm text-slate-500 hover:text-accent-600">&larr; Back to {{ lesson.section.course.title_en }}</a>
+        <h1 class="text-2xl font-bold text-brand-800 mt-2">Case Builder</h1>
+        <p class="text-sm text-slate-500">Section: {{ lesson.section.title_en }} — this is OG Forensic Training's Case Simulation activity, not criminal forensics: deep document/information review training.</p>
+    </div>
+    <div class="flex items-center gap-2 shrink-0">
+        <a href="{{ url_for('admin.case_preview', case_id=case.id) }}" target="_blank"
+           class="inline-flex items-center rounded-lg border border-slate-200 text-brand-800 font-semibold px-4 py-2.5 text-sm hover:border-accent-300 transition">
+            Preview as Student
+        </a>
+        <form method="POST" action="{{ url_for('admin.case_duplicate', case_id=case.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="inline-flex items-center rounded-lg border border-slate-200 text-brand-800 font-semibold px-4 py-2.5 text-sm hover:border-accent-300 transition">
+                Duplicate Case
+            </button>
+        </form>
+    </div>
+</div>
+
+<form method="POST" class="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 space-y-6 max-w-3xl">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Case Title (English)</label>
+            <input type="text" name="title_en" required value="{{ case.title_en }}"
+                   class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Título del Caso (Español)</label>
+            <input type="text" name="title_es" required value="{{ case.title_es }}"
+                   class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Description (English)</label>
+            <textarea name="description_en" rows="2" placeholder="One or two sentences of context shown before the client profile."
+                      class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ case.description_en or '' }}</textarea>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Descripción (Español)</label>
+            <textarea name="description_es" rows="2"
+                      class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ case.description_es or '' }}</textarea>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Client Profile (English)</label>
+            <textarea name="client_profile_en" rows="5" placeholder="Fictional client name, situation, notes — everything the student should know going in."
+                      class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ case.client_profile_en or '' }}</textarea>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Perfil del Cliente (Español)</label>
+            <textarea name="client_profile_es" rows="5"
+                      class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ case.client_profile_es or '' }}</textarea>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Instructions (English)</label>
+            <textarea name="instructions_en" rows="3" placeholder="What the student should do — e.g. review the documents and answer every task below."
+                      class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ case.instructions_en or '' }}</textarea>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Instrucciones (Español)</label>
+            <textarea name="instructions_es" rows="3"
+                      class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ case.instructions_es or '' }}</textarea>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg">
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Passing score (%)</label>
+            <input type="number" name="passing_score" min="1" max="100" value="{{ case.passing_score if case.passing_score is not none else '' }}" placeholder="Leave blank = no pass/fail"
+                   class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Max attempts</label>
+            <input type="number" name="max_attempts" min="1" value="{{ case.max_attempts if case.max_attempts is not none else '' }}" placeholder="Leave blank = unlimited"
+                   class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+    </div>
+
+    <label class="flex items-center gap-2.5 text-sm font-medium text-slate-700">
+        <input type="checkbox" name="is_active" {{ 'checked' if case.is_active else '' }}
+               class="w-4 h-4 rounded border-slate-300 text-accent-600 focus:ring-accent-500">
+        Active (visible to enrolled students)
+    </label>
+
+    <div class="flex items-center gap-3 pt-2 border-t border-slate-100">
+        <button type="submit" class="rounded-lg bg-accent-600 text-white font-semibold px-6 py-2.5 text-sm hover:bg-accent-700 transition">
+            Save Case
+        </button>
+        <span class="text-xs text-slate-400">To delete this case entirely, delete its lesson from the course outline. Deactivating it above is safer if students may have attempts.</span>
+    </div>
+</form>
+
+<!-- Documents -->
+<div class="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 max-w-3xl mt-6">
+    <h2 class="font-semibold text-slate-900 mb-1">Documents</h2>
+    <p class="text-sm text-slate-500 mb-5">PDF or image files the student reviews inside the case — fictional or sanitized only.</p>
+
+    {% if case.documents %}
+    <div class="space-y-2 mb-6">
+        {% for doc in case.documents %}
+        <div class="flex items-center gap-3 border border-slate-100 rounded-lg px-3 py-2.5">
+            <span class="w-9 h-9 rounded-lg bg-slate-50 text-slate-400 flex items-center justify-center shrink-0 text-xs font-bold uppercase">{{ doc.file_filename.rsplit('.', 1)[-1] }}</span>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm text-slate-800 truncate">{{ doc.label_en }} <span class="text-slate-400">/ {{ doc.label_es }}</span></p>
+                <p class="text-xs text-slate-400">{{ doc.doc_type or 'No type' }} {% if not doc.is_active %}· inactive{% endif %}</p>
+            </div>
+            <a href="{{ url_for('admin.media', stored_path=doc.file_filename) }}" target="_blank" class="text-xs font-semibold text-accent-600 hover:underline shrink-0">View</a>
+            <form method="POST" action="{{ url_for('admin.document_move', document_id=doc.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="direction" value="up">
+                <button type="submit" class="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-400 text-sm">↑</button>
+            </form>
+            <form method="POST" action="{{ url_for('admin.document_move', document_id=doc.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="direction" value="down">
+                <button type="submit" class="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-400 text-sm">↓</button>
+            </form>
+            <button type="button" class="doc-edit-toggle w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-400 text-sm" data-target="doc-edit-{{ doc.id }}">✎</button>
+            <form method="POST" action="{{ url_for('admin.document_delete', document_id=doc.id) }}" data-confirm="Delete this document?">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="w-7 h-7 rounded-lg hover:bg-red-50 text-red-400 text-sm">✕</button>
+            </form>
+        </div>
+        <form id="doc-edit-{{ doc.id }}" method="POST" action="{{ url_for('admin.document_edit', document_id=doc.id) }}" enctype="multipart/form-data" class="hidden border border-slate-100 rounded-lg p-3 space-y-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <input type="text" name="label_en" value="{{ doc.label_en }}" placeholder="Label (EN)" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                <input type="text" name="label_es" value="{{ doc.label_es }}" placeholder="Etiqueta (ES)" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                <input type="text" name="doc_type" value="{{ doc.doc_type or '' }}" placeholder="Type (e.g. W-2)" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+            </div>
+            <input type="file" name="file" accept="application/pdf,image/*" class="text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 file:px-3 file:py-2 file:font-medium">
+            <label class="flex items-center gap-2 text-xs text-slate-600">
+                <input type="checkbox" name="is_active" {{ 'checked' if doc.is_active else '' }}> Active
+            </label>
+            <button type="submit" class="rounded-lg bg-accent-600 text-white text-sm font-semibold px-4 py-2 hover:bg-accent-700 transition">Save Document</button>
+        </form>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('admin.document_new', case_id=case.id) }}" enctype="multipart/form-data" class="border-t border-slate-100 pt-5 space-y-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <input type="text" name="label_en" placeholder="Label (EN) — e.g. W-2" class="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            <input type="text" name="label_es" placeholder="Etiqueta (ES)" class="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            <input type="text" name="doc_type" placeholder="Type (optional) — e.g. W-2, 1099-NEC, ID" class="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+        <input type="file" name="file" accept="application/pdf,image/*" required class="text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 file:px-3 file:py-2 file:font-medium">
+        <button type="submit" class="rounded-lg bg-brand-800 text-white text-sm font-semibold px-5 py-2.5 hover:bg-brand-700 transition">
+            + Add Document
+        </button>
+    </form>
+</div>
+
+<!-- Tasks -->
+<div class="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 max-w-3xl mt-6">
+    <div class="flex items-center justify-between mb-1">
+        <h2 class="font-semibold text-slate-900">Tasks</h2>
+        <a href="{{ url_for('admin.task_new', case_id=case.id) }}" class="text-sm font-semibold text-accent-600 hover:underline">+ Add Task</a>
+    </div>
+    <p class="text-sm text-slate-500 mb-5">Total points: {{ case.max_score }}{% if case.passing_score %} — {{ case.passing_score }}% needed to pass{% endif %}</p>
+
+    {% if case.tasks %}
+    <div class="space-y-2">
+        {% for task in case.tasks %}
+        <div class="flex items-center gap-3 border border-slate-100 rounded-lg px-3 py-2.5">
+            <span class="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-accent-50 text-accent-700 shrink-0">{{ task.task_type.replace('_', ' ') }}</span>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm text-slate-800 truncate">{{ loop.index }}. {{ task.prompt_en }}</p>
+                <p class="text-xs text-slate-400">{{ task.points }} pt{{ 's' if task.points != 1 else '' }}{% if task.requires_justification %} · requires justification{% endif %}{% if not task.is_active %} · inactive{% endif %}</p>
+            </div>
+            <a href="{{ url_for('admin.task_edit', task_id=task.id) }}" class="text-xs font-semibold text-accent-600 hover:underline shrink-0">Edit</a>
+            <form method="POST" action="{{ url_for('admin.task_duplicate', task_id=task.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="text-xs font-semibold text-slate-500 hover:text-accent-600 shrink-0">Duplicate</button>
+            </form>
+            <form method="POST" action="{{ url_for('admin.task_move', task_id=task.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="direction" value="up">
+                <button type="submit" class="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-400 text-sm">↑</button>
+            </form>
+            <form method="POST" action="{{ url_for('admin.task_move', task_id=task.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="direction" value="down">
+                <button type="submit" class="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-400 text-sm">↓</button>
+            </form>
+            <form method="POST" action="{{ url_for('admin.task_delete', task_id=task.id) }}" data-confirm="Delete this task?">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="w-7 h-7 rounded-lg hover:bg-red-50 text-red-400 text-sm">✕</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm text-slate-500 bg-slate-50 rounded-lg px-4 py-3">No tasks yet — add at least one before publishing this case.</p>
+    {% endif %}
+</div>
+
+<script>
+    document.querySelectorAll('.doc-edit-toggle').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.getElementById(btn.dataset.target).classList.toggle('hidden');
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% import "certificates/_macros.html" as cert_macros %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Certificate Preview — {{ course.title_en }}</title>
+    <meta name="robots" content="noindex, nofollow">
+</head>
+<body style="margin: 0; background: #f1f5f9; font-family: -apple-system, 'Segoe UI', sans-serif;">
+    <div class="print:hidden" style="max-width: 760px; margin: 0 auto; padding: 24px 24px 0;">
+        <a href="{{ url_for('admin.course_edit', course_id=course.id) }}" style="font-size: 13px; color: #64748b; text-decoration: none;">&larr; Back to Edit Course</a>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 12px; margin-bottom: 20px;">
+            <h1 style="font-size: 18px; font-weight: 700; color: #0f1829; margin: 0;">Certificate Preview — {{ course.title_en }}</h1>
+            <div style="display: flex; gap: 8px;">
+                {% for t in ['classic', 'modern', 'premium'] %}
+                <a href="{{ url_for('admin.certificate_preview', course_id=course.id, template=t) }}"
+                   style="font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 8px; text-decoration: none; border: 1px solid {{ '#0aa3cf' if t == template else '#e2e8f0' }}; color: {{ '#0aa3cf' if t == template else '#475569' }}; background: {{ '#e6fbff' if t == template else '#fff' }};">
+                    {{ t|capitalize }}
+                </a>
+                {% endfor %}
+                <button onclick="window.print()" style="font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 8px; border: none; background: #0aa3cf; color: #fff; cursor: pointer;">Print / PDF</button>
+            </div>
+        </div>
+        <p style="font-size: 12px; color: #94a3b8; margin: -12px 0 20px;">Sample data shown — "Jane A. Sample" and a placeholder certificate ID. Nothing here is saved or issued to any student.</p>
+    </div>
+
+    <div style="max-width: 760px; margin: 0 auto; padding: 0 24px 48px;">
+        {{ cert_macros.render(template, cert) }}
+    </div>
+</body>
+</html>

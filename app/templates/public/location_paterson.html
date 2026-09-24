@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% from "partials/icons.html" import icon %}
+{% block title %}{{ t('loc_paterson_title') }}{% endblock %}
+{% set page_description = t('loc_paterson_meta_description') %}
+
+{% block content %}
+{% set loc = biz.LOCATIONS['paterson-nj'] %}
+<nav class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 text-sm text-slate-400 flex flex-wrap items-center gap-1.5">
+    <a href="{{ url_for('public.home', lang=lang) }}" class="hover:text-accent-600">{{ t('breadcrumb_home') }}</a>
+    <span>/</span>
+    <a href="{{ url_for('public.locations_hub', lang=lang) }}" class="hover:text-accent-600">{{ t('loc_breadcrumb') }}</a>
+    <span>/</span>
+    <span class="text-slate-600">Paterson, NJ</span>
+</nav>
+
+<!-- Hero -->
+<section class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-14">
+    <span class="inline-flex items-center rounded-full bg-accent-50 text-accent-700 text-xs font-bold px-3 py-1">{{ t('loc_paterson_badge') }}</span>
+    <h1 class="mt-4 text-3xl sm:text-4xl font-extrabold text-brand-800 leading-tight">{{ t('loc_paterson_title') }}</h1>
+    <p class="mt-4 text-lg text-slate-600 max-w-2xl leading-relaxed">{{ t('loc_paterson_intro') }}</p>
+</section>
+
+<!-- Office info card -->
+<section class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-14">
+    <div class="rounded-2xl bg-brand-800 text-white p-8 sm:p-10 grid grid-cols-1 sm:grid-cols-2 gap-8">
+        <div>
+            <p class="text-xs font-semibold uppercase tracking-wide text-accent-300 mb-2">{{ t('contact_address') }}</p>
+            <p class="font-medium">{{ loc.address_line1 }}</p>
+            <p class="text-slate-300">{{ loc.address_line2 }}</p>
+            <a href="https://www.google.com/maps/search/?api=1&query={{ (loc.address_line1 ~ ', ' ~ loc.address_line2)|urlencode }}"
+               target="_blank" rel="noopener" class="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-accent-300 hover:text-accent-200">
+                {{ t('loc_paterson_get_directions') }}
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+            </a>
+        </div>
+        <div>
+            <p class="text-xs font-semibold uppercase tracking-wide text-accent-300 mb-2">{{ t('contact_hours') }}</p>
+            <p class="font-medium">{{ t('footer_hours_value') }}</p>
+            <p class="text-slate-400 text-sm">{{ t('footer_hours_closed') }}</p>
+        </div>
+        <div>
+            <p class="text-xs font-semibold uppercase tracking-wide text-accent-300 mb-2">{{ t('contact_phone') }}</p>
+            <a href="tel:{{ loc.phone_tel }}" class="font-medium hover:text-accent-200">{{ loc.phone_display }}</a>
+        </div>
+        <div>
+            <p class="text-xs font-semibold uppercase tracking-wide text-accent-300 mb-2">{{ t('contact_whatsapp') }}</p>
+            <a href="{{ loc.whatsapp_link }}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 font-medium hover:text-accent-200">
+                {{ icon('whatsapp', 'w-5 h-5') }} {{ biz.WHATSAPP_DISPLAY }}
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- Services available here -->
+<section class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-14">
+    <h2 class="text-2xl font-bold text-brand-800 mb-8 text-center">{{ t('loc_paterson_services_title') }}</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for s in services %}
+        <a href="{{ s.url }}" class="rounded-xl border border-slate-100 p-4 text-sm font-medium text-slate-800 hover:border-accent-300 hover:text-accent-600 transition">{{ s.title }}</a>
+        {% endfor %}
+    </div>
+</section>
+
+<!-- Nearby areas -->
+<section class="bg-brand-50/60 py-14">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <h2 class="text-xl font-bold text-brand-800 mb-4">{{ t('loc_paterson_areas_title') }}</h2>
+        <p class="text-slate-700">{{ loc.service_cities|join(', ') }}, NJ</p>
+    </div>
+</section>
+
+<!-- FAQ -->
+<section class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+    <h2 class="text-2xl font-bold text-brand-800 mb-8 text-center">{{ t('loc_paterson_faq_title') }}</h2>
+    <div class="space-y-3">
+        {% set faq_pairs = [('loc_paterson_faq_q1','loc_paterson_faq_a1'), ('loc_paterson_faq_q2','loc_paterson_faq_a2'), ('loc_paterson_faq_q3','loc_paterson_faq_a3')] %}
+        {% for q_key, a_key in faq_pairs %}
+        <details class="group rounded-xl border border-slate-100 p-5">
+            <summary class="cursor-pointer list-none flex items-center justify-between font-semibold text-slate-900 marker:content-['']">
+                {{ t(q_key) }}
+                <svg class="w-4 h-4 text-slate-400 group-open:rotate-180 transition shrink-0 ml-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+            </summary>
+            <p class="mt-3 text-sm text-slate-600 leading-relaxed">{{ t(a_key) }}</p>
+        </details>
+        {% endfor %}
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+    <div class="rounded-2xl bg-accent-600 text-white p-8 sm:p-10 text-center">
+        <h2 class="text-2xl font-bold">{{ t('loc_paterson_cta_title') }}</h2>
+        <p class="mt-2 text-accent-50 max-w-xl mx-auto">{{ t('loc_paterson_cta_body') }}</p>
+        <div class="mt-6 flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="{{ loc.whatsapp_link }}" target="_blank" rel="noopener"
+               class="inline-flex items-center justify-center gap-2 rounded-lg bg-white text-accent-700 font-semibold px-6 py-3 hover:bg-accent-50 transition">
+                {{ icon('whatsapp', 'w-5 h-5') }} {{ t('svc_send_whatsapp') }}
+            </a>
+            <a href="https://www.google.com/maps/search/?api=1&query={{ (loc.address_line1 ~ ', ' ~ loc.address_line2)|urlencode }}"
+               target="_blank" rel="noopener"
+               class="inline-flex items-center justify-center rounded-lg border border-white/40 text-white font-semibold px-6 py-3 hover:bg-white/10 transition">
+                {{ t('loc_paterson_get_directions') }}
+            </a>
+        </div>
+    </div>
+</section>
+
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "ProfessionalService",
+    "name": "OG Multiservices LLC — Paterson, NJ",
+    "telephone": {{ loc.phone_tel|tojson }},
+    "email": {{ biz.EMAIL|tojson }},
+    "url": {{ request.url|tojson }},
+    "address": {
+        "@type": "PostalAddress",
+        "streetAddress": {{ loc.address_line1|tojson }},
+        "addressLocality": "Paterson",
+        "addressRegion": "NJ",
+        "postalCode": {{ loc.postal_code|tojson }},
+        "addressCountry": "US"
+    },
+    "openingHoursSpecification": {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        "opens": "09:00",
+        "closes": "17:00"
+    },
+    "areaServed": [
+        {% for city in loc.service_cities %}{"@type": "City", "name": {{ (city ~ ', NJ')|tojson }}}{{ ", " if not loop.last else "" }}{% endfor %}
+    ]
+}
+</script>
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": {{ t('breadcrumb_home')|tojson }}, "item": {{ url_for('public.home', lang=lang, _external=True)|tojson }} },
+        {"@type": "ListItem", "position": 2, "name": {{ t('loc_breadcrumb')|tojson }}, "item": {{ url_for('public.locations_hub', lang=lang, _external=True)|tojson }} },
+        {"@type": "ListItem", "position": 3, "name": "Paterson, NJ", "item": {{ request.url|tojson }} }
+    ]
+}
+</script>
+{% include "partials/faq_schema.html" %}
+{% endblock %}

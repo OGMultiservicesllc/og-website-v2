@@ -1,0 +1,29 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}DS-260 source snapshots{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold text-brand-800">DS-260 source snapshots</h1>
+<p class="text-sm text-slate-600 mt-1 max-w-3xl">The DS-260 is an online Department of State form (CEAC): it has no edition number. Each snapshot records the official material the question schema was built from, when it was verified and a hash of the question registry. An application keeps the snapshot it was created under; a newer snapshot never rewrites it.</p>
+<div class="mt-5 space-y-4">
+    {% for r in rows %}
+    <div class="rounded-2xl bg-white border border-slate-100 p-5">
+        <div class="flex flex-wrap items-center gap-2">
+            <h2 class="font-mono text-sm font-bold text-brand-800">{{ r.code }}</h2>
+            {% if r.is_current %}<span class="rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase px-2 py-0.5">Current</span>{% endif %}
+            <span class="text-xs text-slate-500">{{ counts.get(r.id, 0) }} application(s)</span>
+        </div>
+        <p class="text-sm text-slate-700 mt-1">{{ r.agency }} &middot; {{ r.system }} &middot; {{ r.official_name }}</p>
+        <p class="text-xs text-slate-500 mt-1">{{ r.source_label }} &middot; sample {{ r.sample_date }} &middot; verified {{ r.verified_at }} &middot; hash <span class="font-mono">{{ (r.schema_hash or '')[:16] }}</span></p>
+        {% if r.reference %}<pre class="mt-2 whitespace-pre-wrap text-[11px] text-slate-500 font-sans">{{ r.reference }}</pre>{% endif %}
+        {% if r.notes %}<pre class="mt-2 whitespace-pre-wrap text-[11px] text-amber-800 font-sans">{{ r.notes }}</pre>{% endif %}
+    </div>
+    {% endfor %}
+    {% for a, b, d in diffs %}
+    <div class="rounded-2xl bg-white border border-slate-100 p-5 text-sm">
+        <h2 class="font-semibold text-brand-800">Difference: {{ a.code }} &rarr; {{ b.code }}</h2>
+        <p class="text-slate-600">{{ d.added|length }} added &middot; {{ d.removed|length }} removed &middot; {{ d.changed|length }} changed{% if d.same_hash %} &middot; identical schema{% endif %}</p>
+        {% for label, items in (('Added', d.added), ('Removed', d.removed), ('Changed', d.changed)) if items %}<p class="mt-1 text-xs text-slate-500"><strong>{{ label }}:</strong> {{ items|join(', ') }}</p>{% endfor %}
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

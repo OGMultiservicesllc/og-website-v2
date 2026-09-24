@@ -1,0 +1,55 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Cases{% endblock %}
+{% block content %}
+<div class="flex items-start justify-between flex-wrap gap-3 mb-5">
+    <div>
+        <h1 class="text-2xl font-bold text-brand-800">Cases</h1>
+        <p class="text-sm text-slate-500 mt-0.5">A case is the customer's overall matter. It groups people, applications, shared data and documents.</p>
+    </div>
+</div>
+
+<form method="GET" class="flex flex-wrap gap-2 mb-4">
+    <input type="search" name="q" value="{{ q }}" placeholder="Search case, customer or email" class="flex-1 min-w-[12rem] rounded-lg border border-slate-200 px-3 py-2 text-sm">
+    <select name="status" aria-label="Status" class="rounded-lg border border-slate-200 px-3 py-2 text-sm"><option value="">All statuses</option>{% for k, l in statuses %}<option value="{{ k }}" {{ 'selected' if status == k else '' }}>{{ l }}</option>{% endfor %}</select>
+    <select name="type" aria-label="Type" class="rounded-lg border border-slate-200 px-3 py-2 text-sm"><option value="">All types</option>{% for k, v in types.items() %}<option value="{{ k }}" {{ 'selected' if ctype == k else '' }}>{{ v.en }}</option>{% endfor %}</select>
+    <button class="rounded-lg bg-accent-600 text-white font-semibold px-4 py-2 text-sm">Filter</button>
+</form>
+
+<div class="bg-white border border-slate-100 rounded-2xl overflow-x-auto">
+    <table class="w-full text-sm text-left">
+        <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <tr><th class="px-4 py-3 font-semibold">Case</th><th class="px-4 py-3 font-semibold">Customer</th><th class="px-4 py-3 font-semibold">Status</th><th class="px-4 py-3 font-semibold">Applications</th><th class="px-4 py-3 font-semibold">People</th><th class="px-4 py-3 font-semibold">Documents</th><th class="px-4 py-3 font-semibold">Last activity</th></tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            {% for r in rows %}
+            {% set c = r.c %}
+            <tr class="hover:bg-slate-50/60">
+                <td class="px-4 py-3"><a href="{{ url_for('admin.ocase_detail', case_id=c.id) }}" class="font-semibold text-slate-800 hover:text-accent-700">{{ c.title }}</a><span class="block text-xs font-mono text-slate-400">{{ c.case_number }} · {{ types.get(c.case_type, types['other']).en }}</span></td>
+                <td class="px-4 py-3"><a href="{{ url_for('admin.customer_detail', student_id=c.customer_id) }}" class="text-slate-700 hover:text-accent-700">{{ c.customer.name }}</a><span class="block text-xs text-slate-400 break-all">{{ c.customer.email }}</span></td>
+                <td class="px-4 py-3"><span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold bg-accent-50 text-accent-700">{{ c.status_label }}</span></td>
+                <td class="px-4 py-3 text-slate-600">{{ r.apps }}</td>
+                <td class="px-4 py-3 text-slate-600">{{ r.people }}</td>
+                <td class="px-4 py-3 text-slate-600 whitespace-nowrap">{% if r.open_docs %}<span class="text-amber-700 font-semibold">{{ r.open_docs }} waiting on customer</span>{% endif %}{% if r.review_docs %}<span class="block text-accent-700 font-semibold">{{ r.review_docs }} to review</span>{% endif %}{% if not r.open_docs and not r.review_docs %}<span class="text-slate-400">—</span>{% endif %}</td>
+                <td class="px-4 py-3 text-slate-500 whitespace-nowrap">{{ r.activity.strftime('%b %d, %Y') if r.activity else '—' }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="px-4 py-10 text-center text-slate-500">No cases match.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<details class="mt-6 bg-white border border-slate-100 rounded-2xl p-5">
+    <summary class="cursor-pointer text-sm font-semibold text-accent-700">+ Create a case</summary>
+    <form method="POST" action="{{ url_for('admin.ocase_new') }}" class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label class="text-xs font-semibold text-slate-500">Customer
+            <select name="customer_id" required class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal text-slate-800">{% for s in customers %}<option value="{{ s.id }}">{{ s.name }} — {{ s.email }}</option>{% endfor %}</select></label>
+        <label class="text-xs font-semibold text-slate-500">Case type
+            <select name="case_type" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal text-slate-800">{% for k, v in types.items() %}<option value="{{ k }}">{{ v.en }}</option>{% endfor %}</select></label>
+        <label class="text-xs font-semibold text-slate-500">Title (optional)
+            <input type="text" name="title" maxlength="200" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal text-slate-800"></label>
+        <div class="sm:col-span-3"><button class="rounded-lg bg-accent-600 text-white font-semibold px-4 py-2 text-sm">Create case</button></div>
+    </form>
+</details>
+{% endblock %}

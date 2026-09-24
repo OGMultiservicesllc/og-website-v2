@@ -1,0 +1,30 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Send Test Email{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('admin.emails_list') }}" class="text-sm text-slate-500 hover:text-accent-600">&larr; Emails</a>
+<h1 class="text-2xl font-bold text-brand-800 mt-2 mb-1">Send Test Email</h1>
+<p class="text-sm text-slate-500 mb-6 max-w-xl">
+    Confirms the configured SMTP connection (Titan) can actually deliver a message. Sends a clearly-labeled
+    "OG TEST EMAIL" to whatever address you choose below — never real customer data. If <code class="text-xs bg-slate-100 px-1 py-0.5 rounded">MAIL_ENABLED</code>
+    isn't set to <code class="text-xs bg-slate-100 px-1 py-0.5 rounded">1</code>, this will show a failure explaining why — that's expected in development.
+</p>
+
+<form method="POST" class="bg-white border border-slate-100 rounded-2xl p-5 max-w-md space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div>
+        <label for="test-email" class="block text-sm font-semibold text-brand-800 mb-1.5">Send to</label>
+        <input id="test-email" type="email" name="email" required placeholder="you@example.com"
+               class="w-full min-h-[44px] rounded-lg border border-slate-200 px-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+    </div>
+    <button type="submit" class="min-h-[44px] px-6 rounded-lg bg-accent-600 text-white font-semibold text-sm hover:bg-accent-700 transition">Send Test Email</button>
+</form>
+
+{% if result %}
+<div class="mt-6 max-w-md bg-white border border-slate-100 rounded-2xl p-5">
+    <p class="text-sm font-semibold text-slate-800">Result</p>
+    <p class="text-sm mt-1 {{ 'text-emerald-700' if result.status == 'sent' else 'text-red-600' }}">Status: {{ result.status|capitalize }}</p>
+    {% if result.failure_reason %}<p class="text-xs text-slate-500 mt-1">{{ result.failure_reason }}</p>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

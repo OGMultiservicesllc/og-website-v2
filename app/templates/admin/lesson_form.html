@@ -1,0 +1,506 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}{{ 'Edit Lesson' if lesson else 'New Lesson' }}{% endblock %}
+
+{% block content %}
+
+<div class="mb-6">
+    <a href="{{ url_for('admin.course_builder', course_id=section.course_id) }}" class="text-sm text-slate-500 hover:text-accent-600">&larr; Back to {{ section.course.title_en }}</a>
+    <h1 class="text-2xl font-bold text-brand-800 mt-2">{{ 'Edit Lesson' if lesson else 'New Lesson' }}</h1>
+    <p class="text-sm text-slate-500">Section: {{ section.title_en }}</p>
+</div>
+
+<form method="POST" enctype="multipart/form-data" class="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 space-y-6 max-w-2xl">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Lesson Title (English)</label>
+            <input type="text" name="title_en" required value="{{ lesson.title_en if lesson else '' }}"
+                   class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Título de la Lección (Español)</label>
+            <input type="text" name="title_es" required value="{{ lesson.title_es if lesson else '' }}"
+                   class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+    </div>
+
+    <label class="flex items-center gap-2.5 text-sm font-medium text-slate-700">
+        <input type="checkbox" name="is_preview" {{ 'checked' if lesson and lesson.is_preview else '' }}
+               class="w-4 h-4 rounded border-slate-300 text-accent-600 focus:ring-accent-500">
+        Free preview (visible to visitors who aren't enrolled)
+    </label>
+
+    <div>
+        <label class="block text-sm font-medium text-slate-700 mb-2">Lesson Type</label>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+            {% set current_type = lesson.lesson_type if lesson else 'text' %}
+            {% for type_value, type_label in [('text', 'Text'), ('video', 'Video'), ('presentation', 'Presentation'), ('quiz', 'Quiz'), ('assignment', 'Assignment'), ('case_simulation', 'Case Simulation')] %}
+            <label class="type-option cursor-pointer rounded-lg border-2 px-3 py-3 text-center text-sm font-medium {{ 'border-accent-500 bg-accent-50 text-accent-700' if current_type == type_value else 'border-slate-200 text-slate-600' }}">
+                <input type="radio" name="lesson_type" value="{{ type_value }}" class="hidden" {{ 'checked' if current_type == type_value else '' }}>
+                {{ type_label }}
+            </label>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div id="fields-text" class="type-fields space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Content (English)</label>
+                <textarea name="content_en" rows="8"
+                          class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ lesson.content_en if lesson else '' }}</textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Contenido (Español)</label>
+                <textarea name="content_es" rows="8"
+                          class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ lesson.content_es if lesson else '' }}</textarea>
+            </div>
+        </div>
+    </div>
+
+    <div id="fields-case" class="type-fields space-y-4">
+        <p class="text-sm text-slate-500 bg-slate-50 rounded-lg px-4 py-3">
+            {% if lesson %}
+            Manage this case's client profile, documents, and tasks below, after saving.
+            {% else %}
+            Save this lesson first, then you'll be taken to the Case Builder to add the client profile, documents, and tasks.
+            {% endif %}
+        </p>
+    </div>
+
+    <div id="fields-video" class="type-fields space-y-4">
+        {% set video_source = lesson.video_source if lesson and lesson.video_source else 'external' %}
+        <div class="flex gap-4 text-sm">
+            <label class="flex items-center gap-2">
+                <input type="radio" name="video_source" value="external" class="video-source-radio" {{ 'checked' if video_source == 'external' else '' }}>
+                External link (YouTube, Vimeo, etc.)
+            </label>
+            <label class="flex items-center gap-2">
+                <input type="radio" name="video_source" value="upload" class="video-source-radio" {{ 'checked' if video_source == 'upload' else '' }}>
+                Upload a video file
+            </label>
+        </div>
+        <div id="video-external-field">
+            <label class="block text-sm font-medium text-slate-700 mb-1">Video URL</label>
+            <input type="url" name="video_external_url" value="{{ lesson.video_external_url if lesson and lesson.video_external_url else '' }}"
+                   placeholder="https://www.youtube.com/watch?v=..."
+                   class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+        <div id="video-upload-field">
+            <label class="block text-sm font-medium text-slate-700 mb-1">Video file (MP4, WEBM, MOV)</label>
+            <input type="file" name="video_file" accept="video/*"
+                   class="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 file:px-3 file:py-2 file:font-medium">
+            {% if lesson and lesson.video_filename %}
+            <div class="mt-2 flex items-center gap-3 text-xs text-slate-500">
+                <span>Current file: <a href="{{ url_for('admin.media', stored_path=lesson.video_filename) }}" target="_blank" class="text-accent-600 hover:underline">preview</a> — uploading a new file will replace it.</span>
+            </div>
+            <label class="mt-2 flex items-center gap-2 text-xs font-medium text-red-600">
+                <input type="checkbox" name="remove_video" class="w-3.5 h-3.5 rounded border-slate-300 text-red-600 focus:ring-red-500">
+                Remove the current video file (without uploading a new one)
+            </label>
+            {% endif %}
+        </div>
+    </div>
+
+    <div id="fields-presentation" class="type-fields">
+        <p class="text-sm text-slate-500 bg-slate-50 rounded-lg px-4 py-3">
+            {% if lesson %}
+            Manage this lesson's bilingual slides below, after saving.
+            {% else %}
+            Save this lesson first, then you'll be able to add slides — each with an English image/audio and a Spanish image/audio.
+            {% endif %}
+        </p>
+    </div>
+
+    <div id="fields-quiz" class="type-fields space-y-4">
+        <div class="max-w-lg">
+            <label class="block text-sm font-medium text-slate-700 mb-1">Quiz type</label>
+            <select name="quiz_kind" class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+                <option value="final" {{ 'selected' if not lesson or lesson.quiz_kind == 'final' else '' }}>Final Exam — passing score required, Passed/Not Passed shown</option>
+                <option value="formative" {{ 'selected' if lesson and lesson.quiz_kind == 'formative' else '' }}>Section Knowledge Check — formative, unlimited retries, no pass/fail</option>
+            </select>
+            <p class="text-xs text-slate-400 mt-1">Knowledge Checks are for review: score is shown (e.g. "3 / 5 correct") but never blocks progress, and passing score / max attempts below are ignored.</p>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Passing score (%)</label>
+                <input type="number" name="quiz_passing_percentage" min="1" max="100"
+                       value="{{ lesson.quiz_passing_percentage if lesson else 70 }}"
+                       class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+                <p class="text-xs text-slate-400 mt-1">Final Exam only</p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Max attempts</label>
+                <input type="number" name="quiz_max_attempts" min="1"
+                       value="{{ lesson.quiz_max_attempts if lesson and lesson.quiz_max_attempts is not none else '' }}" placeholder="Leave blank = unlimited"
+                       class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+                <p class="text-xs text-slate-400 mt-1">Final Exam only</p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Questions per page</label>
+                <input type="number" name="quiz_questions_per_page" min="1"
+                       value="{{ lesson.quiz_questions_per_page if lesson else 8 }}"
+                       class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+                <p class="text-xs text-slate-400 mt-1">Shown per screen, with Continue</p>
+            </div>
+        </div>
+        <div class="space-y-2">
+            <label class="flex items-center gap-2.5 text-sm text-slate-700">
+                <input type="checkbox" name="quiz_allow_retry" {{ 'checked' if not lesson or lesson.quiz_allow_retry else '' }}
+                       class="w-4 h-4 rounded border-slate-300 text-accent-600 focus:ring-accent-500">
+                Allow retry (Final Exam only — if off, only 1 attempt ever, regardless of Max attempts)
+            </label>
+            <label class="flex items-center gap-2.5 text-sm text-slate-700">
+                <input type="checkbox" name="quiz_show_results" {{ 'checked' if not lesson or lesson.quiz_show_results else '' }}
+                       class="w-4 h-4 rounded border-slate-300 text-accent-600 focus:ring-accent-500">
+                Show results after submission
+            </label>
+            <label class="flex items-center gap-2.5 text-sm text-slate-700">
+                <input type="checkbox" name="quiz_show_correct_answers" {{ 'checked' if not lesson or lesson.quiz_show_correct_answers else '' }}
+                       class="w-4 h-4 rounded border-slate-300 text-accent-600 focus:ring-accent-500">
+                Show correct answers after submission
+            </label>
+        </div>
+        <p class="text-sm text-slate-500 bg-slate-50 rounded-lg px-4 py-3">
+            {% if lesson %}
+            Manage this quiz's questions below, after saving.
+            {% else %}
+            Save this lesson first, then you'll be able to add questions of any type (single choice, multi-select, short answer, and more).
+            {% endif %}
+        </p>
+    </div>
+
+    <div class="flex items-center gap-3 pt-2">
+        <button type="submit" class="rounded-lg bg-accent-600 text-white font-semibold px-6 py-2.5 text-sm hover:bg-accent-700 transition">
+            {{ 'Save Changes' if lesson else 'Create Lesson' }}
+        </button>
+    </div>
+</form>
+
+{% if lesson and lesson.lesson_type == 'presentation' %}
+<div class="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 max-w-3xl mt-6">
+    <h2 class="font-semibold text-slate-900 mb-1">Slides</h2>
+    <p class="text-xs text-slate-400 mb-4">Each slide is one record shared by both languages — English and Español stay on the same slide number.</p>
+
+    {% if lesson.slides %}
+    <div class="space-y-2 mb-6">
+        {% for slide in lesson.slides %}
+        {% set thumb = slide.image_en or slide.image_es %}
+        <div class="border border-slate-100 rounded-lg overflow-hidden">
+            <div class="flex items-center gap-3 px-3 py-2.5">
+                {% if thumb %}
+                <img src="{{ url_for('admin.media', stored_path=thumb) }}" alt="Slide {{ loop.index }}" class="w-16 h-10 object-cover rounded-md border border-slate-100 shrink-0">
+                {% else %}
+                <div class="w-16 h-10 rounded-md border border-slate-100 bg-slate-50 shrink-0"></div>
+                {% endif %}
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-slate-700">Slide {{ loop.index }}</p>
+                    <p class="text-xs text-slate-400 mt-0.5">
+                        EN: {{ '✓ Slide' if slide.image_en else 'Missing slide' }} · {{ '✓ Audio' if slide.audio_en else 'Missing audio' }}
+                        &nbsp;·&nbsp;
+                        ES: {{ '✓ Slide' if slide.image_es else 'Missing slide' }} · {{ '✓ Audio' if slide.audio_es else 'Missing audio' }}
+                    </p>
+                </div>
+                <button type="button" class="slide-edit-toggle text-xs font-semibold text-accent-600 hover:text-accent-700 px-2" data-target="slide-edit-{{ slide.id }}">Edit</button>
+                <form method="POST" action="{{ url_for('admin.slide_move', slide_id=slide.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="direction" value="up">
+                    <button type="submit" class="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-400 text-sm">↑</button>
+                </form>
+                <form method="POST" action="{{ url_for('admin.slide_move', slide_id=slide.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="direction" value="down">
+                    <button type="submit" class="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-400 text-sm">↓</button>
+                </form>
+                <form method="POST" action="{{ url_for('admin.slide_delete', slide_id=slide.id) }}" data-confirm="Delete this slide? Both language versions will be removed.">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="w-7 h-7 rounded-lg hover:bg-red-50 text-red-400 text-sm">✕</button>
+                </form>
+            </div>
+
+            <form id="slide-edit-{{ slide.id }}" method="POST" action="{{ url_for('admin.slide_update', slide_id=slide.id) }}" enctype="multipart/form-data"
+                  class="hidden border-t border-slate-100 px-4 py-4 bg-slate-50 grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">English</p>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">Slide image {% if slide.image_en %}<span class="text-emerald-600">· current file set</span>{% endif %}</label>
+                    <input type="file" name="image_en_file" accept="image/*"
+                           class="w-full text-xs text-slate-600 file:mr-2 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 file:px-2.5 file:py-1.5 file:font-medium mb-1.5">
+                    {% if slide.image_en %}
+                    <label class="flex items-center gap-1.5 text-xs text-slate-500 mb-3">
+                        <input type="checkbox" name="remove_image_en" class="rounded border-slate-300"> Remove English slide image
+                    </label>
+                    {% endif %}
+                    <label class="block text-xs font-medium text-slate-600 mb-1">Narration audio {% if slide.audio_en %}<span class="text-emerald-600">· current file set</span>{% endif %}</label>
+                    <input type="file" name="audio_en_file" accept="audio/*"
+                           class="w-full text-xs text-slate-600 file:mr-2 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 file:px-2.5 file:py-1.5 file:font-medium mb-1.5">
+                    {% if slide.audio_en %}
+                    <label class="flex items-center gap-1.5 text-xs text-slate-500">
+                        <input type="checkbox" name="remove_audio_en" class="rounded border-slate-300"> Remove English audio
+                    </label>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Español</p>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">Imagen del slide {% if slide.image_es %}<span class="text-emerald-600">· current file set</span>{% endif %}</label>
+                    <input type="file" name="image_es_file" accept="image/*"
+                           class="w-full text-xs text-slate-600 file:mr-2 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 file:px-2.5 file:py-1.5 file:font-medium mb-1.5">
+                    {% if slide.image_es %}
+                    <label class="flex items-center gap-1.5 text-xs text-slate-500 mb-3">
+                        <input type="checkbox" name="remove_image_es" class="rounded border-slate-300"> Quitar imagen en español
+                    </label>
+                    {% endif %}
+                    <label class="block text-xs font-medium text-slate-600 mb-1">Audio de narración {% if slide.audio_es %}<span class="text-emerald-600">· current file set</span>{% endif %}</label>
+                    <input type="file" name="audio_es_file" accept="audio/*"
+                           class="w-full text-xs text-slate-600 file:mr-2 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 file:px-2.5 file:py-1.5 file:font-medium mb-1.5">
+                    {% if slide.audio_es %}
+                    <label class="flex items-center gap-1.5 text-xs text-slate-500">
+                        <input type="checkbox" name="remove_audio_es" class="rounded border-slate-300"> Quitar audio en español
+                    </label>
+                    {% endif %}
+                </div>
+
+                <div class="sm:col-span-2">
+                    <button type="submit" class="rounded-lg bg-accent-600 text-white text-xs font-semibold px-4 py-2 hover:bg-accent-700 transition">
+                        Save Slide
+                    </button>
+                </div>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('admin.slide_new', lesson_id=lesson.id) }}" enctype="multipart/form-data" class="border-t border-slate-100 pt-5">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <p class="text-sm font-semibold text-slate-700 mb-3">+ New Slide</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">English</p>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Slide image</label>
+                <input type="file" name="image_en_file" accept="image/*"
+                       class="w-full text-xs text-slate-600 file:mr-2 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 file:px-2.5 file:py-1.5 file:font-medium mb-3">
+                <label class="block text-xs font-medium text-slate-600 mb-1">Narration audio (optional)</label>
+                <input type="file" name="audio_en_file" accept="audio/*"
+                       class="w-full text-xs text-slate-600 file:mr-2 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 file:px-2.5 file:py-1.5 file:font-medium">
+            </div>
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Español</p>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Imagen del slide</label>
+                <input type="file" name="image_es_file" accept="image/*"
+                       class="w-full text-xs text-slate-600 file:mr-2 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 file:px-2.5 file:py-1.5 file:font-medium mb-3">
+                <label class="block text-xs font-medium text-slate-600 mb-1">Audio de narración (opcional)</label>
+                <input type="file" name="audio_es_file" accept="audio/*"
+                       class="w-full text-xs text-slate-600 file:mr-2 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 file:px-2.5 file:py-1.5 file:font-medium">
+            </div>
+        </div>
+        <p class="text-xs text-slate-400 mt-3">At least one slide image (English or Español) is required — you can add the other language later.</p>
+        <button type="submit" class="mt-3 rounded-lg bg-brand-800 text-white text-sm font-semibold px-5 py-2.5 hover:bg-brand-700 transition">
+            + Add Slide
+        </button>
+    </form>
+</div>
+<script>
+    document.querySelectorAll('.slide-edit-toggle').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.getElementById(btn.dataset.target).classList.toggle('hidden');
+        });
+    });
+</script>
+{% endif %}
+
+{% if lesson and lesson.lesson_type == 'quiz' %}
+<div class="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 max-w-3xl mt-6">
+    <div class="flex items-center justify-between mb-1">
+        <h2 class="font-semibold text-slate-900">Quiz Questions</h2>
+        <a href="{{ url_for('admin.question_new', lesson_id=lesson.id) }}" class="text-sm font-semibold text-accent-600 hover:underline">+ Add Question</a>
+    </div>
+    <p class="text-sm text-slate-500 mb-5">Passing score: {{ lesson.quiz_passing_percentage }}%. Total points: {{ lesson.quiz_questions|sum(attribute='points') }}.</p>
+
+    {% set type_badge_labels = {'single_choice': 'Single Choice', 'multi_select': 'Multiple Select', 'true_false': 'True/False', 'short_answer': 'Short Answer', 'number': 'Number', 'long_answer': 'Long Answer', 'image_choice': 'Image Choice', 'file_upload': 'File Upload'} %}
+    {% if lesson.quiz_questions %}
+    <div class="space-y-2">
+        {% for q in lesson.quiz_questions %}
+        <div class="flex items-center gap-3 border border-slate-100 rounded-lg px-3 py-2.5">
+            <span class="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-accent-50 text-accent-700 shrink-0">{{ type_badge_labels.get(q.question_type, q.question_type) }}</span>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm text-slate-800 truncate">{{ loop.index }}. {{ q.question_en }}</p>
+                <p class="text-xs text-slate-400">{{ q.points }} pt{{ 's' if q.points != 1 else '' }}{% if not q.required %} · optional{% endif %}</p>
+            </div>
+            <a href="{{ url_for('admin.question_edit', question_id=q.id) }}" class="text-xs font-semibold text-accent-600 hover:underline shrink-0">Edit</a>
+            <form method="POST" action="{{ url_for('admin.question_duplicate', question_id=q.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="text-xs font-semibold text-slate-500 hover:text-accent-600 shrink-0">Duplicate</button>
+            </form>
+            <form method="POST" action="{{ url_for('admin.question_move', question_id=q.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="direction" value="up">
+                <button type="submit" class="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-400 text-sm">↑</button>
+            </form>
+            <form method="POST" action="{{ url_for('admin.question_move', question_id=q.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="direction" value="down">
+                <button type="submit" class="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-400 text-sm">↓</button>
+            </form>
+            <form method="POST" action="{{ url_for('admin.question_delete', question_id=q.id) }}" data-confirm="Delete this question?">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="w-7 h-7 rounded-lg hover:bg-red-50 text-red-400 text-sm">✕</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm text-slate-500 bg-slate-50 rounded-lg px-4 py-3">No questions yet — add one above.</p>
+    {% endif %}
+
+    <div class="mt-5 pt-5 border-t border-slate-100">
+        <a href="{{ url_for('admin.quiz_attempts_review', lesson_id=lesson.id) }}" class="text-sm font-semibold text-accent-600 hover:underline">
+            Review Student Attempts &rarr;
+        </a>
+    </div>
+</div>
+{% endif %}
+
+{% if lesson and lesson.lesson_type == 'assignment' %}
+<div class="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 max-w-3xl mt-6">
+    <h2 class="font-semibold text-slate-900 mb-1">Student Submissions</h2>
+    <p class="text-sm text-slate-500 mb-5">Review each student's work and approve it or request a revision.</p>
+
+    {% if submissions %}
+    <div class="space-y-3">
+        {% for s in submissions %}
+        <details class="group border border-slate-100 rounded-xl">
+            <summary class="list-none cursor-pointer flex items-center justify-between gap-3 px-4 py-3 marker:content-['']">
+                <span class="text-sm font-medium text-slate-800">{{ s.student.name }}</span>
+                <div class="flex items-center gap-2 shrink-0">
+                    <span class="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full
+                        {{ 'bg-emerald-50 text-emerald-700' if s.status == 'approved' else ('bg-amber-50 text-amber-700' if s.status == 'needs_revision' else 'bg-accent-50 text-accent-700') }}">
+                        {{ s.status.replace('_', ' ') }}
+                    </span>
+                    <svg class="w-3.5 h-3.5 text-slate-400 group-open:rotate-180 transition" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                </div>
+            </summary>
+            <div class="px-4 pb-4 space-y-3">
+                {% if s.text_response %}
+                <p class="text-sm text-slate-700 bg-slate-50 rounded-lg p-3 whitespace-pre-wrap">{{ s.text_response }}</p>
+                {% endif %}
+                {% if s.file_filename %}
+                <a href="{{ url_for('admin.media', stored_path=s.file_filename) }}" target="_blank" class="text-sm text-accent-600 hover:underline">Download attached file</a>
+                {% endif %}
+                {% if s.feedback %}
+                <p class="text-xs text-slate-500">Previous feedback: {{ s.feedback }}</p>
+                {% endif %}
+                <form method="POST" action="{{ url_for('admin.submission_review', lesson_id=lesson.id, submission_id=s.id) }}" class="space-y-2">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <textarea name="feedback" rows="2" placeholder="Feedback for the student (optional)"
+                              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ s.feedback or '' }}</textarea>
+                    <div class="flex gap-2">
+                        <button type="submit" name="decision" value="approve" class="rounded-lg bg-emerald-600 text-white text-sm font-semibold px-4 py-2 hover:bg-emerald-700 transition">
+                            Approve
+                        </button>
+                        <button type="submit" name="decision" value="revise" class="rounded-lg border border-amber-300 text-amber-700 text-sm font-semibold px-4 py-2 hover:bg-amber-50 transition">
+                            Request Revision
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </details>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm text-slate-500">No submissions yet.</p>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if lesson %}
+<div class="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 max-w-3xl mt-6">
+    <h2 class="font-semibold text-slate-900 mb-1">Resources</h2>
+    <p class="text-sm text-slate-500 mb-5">Optional downloadable files or links attached to this lesson.</p>
+
+    {% if lesson.resources %}
+    <div class="space-y-2 mb-6">
+        {% for r in lesson.resources %}
+        <div class="flex items-center justify-between gap-3 border border-slate-100 rounded-lg px-4 py-2.5">
+            <div class="min-w-0">
+                <p class="text-sm font-medium text-slate-800 truncate">{{ r.title_en }}</p>
+                <p class="text-xs text-slate-400 truncate">
+                    {% if r.file_filename %}Uploaded file{% else %}{{ r.external_url }}{% endif %}
+                </p>
+            </div>
+            <form method="POST" action="{{ url_for('admin.resource_delete', resource_id=r.id) }}" data-confirm="Delete this resource?">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="text-sm font-medium text-red-500 hover:text-red-700 shrink-0">Remove</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('admin.resource_new', lesson_id=lesson.id) }}" enctype="multipart/form-data" class="border-t border-slate-100 pt-5 space-y-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <input type="text" name="title_en" placeholder="Resource title (EN)" class="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            <input type="text" name="title_es" placeholder="Título del recurso (ES)" class="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+            <input type="file" name="file" class="text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 file:px-3 file:py-2 file:font-medium">
+            <input type="url" name="external_url" placeholder="...or paste a URL instead" class="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+        <button type="submit" class="rounded-lg bg-brand-800 text-white text-sm font-semibold px-5 py-2.5 hover:bg-brand-700 transition">
+            + Add Resource
+        </button>
+    </form>
+</div>
+{% endif %}
+
+<script>
+    (function () {
+        const typeInputs = document.querySelectorAll('input[name="lesson_type"]');
+        const typeLabels = document.querySelectorAll('.type-option');
+        const fieldGroups = [
+            { id: 'fields-text', types: ['text', 'assignment'] },
+            { id: 'fields-video', types: ['video'] },
+            { id: 'fields-presentation', types: ['presentation'] },
+            { id: 'fields-quiz', types: ['quiz'] },
+            { id: 'fields-case', types: ['case_simulation'] },
+        ];
+
+        function updateVisibility() {
+            const selected = document.querySelector('input[name="lesson_type"]:checked');
+            const value = selected ? selected.value : 'text';
+            fieldGroups.forEach(({ id, types }) => {
+                document.getElementById(id).classList.toggle('hidden', !types.includes(value));
+            });
+            typeLabels.forEach((label) => {
+                const input = label.querySelector('input');
+                const active = input.checked;
+                label.classList.toggle('border-accent-500', active);
+                label.classList.toggle('bg-accent-50', active);
+                label.classList.toggle('text-accent-700', active);
+                label.classList.toggle('border-slate-200', !active);
+                label.classList.toggle('text-slate-600', !active);
+            });
+        }
+
+        typeInputs.forEach((input) => input.addEventListener('change', updateVisibility));
+        updateVisibility();
+
+        const videoRadios = document.querySelectorAll('.video-source-radio');
+        const externalField = document.getElementById('video-external-field');
+        const uploadField = document.getElementById('video-upload-field');
+
+        function updateVideoSource() {
+            const selected = document.querySelector('.video-source-radio:checked');
+            const value = selected ? selected.value : 'external';
+            externalField.classList.toggle('hidden', value !== 'external');
+            uploadField.classList.toggle('hidden', value !== 'upload');
+        }
+        videoRadios.forEach((input) => input.addEventListener('change', updateVideoSource));
+        updateVideoSource();
+    })();
+</script>
+{% endblock %}

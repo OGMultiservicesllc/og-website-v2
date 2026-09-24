@@ -1,0 +1,35 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Edit question{% endblock %}
+{% block content %}
+<a href="{{ url_for('admin.dl_questions', topic=q.topic) }}" class="text-sm text-slate-500 hover:text-accent-600">&larr; Knowledge Test questions</a>
+<h1 class="text-2xl font-bold text-brand-800 mt-2 mb-5">Edit question</h1>
+<form method="post" class="space-y-5 max-w-2xl">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="grid sm:grid-cols-2 gap-3">
+        <label class="text-sm"><span class="block text-[12px] font-semibold text-slate-600 mb-1">Topic</span>
+            <select name="topic" class="w-full rounded-lg border border-slate-200 px-3 py-2 bg-white">{% for t in topics %}<option value="{{ t }}" {{ 'selected' if q.topic == t else '' }}>{{ t|replace('_',' ')|title }}</option>{% endfor %}</select>
+        </label>
+        <label class="text-sm"><span class="block text-[12px] font-semibold text-slate-600 mb-1">Difficulty</span>
+            <select name="difficulty" class="w-full rounded-lg border border-slate-200 px-3 py-2 bg-white">{% for d in ('easy', 'medium', 'hard') %}<option value="{{ d }}" {{ 'selected' if q.difficulty == d else '' }}>{{ d|title }}</option>{% endfor %}</select>
+        </label>
+    </div>
+    <label class="block text-sm"><span class="block text-[12px] font-semibold text-slate-600 mb-1">Question (English)</span><textarea name="question_en" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2">{{ q.question_en }}</textarea></label>
+    <label class="block text-sm"><span class="block text-[12px] font-semibold text-slate-600 mb-1">Question (Spanish)</span><textarea name="question_es" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2">{{ q.question_es }}</textarea></label>
+    <div>
+        <p class="text-[12px] font-semibold text-slate-600 mb-2">Choices (mark the correct one)</p>
+        <div class="space-y-2">
+            {% for o in q.options %}
+            <div class="rounded-lg border border-slate-200 p-3 grid sm:grid-cols-[auto_1fr_1fr] gap-2 items-center">
+                <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-500"><input type="radio" name="correct_option" value="{{ o.id }}" {{ 'checked' if o.is_correct else '' }}> Correct</label>
+                <input name="opt_en_{{ o.id }}" value="{{ o.text_en }}" placeholder="English" class="rounded border border-slate-200 px-2 py-1.5 text-sm">
+                <input name="opt_es_{{ o.id }}" value="{{ o.text_es }}" placeholder="Español" class="rounded border border-slate-200 px-2 py-1.5 text-sm">
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    <label class="block text-sm"><span class="block text-[12px] font-semibold text-slate-600 mb-1">Explanation (English)</span><textarea name="explanation_en" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2">{{ q.explanation_en or '' }}</textarea></label>
+    <label class="block text-sm"><span class="block text-[12px] font-semibold text-slate-600 mb-1">Explanation (Spanish)</span><textarea name="explanation_es" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2">{{ q.explanation_es or '' }}</textarea></label>
+    <p class="text-[12px] text-slate-400">Source: {{ q.source_ref or '—' }} · Version {{ q.version }} · Updated {{ q.updated_at.strftime('%b %d, %Y') if q.updated_at else '—' }}</p>
+    <button class="rounded-lg bg-accent-600 text-white font-semibold px-5 py-2.5 text-sm hover:bg-accent-700">Save question</button>
+</form>
+{% endblock %}

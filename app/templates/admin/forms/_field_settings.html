@@ -1,0 +1,281 @@
+{# Right-panel content when a field is selected. #}
+{% set f = selected_field %}
+{% set kind = field_input_kind(f.field_type) %}
+<div class="p-4">
+    <div class="flex items-center justify-between mb-1">
+        <p class="text-[11px] font-bold uppercase tracking-wide text-slate-400">{{ field_meta[f.field_type].label }}</p>
+        <a href="{{ url_for('admin.form_builder', form_id=form.id, page=page.id, lang=lang, device=device) }}" class="text-xs text-slate-400 hover:text-slate-600">Close ✕</a>
+    </div>
+
+    <form method="POST" action="{{ url_for('admin.form_field_update', field_id=f.id) }}" enctype="multipart/form-data" class="space-y-3 mt-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+        {% if kind in ('heading', 'paragraph', 'consent') %}
+        <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Text (English)</label>
+            {% if kind == 'paragraph' or kind == 'consent' %}
+            <textarea name="content_en" rows="3" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ f.content_en or '' }}</textarea>
+            {% else %}
+            <input type="text" name="content_en" value="{{ f.content_en or '' }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            {% endif %}
+            {% if kind == 'consent' %}<p class="text-[11px] text-slate-400 mt-1">HTML links allowed, e.g. I agree to the &lt;a href="/en/privacy-policy"&gt;Privacy Policy&lt;/a&gt;.</p>{% endif %}
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Texto (Español)</label>
+            {% if kind == 'paragraph' or kind == 'consent' %}
+            <textarea name="content_es" rows="3" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ f.content_es or '' }}</textarea>
+            {% else %}
+            <input type="text" name="content_es" value="{{ f.content_es or '' }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if kind == 'image' %}
+        <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Image</label>
+            {% if f.image_filename %}<img src="{{ url_for('admin.media', stored_path=f.image_filename) }}" class="h-20 rounded-lg border border-slate-100 mb-2">{% endif %}
+            <input type="file" name="image_file" accept="image/*" class="w-full text-xs text-slate-600 file:mr-2 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 file:px-2.5 file:py-1.5 file:font-medium">
+        </div>
+        {% endif %}
+
+        {% if kind not in ('heading', 'paragraph', 'divider', 'spacer', 'image', 'hidden') %}
+        <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Label (English)</label>
+            <input type="text" name="label_en" value="{{ f.label_en or '' }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Etiqueta (Español)</label>
+            <input type="text" name="label_es" value="{{ f.label_es or '' }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+        {% endif %}
+
+        {% if kind in ('text', 'email', 'tel', 'url', 'number', 'textarea', 'price_input') %}
+        <div class="grid grid-cols-2 gap-2">
+            <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Placeholder (EN)</label>
+                <input type="text" name="placeholder_en" value="{{ f.placeholder_en or '' }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Placeholder (ES)</label>
+                <input type="text" name="placeholder_es" value="{{ f.placeholder_es or '' }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            </div>
+        </div>
+        {% endif %}
+
+        {% if kind not in ('heading', 'paragraph', 'divider', 'spacer', 'image', 'hidden') %}
+        <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Help Text (EN)</label>
+            <input type="text" name="help_text_en" value="{{ f.help_text_en or '' }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Texto de Ayuda (ES)</label>
+            <input type="text" name="help_text_es" value="{{ f.help_text_es or '' }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+            <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Validation Msg (EN)</label>
+                <input type="text" name="validation_message_en" value="{{ f.validation_message_en or '' }}" placeholder="Default message" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Validation Msg (ES)</label>
+                <input type="text" name="validation_message_es" value="{{ f.validation_message_es or '' }}" placeholder="Mensaje por defecto" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 items-end">
+            <label class="flex items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" name="required" {{ 'checked' if f.required else '' }} class="rounded border-slate-300 text-accent-600 focus:ring-accent-500">
+                Required
+            </label>
+            <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Width</label>
+                <select name="width" class="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm">
+                    <option value="full" {{ 'selected' if f.width == 'full' else '' }}>Full</option>
+                    <option value="half" {{ 'selected' if f.width == 'half' else '' }}>Half</option>
+                    <option value="third" {{ 'selected' if f.width == 'third' else '' }}>Third</option>
+                </select>
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Default Value</label>
+            <input type="text" name="default_value" value="{{ f.default_value or '' }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+        {% endif %}
+
+        {% if kind == 'number' %}
+        <div class="grid grid-cols-2 gap-2">
+            <div><label class="block text-xs font-medium text-slate-600 mb-1">Min value</label><input type="number" step="any" name="min_value" value="{{ f.min_value if f.min_value is not none else '' }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"></div>
+            <div><label class="block text-xs font-medium text-slate-600 mb-1">Max value</label><input type="number" step="any" name="max_value" value="{{ f.max_value if f.max_value is not none else '' }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"></div>
+        </div>
+        {% endif %}
+
+        {% if kind in ('text', 'textarea') %}
+        <div class="grid grid-cols-2 gap-2">
+            <div><label class="block text-xs font-medium text-slate-600 mb-1">Min length</label><input type="number" name="min_length" value="{{ f.min_length if f.min_length is not none else '' }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"></div>
+            <div><label class="block text-xs font-medium text-slate-600 mb-1">Max length</label><input type="number" name="max_length" value="{{ f.max_length if f.max_length is not none else '' }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"></div>
+        </div>
+        {% endif %}
+
+        {% if kind == 'file' %}
+        <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Allowed extensions (comma-separated)</label>
+            <input type="text" name="allowed_file_types" value="{{ f.allowed_file_types or '' }}" placeholder="pdf, jpg, png, doc, docx" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+            <div><label class="block text-xs font-medium text-slate-600 mb-1">Max file size (MB)</label><input type="number" name="max_file_size_mb" value="{{ f.max_file_size_mb }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"></div>
+            <div><label class="block text-xs font-medium text-slate-600 mb-1">Max files</label><input type="number" min="1" name="max_files" value="{{ f.max_files }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"></div>
+        </div>
+        {% endif %}
+
+        {% if kind in ('price_display',) %}
+        <div class="grid grid-cols-2 gap-2">
+            <div><label class="block text-xs font-medium text-slate-600 mb-1">Price</label><input type="number" step="0.01" name="price_amount" value="{{ f.price_amount if f.price_amount is not none else '' }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"></div>
+            <div><label class="block text-xs font-medium text-slate-600 mb-1">Currency</label><input type="text" name="price_currency" value="{{ f.price_currency }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"></div>
+        </div>
+        {% endif %}
+
+        {% if f.field_type in ('service_single', 'service_multi') %}
+        <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Options source</label>
+            <select name="service_source" class="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm">
+                <option value="og_services" {{ 'selected' if f.service_source == 'og_services' else '' }}>OG's service list (recommended)</option>
+                <option value="custom" {{ 'selected' if f.service_source == 'custom' else '' }}>Custom list (edit below)</option>
+            </select>
+        </div>
+        {% endif %}
+
+        {% if kind not in ('divider', 'spacer', 'image', 'hidden') %}
+        <details class="rounded-lg border border-slate-100 bg-slate-50/50" {{ 'open' if form.form_type == 'service_intake' else '' }}>
+            <summary class="cursor-pointer select-none px-3 py-2 text-xs font-semibold text-slate-600">Intake options</summary>
+            <div class="px-3 pb-3 space-y-3">
+                <input type="hidden" name="_intake_options" value="1">
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">Source reference (admin only)</label>
+                    <input type="text" name="source_ref" value="{{ f.source_ref or '' }}" maxlength="120" placeholder="e.g. Part 1, Item 3.a" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                    <p class="text-[11px] text-slate-400 mt-1">Where this question comes from in the official form. Shown to admins only.</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">Source notes (admin only)</label>
+                    <textarea name="source_note" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">{{ f.source_note or '' }}</textarea>
+                </div>
+                {% if kind not in ('heading', 'paragraph') %}
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">“Need help?” detail (EN)</label>
+                    <textarea name="help_detail_en" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">{{ f.help_detail_en or '' }}</textarea>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">Detalle de ayuda (ES)</label>
+                    <textarea name="help_detail_es" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">{{ f.help_detail_es or '' }}</textarea>
+                </div>
+                {% endif %}
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">“Where can I find this?” (EN)</label>
+                    <textarea name="help_where_en" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">{{ f.help_where_en or '' }}</textarea>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">“¿Dónde lo encuentro?” (ES)</label>
+                    <textarea name="help_where_es" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">{{ f.help_where_es or '' }}</textarea>
+                </div>
+                <label class="flex items-center gap-2 text-sm text-slate-700">
+                    <input type="checkbox" name="is_sensitive" {{ 'checked' if f.is_sensitive else '' }} class="rounded border-slate-300 text-accent-600 focus:ring-accent-500">
+                    Sensitive (masked in the customer's review)
+                </label>
+                {% if kind in ('text', 'tel', 'email') %}
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">Format (regular expression)</label>
+                    <input type="text" name="pattern" value="{{ f.pattern or '' }}" maxlength="200" placeholder="e.g. \d{5}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-mono">
+                    <p class="text-[11px] text-slate-400 mt-1">The whole answer must match. Use the validation message above to explain the format.</p>
+                </div>
+                {% endif %}
+                {% if kind == 'records' %}
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">Component settings (JSON)</label>
+                    <textarea name="config_json" rows="4" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs font-mono">{{ f.config_json or '' }}</textarea>
+                    <p class="text-[11px] text-slate-400 mt-1">e.g. {"record": "address", "timeline": {"years": 5}}. Records: address, activity, trip, child, other_name, offense.</p>
+                </div>
+                {% endif %}
+                {% if kind == 'date' %}
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">Date rule</label>
+                    <select name="date_rule" class="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm">
+                        <option value="">Any date</option>
+                        <option value="past" {{ 'selected' if f.date_rule == 'past' else '' }}>Must be in the past</option>
+                        <option value="future" {{ 'selected' if f.date_rule == 'future' else '' }}>Must be in the future</option>
+                    </select>
+                </div>
+                {% endif %}
+            </div>
+        </details>
+        {% endif %}
+
+        <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Internal field name</label>
+            <input type="text" name="internal_name" value="{{ f.internal_name }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-mono">
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Admin-only notes</label>
+            <textarea name="admin_notes" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">{{ f.admin_notes or '' }}</textarea>
+        </div>
+
+        <button type="submit" class="w-full rounded-lg bg-accent-600 text-white font-semibold px-4 py-2 text-sm hover:bg-accent-700 transition">Save Field</button>
+    </form>
+
+    {% if f.field_type in option_based_types or (f.field_type in ('service_single', 'service_multi') and f.service_source == 'custom') %}
+    <div class="mt-5 pt-4 border-t border-slate-100">
+        <p class="text-[11px] font-bold uppercase tracking-wide text-slate-400 mb-2">Options</p>
+        <div class="space-y-2">
+            {% for o in f.options %}
+            <div class="border border-slate-100 rounded-lg p-2">
+                <form method="POST" action="{{ url_for('admin.form_option_update', option_id=o.id) }}" enctype="multipart/form-data" class="space-y-1.5">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <div class="grid grid-cols-2 gap-1.5">
+                        <input type="text" name="label_en" value="{{ o.label_en }}" placeholder="Label EN" class="rounded-lg border border-slate-200 px-2 py-1 text-xs">
+                        <input type="text" name="label_es" value="{{ o.label_es }}" placeholder="Label ES" class="rounded-lg border border-slate-200 px-2 py-1 text-xs">
+                    </div>
+                    <input type="text" name="value" value="{{ o.value }}" placeholder="internal value" class="w-full rounded-lg border border-slate-200 px-2 py-1 text-xs font-mono">
+                    {% if f.field_type == 'image_choice' %}
+                    <input type="file" name="image_file" accept="image/*" class="w-full text-[11px]">
+                    {% if o.image_filename %}<img src="{{ url_for('admin.media', stored_path=o.image_filename) }}" class="h-10 rounded border border-slate-100 mt-1">{% endif %}
+                    {% endif %}
+                    <div class="flex items-center justify-between">
+                        <button type="submit" class="text-[11px] font-semibold text-accent-600">Save</button>
+                        <div class="flex items-center gap-2">
+                            <button type="submit" formaction="{{ url_for('admin.form_option_move', option_id=o.id) }}" name="direction" value="up" class="text-[11px] text-slate-400 hover:text-slate-600">↑</button>
+                            <button type="submit" formaction="{{ url_for('admin.form_option_move', option_id=o.id) }}" name="direction" value="down" class="text-[11px] text-slate-400 hover:text-slate-600">↓</button>
+                            <button type="submit" formaction="{{ url_for('admin.form_option_duplicate', option_id=o.id) }}" class="text-[11px] text-slate-400 hover:text-slate-600">⧉</button>
+                        </div>
+                    </div>
+                </form>
+                <form method="POST" action="{{ url_for('admin.form_option_delete', option_id=o.id) }}" class="mt-1">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="text-[11px] font-medium text-red-500 hover:text-red-700">Remove option</button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+        <form method="POST" action="{{ url_for('admin.form_option_new', field_id=f.id) }}" class="mt-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="text-xs font-semibold text-accent-600 hover:text-accent-700">+ Add Option</button>
+        </form>
+    </div>
+    {% endif %}
+
+    {% if f.field_type not in content_only_types %}
+    <div class="mt-5 pt-4 border-t border-slate-100">
+        <p class="text-[11px] font-bold uppercase tracking-wide text-slate-400 mb-2">Conditional Visibility</p>
+        <p class="text-[11px] text-slate-400 mb-2">Show, hide, require, or make this field optional based on other answers.</p>
+        {% set field_rules = form.rules|selectattr('target_field_id', 'equalto', f.id)|list %}
+        {% for rule in field_rules %}
+        {% include "admin/forms/_rule_card.html" %}
+        {% endfor %}
+        <form method="POST" action="{{ url_for('admin.form_rule_new', form_id=form.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="preset_target_field_id" value="{{ f.id }}">
+            <input type="hidden" name="return_page_id" value="{{ page.id }}">
+            <input type="hidden" name="return_field_id" value="{{ f.id }}">
+            <button type="submit" class="text-xs font-semibold text-accent-600 hover:text-accent-700">+ Add rule for this field</button>
+        </form>
+    </div>
+    {% endif %}
+</div>

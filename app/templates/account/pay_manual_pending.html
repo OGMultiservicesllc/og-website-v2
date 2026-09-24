@@ -1,0 +1,57 @@
+{% extends "account/base_account.html" %}
+{% set en = lang == 'en' %}
+{% block title %}{{ 'Payment Pending' if en else 'Pago Pendiente' }}{% endblock %}
+
+{% block account_body %}
+<section class="max-w-md mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-16">
+    <div class="text-center">
+        <span class="mx-auto flex w-16 h-16 rounded-full bg-amber-100 text-amber-700 items-center justify-center">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        </span>
+        <h1 class="mt-4 text-xl font-extrabold text-brand-800">{{ 'Payment request received' if en else 'Solicitud de pago recibida' }}</h1>
+        <p class="mt-2 text-[15px] font-semibold text-amber-800">{{ 'Awaiting verification' if en else 'Pendiente de verificación' }}</p>
+    </div>
+
+    <div class="mt-6 rounded-card bg-white border border-slate-100 shadow-card p-5 sm:p-6">
+        <dl class="space-y-3 text-[14px]">
+            <div class="flex justify-between gap-3"><dt class="text-slate-500">{{ ('Course' if en else 'Curso') if charge.course_id else ('Payment For' if en else 'Concepto de pago') }}</dt><dd class="font-semibold text-slate-800 text-right">{{ charge.display_title(lang) }}</dd></div>
+            <div class="flex justify-between gap-3"><dt class="text-slate-500">{{ 'Amount' if en else 'Monto' }}</dt><dd class="font-extrabold text-brand-800 text-right tabular-nums">{{ '$%.2f' % (payment.amount_cents / 100) }}</dd></div>
+            <div class="flex justify-between gap-3"><dt class="text-slate-500">{{ 'Payment method' if en else 'Método de pago' }}</dt>
+                <dd class="font-semibold text-slate-800 text-right">
+                    {% if payment.method == 'zelle' %}Zelle{% elif payment.method == 'cash_app' %}Cash App{% else %}{{ 'Pay at Office' if en else 'Pagar en la Oficina' }}{% endif %}
+                </dd>
+            </div>
+        </dl>
+
+        {% if payment.method == 'zelle' %}
+        <div class="mt-4 rounded-xl bg-mist-50 border border-mist-200 px-4 py-3 text-[13px] text-slate-700">
+            <p>{{ 'Send your payment via Zelle to:' if en else 'Envía tu pago por Zelle a:' }} <span class="font-bold">{{ manual.zelle_phone }}</span> ({{ manual.zelle_recipient }})</p>
+        </div>
+        {% elif payment.method == 'cash_app' %}
+        <div class="mt-4 rounded-xl bg-mist-50 border border-mist-200 px-4 py-3 text-[13px] text-slate-700">
+            <p>{{ 'Send your payment via Cash App to:' if en else 'Envía tu pago por Cash App a:' }} <span class="font-bold">{{ manual.cash_app_tag }}</span> ({{ manual.cash_app_recipient }})</p>
+        </div>
+        {% else %}
+        <div class="mt-4 rounded-xl bg-mist-50 border border-mist-200 px-4 py-3 text-[13px] text-slate-700">
+            <p>{{ 'You can pay in person at:' if en else 'Puedes pagar en persona en:' }}</p>
+            <p class="font-bold mt-1">{{ manual.office_name }}</p>
+            <p>{{ manual.office_line1 }}</p>
+            <p>{{ manual.office_line2 }}</p>
+        </div>
+        {% endif %}
+
+        <div class="mt-4 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-[13px] text-amber-900 font-medium">
+            {% if charge.course_id %}
+            {{ 'Your course access is NOT active yet. It will be enabled once OG Multiservices LLC confirms your payment was received — this is not automatic for this payment method.' if en else 'Tu acceso al curso AÚN NO está activo. Se habilitará una vez que OG Multiservices LLC confirme que recibió tu pago — esto no es automático con este método de pago.' }}
+            {% else %}
+            {{ 'This payment is NOT confirmed yet. It will be marked as received once OG Multiservices LLC confirms your payment — this is not automatic for this payment method.' if en else 'Este pago AÚN NO está confirmado. Se marcará como recibido una vez que OG Multiservices LLC confirme tu pago — esto no es automático con este método de pago.' }}
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="mt-7 flex flex-col gap-2.5 items-stretch max-w-xs mx-auto">
+        <a href="{{ url_for('account.payments', lang=lang) }}" class="inline-flex items-center justify-center min-h-[46px] px-6 rounded-xl bg-accent-600 text-white text-[15px] font-bold hover:bg-accent-700 transition">{{ 'Go to My Payments' if en else 'Ir a Mis Pagos' }}</a>
+        {% if service_url %}<a href="{{ service_url }}" class="inline-flex items-center justify-center min-h-[46px] px-6 rounded-xl border border-slate-200 text-[15px] font-bold text-brand-800 hover:border-accent-300 transition">{{ 'Continue' if en else 'Continuar' }}</a>{% endif %}
+    </div>
+</section>
+{% endblock %}

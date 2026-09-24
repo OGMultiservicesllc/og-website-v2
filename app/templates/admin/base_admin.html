@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin{% endblock %} — OG Multiservices</title>
+    <meta name="robots" content="noindex, nofollow">
+    {% include "partials/tailwind_head.html" %}
+</head>
+<body class="font-sans text-slate-700 bg-slate-50 min-h-screen">
+
+{% if admin_logged_in %}
+<div class="md:flex min-h-screen">
+    <!-- Mobile top bar -->
+    <div class="md:hidden sticky top-0 z-40 flex items-center justify-between h-14 px-4 bg-brand-800 text-white">
+        <a href="{{ url_for('admin.dashboard') }}" class="flex items-center gap-2">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="OG" class="h-6 w-auto">
+            <span class="font-bold text-sm">OG Admin</span>
+        </a>
+        <button id="admin-menu-btn" type="button" class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10" aria-label="Menu" aria-expanded="false">
+            <svg id="admin-icon-open" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+            <svg id="admin-icon-close" class="w-5 h-5 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+    </div>
+
+    <!-- Mobile overlay -->
+    <div id="admin-menu-overlay" class="hidden md:hidden fixed inset-0 z-40 bg-black/40"></div>
+
+    <aside id="admin-sidebar"
+           class="fixed md:static inset-y-0 left-0 z-50 w-60 shrink-0 bg-brand-800 text-slate-300 flex flex-col transform -translate-x-full md:translate-x-0 transition-transform duration-200">
+        <a href="{{ url_for('admin.dashboard') }}" class="hidden md:flex items-center gap-2 px-5 h-16 border-b border-white/10">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="OG" class="h-7 w-auto">
+            <span class="font-bold text-white text-sm">OG Admin</span>
+        </a>
+        {% set ep = request.endpoint or '' %}
+        {% macro nav_link(href, label, active, badge=0) -%}
+        <a href="{{ href }}" class="flex items-center justify-between px-3 py-2 rounded-lg text-[13.5px] hover:bg-white/10 hover:text-white transition {{ 'bg-white/10 text-white font-medium' if active else '' }}" {% if active %}aria-current="page"{% endif %}>
+            <span>{{ label }}</span>
+            {% if badge %}<span class="text-[10px] font-bold bg-academy-500 text-white rounded-full min-w-[1.25rem] h-5 px-1 flex items-center justify-center">{{ badge }}</span>{% endif %}
+        </a>
+        {%- endmacro %}
+        {% macro nav_group(label, open) -%}
+        <details class="group" open>
+            <summary class="list-none cursor-pointer flex items-center justify-between px-3 pt-4 pb-1.5 text-[10.5px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-300 marker:content-['']">
+                {{ label }}
+                <svg class="w-3 h-3 transition group-open:rotate-90" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            </summary>
+            <div class="space-y-0.5">{{ caller() }}</div>
+        </details>
+        {%- endmacro %}
+
+        {% set in_website = ep.startswith(('admin.site_page', 'admin.website', 'admin.service', 'admin.page', 'admin.media', 'admin.navigation')) %}
+        {% set in_clients = ep.startswith(('admin.form', 'admin.inquir', 'admin.customer', 'admin.application', 'admin.ocase', 'admin.person', 'admin.itin', 'admin.w7', 'admin.tax', 'admin.dl_')) %}
+        {% set in_academy = ep.startswith(('admin.course', 'admin.lesson', 'admin.section', 'admin.quiz', 'admin.case', 'admin.students', 'admin.certificate')) %}
+
+        <nav class="flex-1 px-3 py-3 text-sm mt-14 md:mt-0 overflow-y-auto" aria-label="Admin">
+            {{ nav_link(url_for('admin.dashboard'), 'Dashboard', ep == 'admin.dashboard') }}
+
+            {% call nav_group('Website', in_website) %}
+                {{ nav_link(url_for('admin.site_page_edit', page_key='home'), 'Home', ep.startswith(('admin.site_page', 'admin.website'))) }}
+                {{ nav_link(url_for('admin.services_list'), 'Services', ep.startswith('admin.service')) }}
+                {{ nav_link(url_for('admin.pages_list'), 'Custom Pages', ep.startswith('admin.page')) }}
+                {{ nav_link(url_for('admin.media_library'), 'Media Library', ep.startswith('admin.media')) }}
+                {{ nav_link(url_for('admin.navigation_list'), 'Navigation', ep.startswith('admin.navigation')) }}
+            {% endcall %}
+
+            {% call nav_group('Clients', in_clients) %}
+                {{ nav_link(url_for('admin.customers_list'), 'Customers', ep.startswith('admin.customer')) }}
+                {{ nav_link(url_for('admin.applications_list'), 'Applications', ep.startswith('admin.application')) }}
+                {{ nav_link(url_for('admin.ocase_list'), 'Cases', ep.startswith('admin.ocase')) }}
+                {{ nav_link(url_for('admin.itin_list'), 'ITIN cases', ep.startswith(('admin.itin', 'admin.w7'))) }}
+                {{ nav_link(url_for('admin.tax_list'), 'Tax cases', ep.startswith('admin.tax') and not ep.startswith('admin.tax_pricing')) }}
+                {{ nav_link(url_for('admin.tax_pricing'), 'Tax pricing', ep.startswith('admin.tax_pricing')) }}
+                {{ nav_link(url_for('admin.dl_list'), 'Driver License cases', ep in ('admin.dl_list', 'admin.dl_case')) }}
+                {{ nav_link(url_for('admin.dl_pricing'), 'Driver License pricing', ep.startswith('admin.dl_pricing')) }}
+                {{ nav_link(url_for('admin.dl_locations'), 'MVC locations', ep.startswith('admin.dl_location')) }}
+                {{ nav_link(url_for('admin.dl_questions'), 'Knowledge Test questions', ep.startswith('admin.dl_question')) }}
+                {{ nav_link(url_for('admin.person_list'), 'People', ep.startswith('admin.person')) }}
+                {{ nav_link(url_for('admin.inquiries_list'), 'Inquiries', ep.startswith('admin.inquir'), new_inquiry_count) }}
+                {{ nav_link(url_for('admin.forms_list'), 'Forms', ep.startswith('admin.form')) }}
+            {% endcall %}
+
+            {% call nav_group('OG Academy', in_academy) %}
+                {{ nav_link(url_for('admin.courses_list'), 'Courses', ep.startswith(('admin.course', 'admin.lesson', 'admin.section', 'admin.quiz', 'admin.case'))) }}
+                {{ nav_link(url_for('admin.students_list'), 'Students', ep.startswith('admin.students')) }}
+                {{ nav_link(url_for('admin.certificates_list'), 'Certificates', ep.startswith('admin.certificate')) }}
+                {{ nav_link(url_for('admin.manual_payments_list'), 'Pending Payments', ep == 'admin.manual_payments_list') }}
+            {% endcall %}
+
+            {% call nav_group('Content', ep.startswith('admin.blog')) %}
+                {{ nav_link(url_for('admin.blog_list'), 'Blog', ep.startswith('admin.blog')) }}
+            {% endcall %}
+
+            {% call nav_group('Analytics', ep == 'admin.reports') %}
+                {{ nav_link(url_for('admin.reports'), 'Reports', ep == 'admin.reports') }}
+            {% endcall %}
+
+            {% call nav_group('System', ep == 'admin.settings' or ep.startswith('admin.email')) %}
+                {{ nav_link(url_for('admin.settings'), 'Settings', ep == 'admin.settings') }}
+                {{ nav_link(url_for('admin.emails_list'), 'Emails', ep == 'admin.emails_list') }}
+                {{ nav_link(url_for('admin.email_test'), 'Test Email', ep == 'admin.email_test') }}
+            {% endcall %}
+        </nav>
+        <div class="px-3 py-4 border-t border-white/10 text-sm">
+            <p class="px-3 text-xs text-slate-400 truncate mb-2">{{ session.get('admin_name', '') }}{% if session.get('admin_name') %} · {% endif %}{{ session.get('admin_email', '') }}</p>
+            <a href="{{ url_for('admin.logout') }}" class="block px-3 py-2 rounded-lg hover:bg-white/10 hover:text-white transition">
+                Log Out
+            </a>
+        </div>
+    </aside>
+
+    <div class="flex-1 min-w-0">
+        <main class="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div class="mb-6 space-y-2">
+                    {% for category, message in messages %}
+                    <div class="rounded-lg px-4 py-3 text-sm font-medium {{ 'bg-red-50 text-red-700 border border-red-100' if category == 'error' else 'bg-emerald-50 text-emerald-700 border border-emerald-100' }}">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endwith %}
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</div>
+
+{% include "admin/_media_modal.html" %}
+
+<!-- Custom confirm dialog (replaces native window.confirm, which some browsers/extensions silently block) -->
+<div id="admin-confirm-overlay" class="hidden fixed inset-0 z-[100] bg-black/40 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+        <p id="admin-confirm-message" class="text-sm text-slate-700"></p>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" id="admin-confirm-cancel" class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium hover:bg-slate-50 transition">Cancel</button>
+            <button type="button" id="admin-confirm-ok" class="rounded-lg bg-red-600 text-white px-4 py-2 text-sm font-semibold hover:bg-red-700 transition">Delete</button>
+        </div>
+    </div>
+</div>
+<script>
+    (function () {
+        const overlay = document.getElementById('admin-confirm-overlay');
+        const messageEl = document.getElementById('admin-confirm-message');
+        const okBtn = document.getElementById('admin-confirm-ok');
+        const cancelBtn = document.getElementById('admin-confirm-cancel');
+        let pendingForm = null;
+
+        document.addEventListener('submit', function (e) {
+            const form = e.target;
+            if (!(form instanceof HTMLFormElement)) return;
+            const message = form.getAttribute('data-confirm');
+            if (!message || form.dataset.confirmed === 'true') return;
+            e.preventDefault();
+            pendingForm = form;
+            messageEl.textContent = message;
+            overlay.classList.remove('hidden');
+        }, true);
+
+        okBtn.addEventListener('click', function () {
+            overlay.classList.add('hidden');
+            if (pendingForm) {
+                pendingForm.dataset.confirmed = 'true';
+                pendingForm.requestSubmit ? pendingForm.requestSubmit() : pendingForm.submit();
+                pendingForm = null;
+            }
+        });
+
+        function cancel() {
+            overlay.classList.add('hidden');
+            pendingForm = null;
+        }
+        cancelBtn.addEventListener('click', cancel);
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) cancel();
+        });
+    })();
+</script>
+
+<script>
+    (function () {
+        const btn = document.getElementById('admin-menu-btn');
+        const sidebar = document.getElementById('admin-sidebar');
+        const overlay = document.getElementById('admin-menu-overlay');
+        const iconOpen = document.getElementById('admin-icon-open');
+        const iconClose = document.getElementById('admin-icon-close');
+        if (!btn) return;
+
+        function setOpen(open) {
+            sidebar.classList.toggle('-translate-x-full', !open);
+            overlay.classList.toggle('hidden', !open);
+            iconOpen.classList.toggle('hidden', open);
+            iconClose.classList.toggle('hidden', !open);
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        }
+
+        btn.addEventListener('click', () => setOpen(sidebar.classList.contains('-translate-x-full')));
+        overlay.addEventListener('click', () => setOpen(false));
+    })();
+</script>
+{% else %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="max-w-md mx-auto mt-6 space-y-2">
+            {% for category, message in messages %}
+            <div class="rounded-lg px-4 py-3 text-sm font-medium {{ 'bg-red-50 text-red-700 border border-red-100' if category == 'error' else 'bg-emerald-50 text-emerald-700 border border-emerald-100' }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    {% endwith %}
+    {% block guest_content %}{% endblock %}
+{% endif %}
+
+</body>
+</html>

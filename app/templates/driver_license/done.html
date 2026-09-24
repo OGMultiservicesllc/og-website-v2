@@ -1,0 +1,23 @@
+{% extends "intake_base.html" %}
+{% set en = lang == 'en' %}
+{% block title %}{{ 'We received your information' if en else 'Recibimos tu información' }}{% endblock %}
+{% block header_actions %}
+<div class="flex items-center gap-0.5 rounded-full border border-slate-200 bg-white p-0.5 text-xs font-bold" role="group" aria-label="Language">
+    {% for code in ('en', 'es') %}<a href="{{ url_for('public.dl_done', lang=code) }}" class="px-2.5 py-1.5 rounded-full {{ 'text-white bg-accent-600' if lang == code else 'text-slate-500' }}" hreflang="{{ code }}">{{ code|upper }}</a>{% endfor %}
+</div>
+{% endblock %}
+{% block content %}
+<div class="rounded-[20px] bg-white border border-slate-100 shadow-card p-6 sm:p-9 text-center">
+    <p class="text-[44px]" aria-hidden="true">✅</p>
+    <h1 class="mt-1 text-[1.6rem] sm:text-3xl font-extrabold tracking-tight text-brand-800">{{ 'We received your information!' if en else '¡Recibimos tu información!' }}</h1>
+    <p class="mt-2 text-[16px] text-slate-700">{{ 'OG will review your documents and translation needs, and confirm your price and next step.' if en else 'OG revisará tus documentos y necesidades de traducción, y confirmará tu precio y próximo paso.' }}</p>
+    <ol class="mt-6 text-left max-w-sm mx-auto space-y-3 text-[15px] text-slate-700">
+        <li class="flex gap-3"><span class="font-extrabold text-accent-700">1</span><span>{{ 'OG reviews your documents.' if en else 'OG revisa tus documentos.' }}</span></li>
+        <li class="flex gap-3"><span class="font-extrabold text-accent-700">2</span><span>{{ 'OG confirms your translation and appointment price.' if en else 'OG confirma tu precio de traducción y cita.' }}</span></li>
+        <li class="flex gap-3"><span class="font-extrabold text-accent-700">3</span><span>{{ 'OG helps you with your next MVC step.' if en else 'OG te ayuda con tu próximo paso en el MVC.' }}</span></li>
+    </ol>
+    {% if missing %}<p class="mt-5 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-[14px] text-amber-900">⏰ {{ ('You still have %d documents to upload. You can do it from My Account.' % missing) if en else ('Todavía tienes %d documentos por subir. Puedes hacerlo desde Mi Cuenta.' % missing) }}</p>{% endif %}
+    <a href="{{ account_url }}" class="mt-6 inline-flex items-center justify-center min-h-[52px] px-8 rounded-[14px] bg-accent-600 text-white font-bold hover:bg-accent-700 transition">{{ 'Go to my Driver License plan' if en else 'Ir a mi plan de Licencia de Conducir' }}</a>
+    <p class="mt-4 text-[12px] text-slate-500">{{ 'This is not an application to the NJ MVC.' if en else 'Esto no es una solicitud al MVC de Nueva Jersey.' }}</p>
+</div>
+{% endblock %}

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% from "partials/custom_form.html" import render_custom_form %}
+{% block title %}{{ form.title(lang) }} — OG Multiservices LLC{% endblock %}
+{% set page_description = form.intro(lang) or t('seo_default_description') %}
+
+{% block content %}
+<section class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    {{ render_custom_form(form, lang, csrf_token, url_for('public.form_submit', lang=lang, slug=form.slug)) }}
+</section>
+{% endblock %}

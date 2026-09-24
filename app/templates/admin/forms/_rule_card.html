@@ -1,0 +1,97 @@
+{# One ConditionalRule, fully editable in place. Expects `rule` and `form` in scope. #}
+<div class="border border-slate-100 rounded-xl p-3 mb-2 bg-slate-50" id="rule-{{ rule.id }}">
+    <form method="POST" action="{{ url_for('admin.form_rule_update', rule_id=rule.id) }}" class="space-y-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="return_page_id" value="{{ page.id }}">
+        <input type="hidden" name="return_field_id" value="{{ selected_field.id if selected_field else '' }}">
+
+        <div class="flex items-center gap-2">
+            <span class="text-[11px] font-semibold text-slate-500">IF</span>
+            <select name="match_type" class="rounded-lg border border-slate-200 px-2 py-1 text-xs">
+                <option value="all" {{ 'selected' if rule.match_type == 'all' else '' }}>ALL match</option>
+                <option value="any" {{ 'selected' if rule.match_type == 'any' else '' }}>ANY match</option>
+            </select>
+        </div>
+
+        <div class="space-y-1.5 rule-conditions">
+            {% for cond in rule.conditions %}
+            <div class="grid grid-cols-3 gap-1 rule-condition-row">
+                <select name="cond_field_id" class="rounded-lg border border-slate-200 px-1.5 py-1 text-[11px] col-span-1">
+                    {% for f in form.all_fields if not f.is_content_only %}
+                    <option value="{{ f.id }}" {{ 'selected' if cond.field_id == f.id else '' }}>{{ (f.label('en') or f.internal_name)|truncate(18) }}</option>
+                    {% endfor %}
+                </select>
+                <select name="cond_operator" class="rounded-lg border border-slate-200 px-1.5 py-1 text-[11px] col-span-1">
+                    {% for op in condition_operators %}
+                    <option value="{{ op }}" {{ 'selected' if cond.operator == op else '' }}>{{ op.replace('_', ' ') }}</option>
+                    {% endfor %}
+                </select>
+                <input type="text" name="cond_value" value="{{ cond.value or '' }}" placeholder="value" class="rounded-lg border border-slate-200 px-1.5 py-1 text-[11px] col-span-1">
+            </div>
+            {% endfor %}
+        </div>
+        <button type="button" class="add-condition-btn text-[11px] font-semibold text-accent-600">+ condition</button>
+
+        <div class="flex items-center gap-2 pt-1">
+            <span class="text-[11px] font-semibold text-slate-500">THEN</span>
+            <select name="action" class="rule-action-select rounded-lg border border-slate-200 px-2 py-1 text-xs flex-1">
+                {% for a in rule_actions %}
+                <option value="{{ a }}" {{ 'selected' if rule.action == a else '' }}>{{ a.replace('_', ' ')|title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="rule-target-field" {{ 'style=display:none' if rule.action not in ('show_field','hide_field','require_field','optional_field') else '' }}>
+            <select name="target_field_id" class="w-full rounded-lg border border-slate-200 px-2 py-1 text-xs">
+                {% for f in form.all_fields if not f.is_content_only %}
+                <option value="{{ f.id }}" {{ 'selected' if rule.target_field_id == f.id else '' }}>{{ f.label('en') or f.internal_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="rule-target-page" {{ 'style=display:none' if rule.action not in ('show_page','skip_page','goto_page') else '' }}>
+            <select name="target_page_id" class="w-full rounded-lg border border-slate-200 px-2 py-1 text-xs">
+                {% for p in form.pages %}
+                <option value="{{ p.id }}" {{ 'selected' if rule.target_page_id == p.id else '' }}>{{ p.title('en') or ('Page ' ~ loop.index) }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="flex items-center justify-between pt-1">
+            <button type="submit" class="text-xs font-semibold text-accent-600 hover:text-accent-700">Save Rule</button>
+        </div>
+    </form>
+    <form method="POST" action="{{ url_for('admin.form_rule_delete', rule_id=rule.id) }}" class="mt-1">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="return_page_id" value="{{ page.id }}">
+        <input type="hidden" name="return_field_id" value="{{ selected_field.id if selected_field else '' }}">
+        <button type="submit" class="text-[11px] font-medium text-red-500 hover:text-red-700">Delete rule</button>
+    </form>
+</div>
+
+<script>
+(function () {
+    var card = document.getElementById('rule-{{ rule.id }}');
+    if (!card || card.dataset.wired) return;
+    card.dataset.wired = '1';
+
+    card.querySelector('.add-condition-btn').addEventListener('click', function () {
+        var wrap = card.querySelector('.rule-conditions');
+        var row = wrap.children[0] ? wrap.children[0].cloneNode(true) : null;
+        if (!row) return;
+        Array.prototype.forEach.call(row.querySelectorAll('input'), function (i) { i.value = ''; });
+        wrap.appendChild(row);
+    });
+
+    var actionSelect = card.querySelector('.rule-action-select');
+    function syncTargets() {
+        var action = actionSelect.value;
+        var fieldTarget = card.querySelector('.rule-target-field');
+        var pageTarget = card.querySelector('.rule-target-page');
+        var isFieldAction = ['show_field', 'hide_field', 'require_field', 'optional_field'].indexOf(action) !== -1;
+        var isPageAction = ['show_page', 'skip_page', 'goto_page'].indexOf(action) !== -1;
+        fieldTarget.style.display = isFieldAction ? '' : 'none';
+        pageTarget.style.display = isPageAction ? '' : 'none';
+    }
+    actionSelect.addEventListener('change', syncTargets);
+    syncTargets();
+})();
+</script>

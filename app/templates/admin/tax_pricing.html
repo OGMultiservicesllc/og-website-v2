@@ -1,0 +1,42 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Tax pricing {{ year }}{% endblock %}
+{% set titles = {'base': 'Base preparation fees', 'addon': 'Complexity add-ons', 'discount': 'Discount', 'setting': 'Thresholds and settings', 'trigger': 'Manual-review triggers'} %}
+{% block content %}
+<a href="{{ url_for('admin.tax_list') }}" class="text-sm text-slate-500 hover:text-accent-600">&larr; Tax cases</a>
+<div class="flex flex-wrap items-end justify-between gap-3 mt-2">
+    <div>
+        <h1 class="text-2xl font-bold text-brand-800">Tax pricing — {{ year }}</h1>
+        <p class="text-sm text-slate-500 mt-1">Every amount below drives the customer's estimate. Nothing is charged per IRS form. Cases already priced keep their own snapshot: changing a value here never rewrites their price.</p>
+    </div>
+    <form method="get" class="flex gap-2 text-sm"><select name="year" aria-label="Tax year" class="rounded-lg border border-slate-200 px-2 py-2 bg-white">{% for y in years %}<option value="{{ y }}" {{ 'selected' if y == year else '' }}>{{ y }}</option>{% endfor %}</select><button class="rounded-lg border border-slate-200 font-semibold px-3 py-2 hover:border-accent-300">Open</button></form>
+</div>
+<form method="post" action="{{ url_for('admin.tax_pricing_save', year=year) }}" class="mt-5 space-y-6">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {% for kind in ['base', 'addon', 'discount', 'setting', 'trigger'] %}
+    {% if groups.get(kind) %}
+    <section class="rounded-2xl bg-white border border-slate-100 overflow-hidden">
+        <h2 class="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-400 border-b border-slate-100">{{ titles[kind] }}</h2>
+        <ul class="divide-y divide-slate-100">
+        {% for r in groups[kind] %}
+            <li class="px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                <input type="hidden" name="r{{ r.id }}__present" value="1">
+                <span class="min-w-0 flex-1 basis-64 text-slate-700">{{ r.label_en }}<span class="block text-[11px] text-slate-400">{{ r.label_es }}</span></span>
+                {% if kind in ('base', 'addon') or (kind == 'setting' and r.amount_cents is not none) %}
+                <label class="text-[11px] text-slate-500">USD <input name="r{{ r.id }}__amount" value="{{ '%.2f' % ((r.amount_cents or 0) / 100) }}" inputmode="decimal" class="w-28 rounded border border-slate-200 px-2 py-1.5 text-sm text-slate-800"></label>
+                {% elif kind == 'discount' %}
+                <label class="text-[11px] text-slate-500">Percent <input name="r{{ r.id }}__percent" value="{{ r.percent }}" inputmode="decimal" class="w-20 rounded border border-slate-200 px-2 py-1.5 text-sm text-slate-800"></label>
+                <label class="text-[12px] text-slate-600 flex items-center gap-1.5"><input type="checkbox" name="r{{ r.id }}__stackable" {{ 'checked' if r.params.get('stackable') else '' }}> Stackable with other discounts</label>
+                {% elif kind == 'setting' %}
+                <label class="text-[11px] text-slate-500">Value <input name="r{{ r.id }}__value" value="{{ r.params.get('value', 0) }}" inputmode="numeric" class="w-20 rounded border border-slate-200 px-2 py-1.5 text-sm text-slate-800"></label>
+                {% endif %}
+                <label class="text-[12px] text-slate-600 flex items-center gap-1.5"><input type="checkbox" name="r{{ r.id }}__active" {{ 'checked' if r.active else '' }}> {{ 'Active' if kind != 'trigger' else 'Send to manual pricing' }}</label>
+                {% if r.updated_by %}<span class="text-[11px] text-slate-400">edited by {{ r.updated_by }}{% if r.updated_at %} · {{ r.updated_at.strftime('%b %d, %Y') }}{% endif %}</span>{% endif %}
+            </li>
+        {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+    {% endfor %}
+    <button class="rounded-lg bg-accent-600 text-white font-semibold px-5 py-2.5 text-sm hover:bg-accent-700">Save prices</button>
+</form>
+{% endblock %}

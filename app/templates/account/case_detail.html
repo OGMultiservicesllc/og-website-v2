@@ -1,0 +1,153 @@
+{% extends "account/base_account.html" %}
+{% from "partials/ui.html" import empty_state, pill %}
+{% from "partials/icons.html" import icon %}
+{% block title %}{{ type_title }} — {{ case.case_number }}{% endblock %}
+
+{% block account_body %}
+<section class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10 sm:pb-16">
+    <a href="{{ url_for('account.services', lang=lang) }}" class="text-sm text-slate-500 hover:text-accent-700">&larr; {{ 'Services' if lang == 'en' else 'Servicios' }}</a>
+    <div class="mt-2 flex flex-wrap items-center gap-3">
+        <h1 class="text-2xl font-extrabold tracking-tight text-brand-800">{{ type_title }}</h1>
+        {{ pill(status_text, 'success' if case.status in ('completed', 'closed') else 'accent') }}
+    </div>
+    <p class="text-sm text-slate-500 mt-1">{{ t('case_number') }} <span class="font-mono">{{ case.case_number }}</span></p>
+    {% if actions and not tax_dash and not dl_dash %}
+    <p class="mt-4 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-900" role="status">{{ t('case_needs_you') % actions }} <a href="#documents" class="font-semibold underline">{{ t('case_documents') }}</a></p>
+    {% elif not dl_dash %}
+    <p class="mt-4 text-sm text-slate-500">{{ t('case_all_good') }}</p>
+    {% endif %}
+
+    {% if itin_dash %}{% include "account/_itin_dash.html" %}{% endif %}
+    {% if tax_dash %}{% include "account/_tax_dash.html" %}{% endif %}
+    {% if dl_dash %}{% include "account/_dl_dash.html" %}{% endif %}
+
+    {% if consular_dash %}
+    {% set en = lang == 'en' %}
+    <h2 class="mt-7 mb-3 text-lg font-bold text-brand-800">{{ 'Where things stand' if en else 'Cómo va todo' }}</h2>
+    <ol class="grid gap-2 sm:grid-cols-2">
+        {% for st in consular_dash.steps %}
+        <li class="flex items-center gap-3 rounded-xl border border-slate-100 bg-white px-3.5 py-2.5">
+            <span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold {{ {'complete': 'bg-emerald-100 text-emerald-700', 'progress': 'bg-accent-100 text-accent-700', 'attention': 'bg-amber-100 text-amber-800', 'ready': 'bg-accent-100 text-accent-700'}.get(st.state, 'bg-slate-100 text-slate-400') }}" aria-hidden="true">{{ '&#10003;'|safe if st.state == 'complete' else ('!' if st.state == 'attention' else '&middot;'|safe) }}</span>
+            <span class="min-w-0 text-[14px] font-semibold text-brand-800 break-words">{{ st.label }}</span>
+            <span class="ml-auto text-[11px] font-semibold text-slate-500">{{ {'complete': ('Done' if en else 'Listo'), 'progress': ('In progress' if en else 'En curso'), 'attention': ('Needs you' if en else 'Te necesitamos'), 'ready': ('Ready' if en else 'Listo')}.get(st.state, ('Not started' if en else 'Sin empezar')) }}</span>
+        </li>
+        {% endfor %}
+    </ol>
+    <p class="mt-2 text-[12px] text-slate-500">{{ 'This shows what is finished in OG. It is not a decision about anyone\'s case and it is not the status of a government system.' if en else 'Esto muestra lo que está terminado en OG. No es una decisión sobre el caso de nadie ni el estado de un sistema del gobierno.' }}</p>
+
+    <h2 class="mt-7 mb-3 text-lg font-bold text-brand-800">{{ 'Applicants — one DS-260 each' if en else 'Solicitantes — un DS-260 para cada uno' }}</h2>
+    <ul class="space-y-3">
+        {% for x in consular_dash.applicants %}
+        <li class="rounded-card bg-white border border-slate-100 shadow-card p-4">
+            <div class="flex flex-wrap items-start gap-3">
+                <div class="min-w-0 flex-1 basis-48">
+                    <p class="font-semibold text-brand-800 leading-snug break-words">{{ x.person.full_name if x.person else '?' }}</p>
+                    <p class="text-xs text-slate-500 mt-0.5">{{ x.role_label }} &middot; <span class="font-mono">{{ x.submission.code }}</span></p>
+                </div>
+                <span class="text-sm font-bold text-brand-800 tabular-nums">{{ x.percent }}%</span>
+            </div>
+            <div class="mt-2 h-2 rounded-full bg-slate-100 overflow-hidden" role="progressbar" aria-valuenow="{{ x.percent }}" aria-valuemin="0" aria-valuemax="100"><div class="h-2 rounded-full bg-accent-600" style="width: {{ x.percent }}%"></div></div>
+            <p class="mt-2 text-[12px] text-slate-500">{{ 'Documents' if en else 'Documentos' }}: {{ x.docs_got }}/{{ x.docs_total }}</p>
+        </li>
+        {% endfor %}
+    </ul>
+    {% if add_applicant_url %}
+    <a href="{{ add_applicant_url }}" class="mt-3 inline-flex items-center min-h-[44px] px-4 rounded-xl border border-slate-200 text-sm font-semibold text-accent-700 hover:border-accent-300 transition">+ {{ 'Add another applicant' if en else 'Agregar otro solicitante' }}</a>
+    {% endif %}
+    {% endif %}
+
+    {% if not tax_dash and not dl_dash %}<h2 class="mt-7 mb-3 text-lg font-bold text-brand-800">{{ t('case_applications') }}</h2>{% endif %}
+    {% if tax_dash or dl_dash %}
+    {% elif apps %}
+    <ul class="space-y-3">
+        {% for a in apps %}
+        <li class="rounded-card bg-white border border-slate-100 shadow-card p-4">
+            <div class="flex flex-wrap items-start gap-3">
+                <div class="min-w-0 flex-1 basis-48">
+                    <p class="font-semibold text-brand-800 leading-snug">{{ a.title }}</p>
+                    <p class="text-xs text-slate-500 mt-0.5">{% if a.form_name %}Form {{ a.form_name }} &middot; {% endif %}<span class="font-mono">{{ a.s.code }}</span>{% if a.roles %} &middot; {{ t('case_your_role') }}: {{ a.roles|join(', ') }}{% endif %}</p>
+                </div>
+                {{ pill(a.label, {'draft': 'warn', 'reopened': 'warn', 'waiting_client': 'warn', 'completed': 'success'}.get(a.key, 'accent')) }}
+            </div>
+            <div class="mt-3 flex flex-wrap gap-2">
+                {% if a.card.continue_url %}<a href="{{ a.card.continue_url }}" class="inline-flex items-center min-h-[44px] px-4 rounded-xl bg-accent-600 text-white text-sm font-semibold hover:bg-accent-700 transition">{{ t('case_continue') }} &rarr;</a>{% endif %}
+                <a href="{{ url_for('account.application_detail', lang=lang, submission_id=a.s.id) }}" class="inline-flex items-center min-h-[44px] px-4 rounded-xl border border-slate-200 text-sm font-semibold text-accent-700 hover:border-accent-300 transition">{{ t('case_view_app') }}</a>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}{{ empty_state(t('case_no_apps'), None, 'documents') }}{% endif %}
+
+    <h2 id="documents" class="mt-8 mb-1 text-lg font-bold text-brand-800 scroll-mt-4">{{ t('case_documents') }}</h2>
+    <p class="text-xs text-slate-500 mb-3">{{ t('case_allowed') }}</p>
+    {% if groups %}
+    {% for g in groups %}
+    <h3 class="mt-5 mb-2 text-xs font-bold uppercase tracking-wider text-accent-700">{{ g.label }}</h3>
+    <ul class="space-y-3">
+        {% for q in g.requirements %}
+        {% set r = q.r %}
+        <li class="rounded-card bg-white border {{ 'border-red-200' if r.status == 'needs_replacement' else 'border-slate-100' }} shadow-card p-4" id="req-{{ r.id }}">
+            <div class="flex flex-wrap items-start gap-3">
+                <div class="min-w-0 flex-1 basis-48">
+                    <p class="font-semibold text-brand-800 leading-snug break-words">{{ q.title }}</p>
+                    <p class="text-xs text-slate-500 mt-0.5">{{ q.category }}{% if q.apps %} &middot; {{ t('case_for_apps') }}: {{ q.apps|join(', ') }}{% endif %}</p>
+                </div>
+                <span class="inline-flex items-center rounded-full text-[11px] font-bold px-2.5 py-1 {{ q.tone }}">{{ q.status }}</span>
+            </div>
+            {% if r.reused_at %}<p class="mt-2 text-[13px] font-semibold text-emerald-700">&#10003; {{ t('case_already_received') }}</p>{% endif %}
+            {% if q.message %}<p class="mt-2 text-[13px] text-slate-600 whitespace-pre-line break-words">{{ q.message }}</p>{% endif %}
+            {% if r.status == 'needs_replacement' and r.review_message %}
+            <p class="mt-2 rounded-xl bg-red-50 border border-red-200 px-3.5 py-2.5 text-[13px] text-red-800 whitespace-pre-line break-words"><span class="font-semibold">{{ t('case_reason') }}:</span> {{ r.review_message }}</p>
+            {% endif %}
+            {% if q.track and q.track.original_required %}
+            {% set en = lang == 'en' %}
+            <div class="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5">
+                <p class="text-[13px] font-semibold text-amber-900">{{ 'Original' if en else 'Original' }}: {{ original_states.get(q.track.original_state, q.track.original_state) }}</p>
+                <p class="text-[12px] text-slate-600">{{ 'A photo here is only a copy for OG to pre-review. It does not count as the original.' if en else 'Una foto aquí es solo una copia para la revisión previa de OG. No cuenta como el original.' }}</p>
+                {% if q.track.original_state in ('required', 'will_mail', 'will_bring') %}
+                <form method="POST" action="{{ url_for('account.my_case_original', lang=lang, case_id=case.id, requirement_id=r.id) }}" class="mt-2 flex flex-wrap gap-2">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" name="choice" value="mail" class="min-h-[40px] px-3.5 rounded-lg border {{ 'border-accent-600 bg-white text-accent-700' if q.track.original_state == 'will_mail' else 'border-slate-200 bg-white text-slate-700' }} text-[13px] font-semibold">{{ 'I will mail it to OG' if en else 'Lo enviaré por correo a OG' }}</button>
+                    <button type="submit" name="choice" value="in_person" class="min-h-[40px] px-3.5 rounded-lg border {{ 'border-accent-600 bg-white text-accent-700' if q.track.original_state == 'will_bring' else 'border-slate-200 bg-white text-slate-700' }} text-[13px] font-semibold">{{ 'I will bring it in person' if en else 'Lo traeré en persona' }}</button>
+                </form>
+                {% endif %}
+            </div>
+            {% endif %}
+            {% if q.confirm_url and q.doc %}<a href="{{ q.confirm_url }}" class="mt-3 inline-flex items-center min-h-[44px] px-4 rounded-xl bg-accent-600 text-white text-sm font-semibold hover:bg-accent-700 transition">{{ 'Confirm passport information' if lang == 'en' else 'Confirmar información del pasaporte' }} &rarr;</a>{% endif %}
+            {% if q.doc %}
+            <div class="mt-3 flex flex-wrap items-center gap-3 rounded-xl bg-fog-50 border border-fog-200 px-3.5 py-2.5">
+                <span class="min-w-0 flex-1 basis-40 text-sm font-semibold text-brand-800 break-all">{{ q.doc.original_filename }}<span class="block text-xs font-normal text-slate-500">{{ q.doc.uploaded_at.strftime('%b %d, %Y') }}</span></span>
+                <a href="{{ url_for('account.my_case_document', lang=lang, case_id=case.id, document_id=q.doc.id, inline=1) }}" target="_blank" rel="noopener" class="text-sm font-semibold text-accent-700 hover:underline">{{ t('case_view') }}</a>
+                <a href="{{ url_for('account.my_case_document', lang=lang, case_id=case.id, document_id=q.doc.id) }}" class="text-sm font-semibold text-slate-500 hover:underline">{{ t('case_download') }}</a>
+                {% if q.can_remove %}
+                <form method="POST" action="{{ url_for('account.my_case_remove', lang=lang, case_id=case.id, requirement_id=r.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="text-sm font-semibold text-red-600 hover:underline">{{ t('case_remove') }}</button>
+                </form>
+                {% endif %}
+            </div>
+            {% endif %}
+            {% if q.can_upload %}
+            <form method="POST" enctype="multipart/form-data" action="{{ url_for('account.my_case_upload', lang=lang, case_id=case.id, requirement_id=r.id) }}" class="mt-3 flex flex-col sm:flex-row gap-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="file" name="file" required accept=".pdf,.jpg,.jpeg,.png,.webp" aria-label="{{ q.title }}" class="min-w-0 flex-1 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-mist-100 file:px-3 file:py-2.5 file:font-semibold file:text-accent-700">
+                <button type="submit" class="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl bg-accent-600 text-white text-sm font-semibold hover:bg-accent-700 transition">{{ t('case_upload_replacement') if q.doc or r.status == 'needs_replacement' else t('case_upload') }}</button>
+            </form>
+            {% if q.reusable %}
+            <p class="mt-3 text-xs font-semibold text-slate-500">{{ t('case_use_existing') }}</p>
+            <form method="POST" action="{{ url_for('account.my_case_reuse', lang=lang, case_id=case.id, requirement_id=r.id) }}" class="mt-1 flex flex-col sm:flex-row gap-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <select name="document_id" aria-label="{{ t('case_use_existing') }}" class="min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
+                    {% for d in q.reusable %}<option value="{{ d.id }}">{{ d.original_filename }}{% if d.title and not itin_dash %} — {{ d.title }}{% endif %}</option>{% endfor %}
+                </select>
+                <button type="submit" class="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl border border-slate-200 text-sm font-semibold text-accent-700 hover:border-accent-300 transition">{{ t('case_use') }}</button>
+            </form>
+            {% endif %}
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% endfor %}
+    {% else %}{{ empty_state(t('case_no_docs'), None, 'upload') }}{% endif %}
+</section>
+{% endblock %}

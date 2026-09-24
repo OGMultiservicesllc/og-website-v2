@@ -1,0 +1,76 @@
+{% extends "account/base_account.html" %}
+{% block title %}{{ t('acct_profile') }}{% endblock %}
+
+{% block account_body %}
+<section class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10 sm:pb-16 space-y-6">
+    <div class="rounded-panel bg-white border border-slate-100 shadow-card p-5 sm:p-6">
+        <h2 class="text-sm font-bold text-brand-800 mb-3">{{ t('acct_photo') }}</h2>
+        <div class="flex items-center gap-4">
+            {% if student.photo_filename %}
+            <img src="{{ url_for('account.photo', lang=lang, v=student.photo_filename[-8:]) }}" alt="" class="w-16 h-16 rounded-full object-cover border border-slate-200">
+            {% else %}
+            <span class="w-16 h-16 rounded-full bg-brand-800 text-white flex items-center justify-center text-lg font-bold" aria-hidden="true">{{ student.initials }}</span>
+            {% endif %}
+            <div class="min-w-0 flex-1">
+                <form method="POST" action="{{ url_for('account.profile_photo', lang=lang) }}" enctype="multipart/form-data" class="flex flex-wrap items-center gap-2">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="file" name="photo" accept=".jpg,.jpeg,.png,.webp" class="text-[13px] text-slate-600 max-w-full">
+                    <button class="min-h-[38px] px-4 rounded-lg bg-accent-600 text-white text-[13px] font-semibold hover:bg-accent-700 transition">{{ t('acct_photo_upload') }}</button>
+                </form>
+                <p class="mt-1 text-xs text-slate-400">{{ t('acct_photo_hint') }}</p>
+                {% if student.photo_filename %}
+                <form method="POST" action="{{ url_for('account.profile_photo_remove', lang=lang) }}" class="mt-1.5">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button class="text-xs font-semibold text-red-700 hover:underline">{{ t('acct_photo_remove') }}</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <form method="POST" class="rounded-panel bg-white border border-slate-100 shadow-card p-5 sm:p-6 space-y-4">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="action" value="profile">
+        <h1 class="text-xl font-extrabold tracking-tight text-brand-800">{{ t('acct_profile') }}</h1>
+        <div>
+            <label for="pf-name" class="block text-sm font-semibold text-brand-800 mb-1.5">{{ t('acct_name') }}</label>
+            <input id="pf-name" name="name" required maxlength="200" autocomplete="name" value="{{ student.name }}" class="w-full min-h-[48px] rounded-xl border border-slate-200 px-3.5 text-base focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+        <div>
+            <label class="block text-sm font-semibold text-brand-800 mb-1.5">{{ t('acct_email') }}</label>
+            <div class="flex items-center gap-2">
+                <input value="{{ student.email }}" disabled class="flex-1 min-h-[48px] rounded-xl border border-slate-100 bg-slate-50 px-3.5 text-base text-slate-500">
+                <a href="{{ url_for('account.verify_email_change', lang=lang, next=url_for('account.profile', lang=lang)) }}"
+                   class="shrink-0 min-h-[48px] inline-flex items-center px-4 rounded-xl border border-slate-200 text-sm font-semibold text-brand-800 hover:border-accent-300 transition">{{ t('verify_change_email_cta') }}</a>
+            </div>
+        </div>
+        <div>
+            <label for="pf-phone" class="block text-sm font-semibold text-brand-800 mb-1.5">{{ t('acct_phone') }}</label>
+            <input id="pf-phone" name="phone" type="tel" maxlength="40" autocomplete="tel" value="{{ student.phone or '' }}" class="w-full min-h-[48px] rounded-xl border border-slate-200 px-3.5 text-base focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+        <div>
+            <label for="pf-lang" class="block text-sm font-semibold text-brand-800 mb-1.5">{{ t('acct_preferred_language') }}</label>
+            <select id="pf-lang" name="preferred_language" class="w-full min-h-[48px] rounded-xl border border-slate-200 bg-white px-3.5 text-base">
+                <option value="">—</option>
+                <option value="en" {{ 'selected' if student.preferred_language == 'en' else '' }}>English</option>
+                <option value="es" {{ 'selected' if student.preferred_language == 'es' else '' }}>Español</option>
+            </select>
+        </div>
+        <button class="min-h-[48px] rounded-xl bg-accent-600 text-white font-semibold px-6 hover:bg-accent-700 transition">{{ t('acct_save') }}</button>
+    </form>
+
+    <form method="POST" class="rounded-panel bg-white border border-slate-100 shadow-card p-5 sm:p-6 space-y-4">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="action" value="password">
+        <h2 class="text-lg font-bold text-brand-800">{{ t('acct_change_password') }}</h2>
+        <div>
+            <label for="pf-cur" class="block text-sm font-semibold text-brand-800 mb-1.5">{{ t('acct_current_password') }}</label>
+            <input id="pf-cur" name="current_password" type="password" required autocomplete="current-password" class="w-full min-h-[48px] rounded-xl border border-slate-200 px-3.5 text-base focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+        <div>
+            <label for="pf-new" class="block text-sm font-semibold text-brand-800 mb-1.5">{{ t('acct_new_password') }}</label>
+            <input id="pf-new" name="new_password" type="password" required minlength="8" autocomplete="new-password" class="w-full min-h-[48px] rounded-xl border border-slate-200 px-3.5 text-base focus:outline-none focus:ring-2 focus:ring-accent-500">
+            <p class="mt-1 text-xs text-slate-400">{{ t('acct_password_hint') }}</p>
+        </div>
+        <button class="min-h-[48px] rounded-xl border border-slate-200 font-semibold px-6 hover:border-accent-300 transition">{{ t('acct_change_password') }}</button>
+    </form>
+</section>
+{% endblock %}

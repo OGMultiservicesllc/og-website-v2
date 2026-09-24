@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0f1829">
+    <title>{% block title %}OG Multiservices LLC{% endblock %}</title>
+    {% set _description = page_description if page_description is defined else t('seo_default_description') %}
+    <meta name="description" content="{{ _description }}">
+    {% if site_settings.block_search_indexing or request.blueprint == 'account' %}
+    <meta name="robots" content="noindex, nofollow">
+    {% endif %}
+    {% if site_settings.search_console_verification %}
+    <meta name="google-site-verification" content="{{ site_settings.search_console_verification }}">
+    {% endif %}
+    <link rel="canonical" href="{{ request.url_root.rstrip('/') }}{{ request.path }}">
+    <link rel="alternate" hreflang="{{ lang }}" href="{{ request.url_root.rstrip('/') }}{{ request.path }}">
+    <link rel="alternate" hreflang="{{ 'es' if lang == 'en' else 'en' }}" href="{{ request.url_root.rstrip('/') }}{{ switch_url() }}">
+    <link rel="alternate" hreflang="x-default" href="{{ request.url_root.rstrip('/') }}{{ request.path if lang == 'en' else switch_url() }}">
+    <meta property="og:site_name" content="OG Multiservices LLC">
+    <meta property="og:title" content="{{ self.title() }}">
+    <meta property="og:description" content="{{ _description }}">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ request.url }}">
+    <meta property="og:image" content="{{ page_image if page_image is defined else logo_url(external=True) }}">
+    <meta name="twitter:card" content="summary_large_image">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "ProfessionalService",
+        "name": "OG Multiservices LLC",
+        "image": "{{ logo_url(external=True) }}",
+        "telephone": "{{ biz.PHONE_TEL }}",
+        "email": "{{ biz.EMAIL }}",
+        "founder": {"@type": "Person", "name": "{{ biz.FOUNDER_NAME }}"},
+        "foundingDate": "{{ biz.FOUNDING_YEAR }}",
+        "url": "{{ request.url_root }}",
+        {% if sameas_urls %}"sameAs": {{ sameas_urls|tojson }},{% endif %}
+        "location": [
+            {
+                "@type": "Place",
+                "name": "OG Multiservices LLC — Paterson, NJ",
+                "address": {
+                    "@type": "PostalAddress",
+                    "streetAddress": "{{ biz.ADDRESS_LINE1 }}",
+                    "addressLocality": "Paterson",
+                    "addressRegion": "NJ",
+                    "postalCode": "07522",
+                    "addressCountry": "US"
+                }
+            },
+            {
+                "@type": "Place",
+                "name": "OG Multiservices LLC — Spring, TX Service Area"
+            }
+        ],
+        "areaServed": [
+            {% for city in biz.NJ_SERVICE_CITIES %}{"@type": "City", "name": "{{ city }}, NJ"}{{ "," if not loop.last }}{% endfor %},
+            {% for city in biz.TX_SERVICE_CITIES %}{"@type": "City", "name": "{{ city }}, TX"}{{ "," if not loop.last }}{% endfor %}
+        ],
+        "openingHoursSpecification": {
+            "@type": "OpeningHoursSpecification",
+            "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+            "opens": "09:00",
+            "closes": "17:00"
+        }
+    }
+    </script>
+    {% include "partials/tailwind_head.html" %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+    {% if site_settings.ga_measurement_id and not site_settings.block_search_indexing %}
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ site_settings.ga_measurement_id }}"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', {{ site_settings.ga_measurement_id|tojson }});
+    </script>
+    {% endif %}
+</head>
+<body class="font-sans text-slate-700 bg-white antialiased og-body-pad">
+    {# The account shell (header dropdown, sidebar-style chrome) is for a VERIFIED customer's own pages —
+       an unverified account (mid email-verification, item 6 of the Transactional Email spec) sees the
+       ordinary marketing header instead, so the verify-email screen stays a simple, focused gate rather
+       than looking like a partially-unlocked account with an "Action Required" badge and a profile menu. #}
+    {% set _is_acct_shell = request.blueprint == 'account' and student and student.is_email_verified %}
+    <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-lg focus:bg-brand-800 focus:text-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold">{{ 'Skip to content' if lang == 'en' else 'Saltar al contenido' }}</a>
+
+    {% if _is_acct_shell %}
+    {% include "account/_account_header.html" %}
+    {% else %}
+    <header class="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-slate-100">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-14 sm:h-16">
+                <a href="{{ url_for('public.home', lang=lang) }}" class="flex items-center gap-2 shrink-0" aria-label="OG Multiservices">
+                    <img src="{{ logo_url() }}" alt="" class="h-8 sm:h-9 w-auto">
+                    <span class="font-bold text-[15px] sm:text-lg tracking-tight text-brand-800">OG Multiservices</span>
+                </a>
+
+                {% from "partials/icons.html" import icon %}
+                {% set services_pages = pages_for_section('services') %}
+                {% set translations_pages = pages_for_section('translations') %}
+                {% set taxes_pages = pages_for_section('taxes_itin') %}
+                {% set academy_pages = pages_for_section('academy') %}
+                {% set resources_pages = pages_for_section('resources') %}
+                <nav class="hidden lg:flex items-center gap-7 text-sm font-medium text-slate-600" aria-label="Main">
+                    {% for item in main_nav %}
+                    {% if item.kind == 'services' %}
+                    <details class="relative group">
+                        <summary class="list-none cursor-pointer flex items-center gap-1 hover:text-accent-700 transition marker:content-['']">
+                            {{ item.label }}
+                            {{ icon('chevron-down', 'w-3.5 h-3.5 mt-px') }}
+                        </summary>
+                        <div class="absolute left-0 mt-3 w-80 rounded-card border border-slate-100 bg-white shadow-pop p-2 max-h-[75vh] overflow-y-auto">
+                            {% for c in nav_categories %}
+                            <a href="{{ c.href }}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-mist-50 hover:text-accent-700 font-semibold text-brand-800">
+                                {{ icon(c.icon, 'w-4 h-4 text-accent-600 shrink-0') }} {{ c.title }}
+                            </a>
+                            {% endfor %}
+                            {% for p in translations_pages + taxes_pages + services_pages %}
+                            <a href="{{ url_for('public.page_view', lang=lang, slug=p.slug) }}" class="block pl-10 pr-3 py-1.5 rounded-lg text-[13px] text-slate-500 hover:bg-mist-50 hover:text-accent-700">{{ p.title(lang) }}</a>
+                            {% endfor %}
+                            <div class="border-t border-slate-100 my-1"></div>
+                            <a href="{{ url_for('public.services', lang=lang) }}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-mist-50 hover:text-accent-700">{{ icon('documents', 'w-4 h-4 text-slate-400 shrink-0') }} {{ t('nav_services_other') }}</a>
+                            <a href="{{ url_for('public.locations_hub', lang=lang) }}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-mist-50 hover:text-accent-700">{{ icon('pin', 'w-4 h-4 text-slate-400 shrink-0') }} {{ t('nav_locations') }}</a>
+                            {% if resources_pages %}
+                            <div class="border-t border-slate-100 my-1"></div>
+                            <a href="{{ url_for('public.resources', lang=lang) }}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-mist-50 hover:text-accent-700 font-semibold text-brand-800">{{ icon('resources', 'w-4 h-4 text-accent-600 shrink-0') }} {{ t('nav_resources') }}</a>
+                            {% for p in resources_pages %}
+                            <a href="{{ url_for('public.page_view', lang=lang, slug=p.slug) }}" class="block pl-10 pr-3 py-1.5 rounded-lg text-[13px] text-slate-500 hover:bg-mist-50 hover:text-accent-700">{{ p.title(lang) }}</a>
+                            {% endfor %}
+                            {% endif %}
+                        </div>
+                    </details>
+                    {% elif item.kind == 'academy' %}
+                    {% if academy_pages %}
+                    <details class="relative group">
+                        <summary class="list-none cursor-pointer flex items-center gap-1.5 rounded-full bg-academy-50 pl-3 pr-2.5 py-1.5 text-academy-700 hover:bg-academy-100 transition marker:content-['']">
+                            {{ icon('academy', 'w-4 h-4') }}
+                            <span class="font-bold">{{ item.label }}</span>
+                            {{ icon('chevron-down', 'w-3.5 h-3.5 mt-px') }}
+                        </summary>
+                        <div class="absolute left-0 mt-3 w-64 rounded-card border border-slate-100 bg-white shadow-pop p-2">
+                            <a href="{{ item.href }}" class="block px-3 py-2 rounded-xl hover:bg-academy-50 hover:text-academy-600 font-semibold">{{ item.label }}</a>
+                            <div class="border-t border-slate-100 my-1"></div>
+                            {% for p in academy_pages %}
+                            <a href="{{ url_for('public.page_view', lang=lang, slug=p.slug) }}" class="block px-3 py-2 rounded-xl hover:bg-academy-50 hover:text-academy-600">{{ p.title(lang) }}</a>
+                            {% endfor %}
+                        </div>
+                    </details>
+                    {% else %}
+                    <a href="{{ item.href }}" class="flex items-center gap-1.5 rounded-full bg-academy-50 pl-3 pr-3.5 py-1.5 text-academy-700 hover:bg-academy-100 transition font-bold">
+                        {{ icon('academy', 'w-4 h-4') }} {{ item.label }}
+                    </a>
+                    {% endif %}
+                    {% else %}
+                    <a href="{{ item.href }}" {% if item.external %}target="_blank" rel="noopener"{% endif %} class="hover:text-accent-700 transition">{{ item.label }}</a>
+                    {% endif %}
+                    {% endfor %}
+                </nav>
+
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <a href="{{ switch_url() }}" hreflang="{{ 'es' if lang == 'en' else 'en' }}"
+                       class="inline-flex items-center justify-center min-w-[2.5rem] h-9 rounded-full border border-slate-200 text-xs font-bold text-brand-700 hover:border-accent-300 hover:text-accent-700 transition"
+                       aria-label="{{ 'Español' if lang == 'en' else 'English' }}">
+                        {{ 'ES' if lang == 'en' else 'EN' }}
+                    </a>
+                    {% if student %}
+                    <a href="{{ url_for('account.dashboard', lang=lang) }}" class="hidden sm:inline text-sm font-medium text-slate-600 hover:text-accent-700 transition">
+                        {{ t('acct_dashboard_title') }}
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('account.login', lang=lang) }}" class="hidden sm:inline text-sm font-medium text-slate-600 hover:text-accent-700 transition">
+                        {{ t('nav_login') }}
+                    </a>
+                    {% endif %}
+                    <a href="{{ url_for('public.contact', lang=lang) }}"
+                       class="hidden sm:inline-flex items-center rounded-xl bg-accent-600 text-white text-sm font-semibold px-4 py-2 hover:bg-accent-700 transition shadow-sm shadow-accent-600/25">
+                        {{ t('nav_get_started') }}
+                    </a>
+                    <button id="mobile-menu-btn" type="button"
+                            class="lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-xl text-brand-800 hover:bg-mist-100 transition"
+                            aria-label="Menu" aria-expanded="false" aria-controls="mobile-menu">
+                        <span id="icon-open">{{ icon('menu', 'w-6 h-6') }}</span>
+                        <span id="icon-close" class="hidden">{{ icon('close', 'w-6 h-6') }}</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="mobile-menu" class="hidden lg:hidden pb-5 max-h-[calc(100vh-3.5rem)] overflow-y-auto overscroll-contain">
+                {% if nav_categories %}
+                <div class="grid grid-cols-2 gap-2 pt-1">
+                    {% for c in nav_categories %}
+                    <a href="{{ c.href }}" class="flex items-center gap-2.5 rounded-xl bg-mist-50 border border-mist-200 px-3 py-2.5 text-[13px] font-semibold text-brand-800 active:bg-mist-100">
+                        <span class="text-accent-600 shrink-0">{{ icon(c.icon, 'w-[18px] h-[18px]') }}</span><span class="leading-tight">{{ c.title }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <nav class="mt-3 pt-2 border-t border-slate-100 flex flex-col text-[15px] font-medium text-slate-700" aria-label="Menu">
+                    {% for item in main_nav if item.kind != 'services' %}
+                    {% if item.kind == 'academy' %}
+                    <a href="{{ item.href }}" class="px-2 py-2.5 rounded-lg text-academy-700 font-bold hover:bg-academy-50 flex items-center gap-2">{{ icon('academy', 'w-[18px] h-[18px]') }}{{ item.label }}</a>
+                    {% else %}
+                    <a href="{{ item.href }}" {% if item.external %}target="_blank" rel="noopener"{% endif %} class="px-2 py-2.5 rounded-lg hover:bg-fog-50">{{ item.label }}</a>
+                    {% endif %}
+                    {% endfor %}
+                    <a href="{{ url_for('public.services', lang=lang) }}" class="px-2 py-2.5 rounded-lg hover:bg-fog-50">{{ t('nav_services_other') }}</a>
+                    <a href="{{ url_for('public.locations_hub', lang=lang) }}" class="px-2 py-2.5 rounded-lg hover:bg-fog-50">{{ t('nav_locations') }}</a>
+                    {% for p in translations_pages %}<a href="{{ url_for('public.page_view', lang=lang, slug=p.slug) }}" class="px-2 py-2.5 rounded-lg hover:bg-fog-50">{{ p.title(lang) }}</a>{% endfor %}
+                    {% for p in taxes_pages %}<a href="{{ url_for('public.page_view', lang=lang, slug=p.slug) }}" class="px-2 py-2.5 rounded-lg hover:bg-fog-50">{{ p.title(lang) }}</a>{% endfor %}
+                    {% for p in services_pages %}<a href="{{ url_for('public.page_view', lang=lang, slug=p.slug) }}" class="px-2 py-2.5 rounded-lg hover:bg-fog-50">{{ p.title(lang) }}</a>{% endfor %}
+                    {% for p in resources_pages %}<a href="{{ url_for('public.page_view', lang=lang, slug=p.slug) }}" class="px-2 py-2.5 rounded-lg hover:bg-fog-50">{{ p.title(lang) }}</a>{% endfor %}
+                    {% for p in academy_pages %}<a href="{{ url_for('public.page_view', lang=lang, slug=p.slug) }}" class="px-2 py-2.5 rounded-lg hover:bg-fog-50">{{ p.title(lang) }}</a>{% endfor %}
+                    {% if student %}
+                    <a href="{{ url_for('account.dashboard', lang=lang) }}" class="px-2 py-2.5 rounded-lg hover:bg-fog-50">{{ t('acct_dashboard_title') }}</a>
+                    {% else %}
+                    <a href="{{ url_for('account.login', lang=lang) }}" class="px-2 py-2.5 rounded-lg hover:bg-fog-50">{{ t('nav_login') }}</a>
+                    {% endif %}
+                </nav>
+            </div>
+        </div>
+    </header>
+    {% endif %}
+
+    <main id="main" tabindex="-1">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-2">
+                {% for category, message in messages %}
+                <div class="rounded-lg px-4 py-3 text-sm font-medium {{ 'bg-red-50 text-red-700 border border-red-100' if category == 'error' else 'bg-emerald-50 text-emerald-700 border border-emerald-100' }}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </main>
+
+    {% if not _is_acct_shell %}
+    <footer class="bg-brand-800 text-slate-300 mt-10 sm:mt-16">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-8">
+                <div class="md:col-span-1">
+                    <div class="flex items-center gap-2 mb-3">
+                        <img src="{{ logo_url() }}" alt="OG Multiservices" class="h-8 w-auto">
+                        <span class="font-bold text-white">OG Multiservices</span>
+                    </div>
+                    <p class="text-sm text-slate-400">{{ t('footer_tagline') }}</p>
+                    {% if site_settings.facebook_url or site_settings.instagram_url or site_settings.tiktok_url or site_settings.youtube_url or site_settings.linkedin_url %}
+                    <div class="flex items-center gap-3 mt-4">
+                        {% if site_settings.facebook_url %}
+                        <a href="{{ site_settings.facebook_url }}" target="_blank" rel="noopener" aria-label="Facebook" class="text-slate-400 hover:text-white transition">{{ icon('facebook', 'w-5 h-5') }}</a>
+                        {% endif %}
+                        {% if site_settings.instagram_url %}
+                        <a href="{{ site_settings.instagram_url }}" target="_blank" rel="noopener" aria-label="Instagram" class="text-slate-400 hover:text-white transition">{{ icon('instagram', 'w-5 h-5') }}</a>
+                        {% endif %}
+                        {% if site_settings.tiktok_url %}
+                        <a href="{{ site_settings.tiktok_url }}" target="_blank" rel="noopener" aria-label="TikTok" class="text-slate-400 hover:text-white transition">{{ icon('tiktok', 'w-5 h-5') }}</a>
+                        {% endif %}
+                        {% if site_settings.youtube_url %}
+                        <a href="{{ site_settings.youtube_url }}" target="_blank" rel="noopener" aria-label="YouTube" class="text-slate-400 hover:text-white transition">{{ icon('youtube', 'w-5 h-5') }}</a>
+                        {% endif %}
+                        {% if site_settings.linkedin_url %}
+                        <a href="{{ site_settings.linkedin_url }}" target="_blank" rel="noopener" aria-label="LinkedIn" class="text-slate-400 hover:text-white transition">{{ icon('linkedin', 'w-5 h-5') }}</a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                <div>
+                    <h4 class="text-white font-semibold mb-3 text-sm uppercase tracking-wide">{{ t('footer_services') }}</h4>
+                    <ul class="space-y-2 text-sm text-slate-400">
+                        <li><a href="{{ url_for('public.translations', lang=lang) }}" class="hover:text-white transition">{{ t('nav_translations') }}</a></li>
+                        <li><a href="{{ url_for('public.taxes_itin', lang=lang) }}" class="hover:text-white transition">{{ t('nav_taxes_itin') }}</a></li>
+                        <li><a href="{{ url_for('public.notary', lang=lang) }}" class="hover:text-white transition">{{ t('nav_services_notary') }}</a></li>
+                        <li><a href="{{ url_for('public.immigration', lang=lang) }}" class="hover:text-white transition">{{ t('nav_services_immigration') }}</a></li>
+                        <li><a href="{{ url_for('public.nj_driver_license', lang=lang) }}" class="hover:text-white transition">{{ t('nav_services_license') }}</a></li>
+                        <li><a href="{{ url_for('public.apostille', lang=lang) }}" class="hover:text-white transition">{{ t('nav_services_apostille') }}</a></li>
+                        <li><a href="{{ url_for('public.wedding_officiant', lang=lang) }}" class="hover:text-white transition">{{ t('nav_services_officiant') }}</a></li>
+                        <li><a href="{{ url_for('public.document_office_services', lang=lang) }}" class="hover:text-white transition">{{ t('nav_services_docs') }}</a></li>
+                        <li><a href="{{ url_for('public.courses', lang=lang) }}" class="hover:text-white transition">{{ t('nav_courses') }}</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-semibold mb-3 text-sm uppercase tracking-wide">{{ t('footer_company') }}</h4>
+                    <ul class="space-y-2 text-sm text-slate-400">
+                        <li><a href="{{ url_for('public.about', lang=lang) }}" class="hover:text-white transition">{{ t('nav_about') }}</a></li>
+                        <li><a href="{{ url_for('public.locations_hub', lang=lang) }}" class="hover:text-white transition">{{ t('nav_locations') }}</a></li>
+                        <li><a href="{{ url_for('public.blog', lang=lang) }}" class="hover:text-white transition">{{ t('nav_blog') }}</a></li>
+                        {% for p in standalone_nav_pages %}
+                        <li><a href="{{ url_for('public.page_view', lang=lang, slug=p.slug) }}" class="hover:text-white transition">{{ p.title(lang) }}</a></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-semibold mb-3 text-sm uppercase tracking-wide">{{ t('footer_contact') }}</h4>
+                    <ul class="space-y-2 text-sm text-slate-400">
+                        <li>{{ biz.ADDRESS_LINE1 }}</li>
+                        <li>{{ biz.ADDRESS_LINE2 }}</li>
+                        <li><a href="tel:{{ biz.PHONE_TEL }}" class="hover:text-white transition">{{ biz.PHONE_DISPLAY }}</a></li>
+                        <li><a href="{{ biz.WHATSAPP_LINK }}" class="hover:text-white transition">WhatsApp: {{ biz.WHATSAPP_DISPLAY }}</a></li>
+                        <li><a href="mailto:{{ biz.EMAIL }}" class="hover:text-white transition">{{ biz.EMAIL }}</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-semibold mb-3 text-sm uppercase tracking-wide">{{ t('footer_hours') }}</h4>
+                    <p class="text-sm text-slate-400">{{ t('footer_hours_value') }}</p>
+                    <p class="text-sm text-slate-500">{{ t('footer_hours_closed') }}</p>
+                </div>
+            </div>
+            <div class="border-t border-slate-700/60 mt-10 pt-6 text-sm text-slate-500">
+                &copy; 2026 OG Multiservices LLC. {{ t('footer_rights') }}
+            </div>
+        </div>
+    </footer>
+
+    <!-- Floating WhatsApp button (desktop / tablet) — pulses on service pages, where
+         messaging us is the main call to action. -->
+    <a href="{{ biz.WHATSAPP_LINK }}" target="_blank" rel="noopener"
+       class="hidden md:flex fixed right-6 og-float-above-nav z-40 items-center justify-center w-12 h-12 rounded-full bg-wa text-white shadow-pop hover:bg-wa-600 hover:scale-105 transition{{ ' og-wa-pulse' if '/services/' in request.path else '' }}"
+       aria-label="WhatsApp">
+        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.472-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.372-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12.001 2C6.478 2 2 6.477 2 12c0 1.9.53 3.68 1.451 5.196L2 22l4.933-1.415A9.951 9.951 0 0012.001 22C17.523 22 22 17.523 22 12S17.523 2 12.001 2zm0 18.06a8.036 8.036 0 01-4.31-1.246l-.309-.183-3.03.868.87-2.965-.2-.31A8.043 8.043 0 013.94 12c0-4.446 3.615-8.06 8.061-8.06 4.445 0 8.06 3.614 8.06 8.06 0 4.446-3.615 8.06-8.06 8.06z"/></svg>
+    </a>
+
+    {% from "partials/icons.html" import icon %}
+    <!-- Chat widget -->
+    <button id="chat-launcher" type="button"
+            class="fixed right-3 md:right-6 og-float-above-nav og-float-chat z-40 flex items-center justify-center w-11 h-11 md:w-12 md:h-12 rounded-full bg-brand-800 text-white shadow-pop hover:scale-105 transition"
+            aria-label="{{ t('chat_title') }}">
+        {{ icon('chat', 'w-5 h-5 md:w-6 md:h-6') }}
+    </button>
+
+    <div id="chat-panel" class="hidden fixed right-3 md:right-6 bottom-[calc(var(--og-bottom-nav-h)+var(--og-safe-bottom)+4rem)] md:bottom-[8rem] z-40 w-[calc(100vw-1.5rem)] max-w-sm bg-white rounded-2xl shadow-2xl border border-slate-100 flex flex-col overflow-hidden" style="height: min(32rem, 65vh);">
+        <div class="bg-brand-800 text-white px-4 py-3 flex items-center justify-between shrink-0">
+            <span class="font-semibold text-sm flex items-center gap-2">
+                <img src="{{ logo_url() }}" alt="" class="h-5 w-auto">
+                {{ t('chat_title') }}
+            </span>
+            <button id="chat-close" type="button" class="text-white/70 hover:text-white" aria-label="Close">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+        </div>
+
+        <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3 text-sm">
+            <div class="bg-slate-100 text-slate-700 rounded-2xl rounded-tl-sm px-3.5 py-2.5 max-w-[85%]">{{ t('chat_greeting') }}</div>
+            <div class="flex flex-wrap gap-1.5" id="chat-quick-replies">
+                <button type="button" data-topic="taxes" class="chat-chip text-xs font-medium px-2.5 py-1.5 rounded-full bg-accent-50 text-accent-700 hover:bg-accent-100">{{ t('finder_taxes') }}</button>
+                <button type="button" data-topic="itin" class="chat-chip text-xs font-medium px-2.5 py-1.5 rounded-full bg-accent-50 text-accent-700 hover:bg-accent-100">{{ t('finder_itin') }}</button>
+                <button type="button" data-topic="translations" class="chat-chip text-xs font-medium px-2.5 py-1.5 rounded-full bg-accent-50 text-accent-700 hover:bg-accent-100">{{ t('finder_translate') }}</button>
+                <button type="button" data-topic="notary" class="chat-chip text-xs font-medium px-2.5 py-1.5 rounded-full bg-accent-50 text-accent-700 hover:bg-accent-100">{{ t('finder_notary') }}</button>
+                <button type="button" data-topic="immigration" class="chat-chip text-xs font-medium px-2.5 py-1.5 rounded-full bg-accent-50 text-accent-700 hover:bg-accent-100">{{ t('finder_immigration') }}</button>
+                <button type="button" data-topic="courses" class="chat-chip text-xs font-medium px-2.5 py-1.5 rounded-full bg-academy-50 text-academy-700 hover:bg-academy-100">{{ t('finder_course') }}</button>
+            </div>
+        </div>
+
+        <div id="chat-lead-form-wrap" class="hidden border-t border-slate-100 p-4">
+            <p class="text-xs font-semibold text-slate-700 mb-2">{{ t('chat_leave_info_title') }}</p>
+            <form id="chat-lead-form" class="space-y-2">
+                <input type="text" name="name" required placeholder="{{ t('contact_name') }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+                <input type="email" name="email" required placeholder="{{ t('contact_email') }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+                <input type="tel" name="phone" placeholder="{{ t('contact_phone') }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+                <button type="submit" class="w-full rounded-lg bg-accent-600 text-white font-semibold py-2 text-sm hover:bg-accent-700 transition">{{ t('chat_send') }}</button>
+            </form>
+        </div>
+
+        <form id="chat-input-form" class="border-t border-slate-100 p-3 flex items-center gap-2 shrink-0">
+            <input type="text" id="chat-input" placeholder="{{ t('chat_placeholder') }}" class="flex-1 rounded-full border border-slate-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            <button type="submit" class="w-9 h-9 shrink-0 rounded-full bg-accent-600 text-white flex items-center justify-center hover:bg-accent-700 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+            </button>
+        </form>
+    </div>
+
+    <!-- Mobile bottom bar: Call | WhatsApp | Start -->
+    <nav class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-t border-slate-200 og-bottom-nav" aria-label="Quick actions">
+        <div class="grid grid-cols-[1fr_1fr_1.3fr] gap-1.5 px-2.5 items-center" style="height: var(--og-bottom-nav-h);">
+            <a href="tel:{{ biz.PHONE_TEL }}" class="flex flex-col items-center justify-center gap-0.5 h-12 rounded-xl text-brand-700 active:bg-fog-100">
+                {{ icon('phone', 'w-5 h-5') }}
+                <span class="text-[11px] font-semibold leading-none">{{ t('mobilebar_call') }}</span>
+            </a>
+            <a href="{{ biz.WHATSAPP_LINK }}" target="_blank" rel="noopener" class="flex flex-col items-center justify-center gap-0.5 h-12 rounded-xl text-wa-700 active:bg-fog-100">
+                {{ icon('whatsapp', 'w-5 h-5') }}
+                <span class="text-[11px] font-semibold leading-none">{{ t('mobilebar_whatsapp') }}</span>
+            </a>
+            <a href="{{ url_for('public.contact', lang=lang) }}" class="flex items-center justify-center gap-1.5 h-12 rounded-xl bg-accent-600 text-white font-bold text-[15px] shadow-sm shadow-accent-600/30 active:bg-accent-700">
+                {{ t('mobilebar_start') }} {{ icon('arrow-right', 'w-4 h-4') }}
+            </a>
+        </div>
+    </nav>
+    {% endif %}
+
+    <script>
+        (function () {
+            const btn = document.getElementById('mobile-menu-btn');
+            const menu = document.getElementById('mobile-menu');
+            if (!btn || !menu) { return; }
+            const iconOpen = document.getElementById('icon-open');
+            const iconClose = document.getElementById('icon-close');
+            btn.addEventListener('click', function () {
+                const isHidden = menu.classList.contains('hidden');
+                menu.classList.toggle('hidden');
+                iconOpen.classList.toggle('hidden');
+                iconClose.classList.toggle('hidden');
+                btn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+            });
+        })();
+    </script>
+
+    {% if not _is_acct_shell %}
+    <script>
+        (function () {
+            const launcher = document.getElementById('chat-launcher');
+            const panel = document.getElementById('chat-panel');
+            const closeBtn = document.getElementById('chat-close');
+            const messages = document.getElementById('chat-messages');
+            const inputForm = document.getElementById('chat-input-form');
+            const input = document.getElementById('chat-input');
+            const leadWrap = document.getElementById('chat-lead-form-wrap');
+            const leadForm = document.getElementById('chat-lead-form');
+            const quickReplies = document.getElementById('chat-quick-replies');
+
+            const KB = {
+                taxes: {
+                    keywords: ['tax', 'taxes', 'impuesto', 'impuestos', 'declarar', 'file', 'uber', 'lyft', '1099'],
+                    reply: {{ t('chat_reply_taxes')|tojson }},
+                    link: {{ url_for('public.taxes_itin', lang=lang)|tojson }},
+                },
+                itin: {
+                    keywords: ['itin', 'caa', 'w-7', 'w7'],
+                    reply: {{ t('chat_reply_itin')|tojson }},
+                    link: {{ url_for('public.taxes_itin', lang=lang)|tojson }} + '#itin',
+                },
+                translations: {
+                    keywords: ['translat', 'traduc', 'document', 'documento', 'certificate', 'acta'],
+                    reply: {{ t('chat_reply_translations')|tojson }},
+                    link: {{ url_for('public.translations', lang=lang)|tojson }},
+                },
+                notary: {
+                    keywords: ['notary', 'notario', 'notaria', 'notariz', 'stamp', 'sello'],
+                    reply: {{ t('chat_reply_notary')|tojson }},
+                    link: {{ url_for('public.notary', lang=lang)|tojson }},
+                },
+                license: {
+                    keywords: ['license', 'licencia', 'mvc', 'dmv', 'driver', 'conducir', 'real id'],
+                    reply: {{ t('chat_reply_license')|tojson }},
+                    link: {{ url_for('public.nj_driver_license', lang=lang)|tojson }},
+                },
+                immigration: {
+                    keywords: ['immigration', 'inmigra', 'visa', 'green card', 'residencia', 'ciudadania', 'citizenship'],
+                    reply: {{ t('chat_reply_immigration')|tojson }},
+                    link: {{ url_for('public.immigration', lang=lang)|tojson }},
+                },
+                courses: {
+                    keywords: ['course', 'curso', 'academy', 'class', 'clase', 'learn', 'aprender'],
+                    reply: {{ t('chat_reply_courses')|tojson }},
+                    link: {{ url_for('public.courses', lang=lang)|tojson }},
+                },
+            };
+            const viewPageLabel = {{ t('chat_view_page')|tojson }};
+            const fallbackReply = {{ t('chat_reply_fallback')|tojson }};
+
+            function addUserMessage(text) {
+                const div = document.createElement('div');
+                div.className = 'bg-accent-600 text-white rounded-2xl rounded-tr-sm px-3.5 py-2.5 max-w-[85%] ml-auto';
+                div.textContent = text;
+                messages.appendChild(div);
+            }
+
+            function addBotMessage(text, link) {
+                const div = document.createElement('div');
+                div.className = 'bg-slate-100 text-slate-700 rounded-2xl rounded-tl-sm px-3.5 py-2.5 max-w-[85%]';
+                div.textContent = text;
+                messages.appendChild(div);
+                if (link) {
+                    const a = document.createElement('a');
+                    a.href = link;
+                    a.textContent = viewPageLabel + ' →';
+                    a.className = 'block text-sm font-semibold text-accent-600 hover:text-accent-700 mt-1';
+                    messages.appendChild(a);
+                }
+                messages.scrollTop = messages.scrollHeight;
+            }
+
+            function showLeadForm() {
+                leadWrap.classList.remove('hidden');
+                messages.scrollTop = messages.scrollHeight;
+            }
+
+            function respondTo(text) {
+                const lower = text.toLowerCase();
+                const match = Object.values(KB).find((entry) => entry.keywords.some((k) => lower.includes(k)));
+                if (match) {
+                    addBotMessage(match.reply, match.link);
+                } else {
+                    addBotMessage(fallbackReply);
+                    showLeadForm();
+                }
+            }
+
+            launcher.addEventListener('click', function () {
+                panel.classList.toggle('hidden');
+            });
+            closeBtn.addEventListener('click', function () {
+                panel.classList.add('hidden');
+            });
+
+            quickReplies.addEventListener('click', function (e) {
+                const btn = e.target.closest('.chat-chip');
+                if (!btn) return;
+                const topic = KB[btn.dataset.topic];
+                addUserMessage(btn.textContent.trim());
+                if (topic) addBotMessage(topic.reply, topic.link);
+                messages.scrollTop = messages.scrollHeight;
+            });
+
+            inputForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                const text = input.value.trim();
+                if (!text) return;
+                addUserMessage(text);
+                input.value = '';
+                respondTo(text);
+            });
+
+            leadForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                const formData = new FormData(leadForm);
+                formData.append('csrf_token', {{ csrf_token|tojson }});
+                fetch({{ url_for('public.chat_message', lang=lang)|tojson }}, {
+                    method: 'POST',
+                    body: formData,
+                }).then(function () {
+                    leadWrap.innerHTML = '<p class="text-sm text-emerald-600 font-medium">' + {{ t('chat_thanks')|tojson }} + '</p>';
+                });
+            });
+        })();
+    </script>
+    {% endif %}
+</body>
+</html>

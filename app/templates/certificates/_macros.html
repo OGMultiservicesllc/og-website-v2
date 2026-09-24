@@ -1,0 +1,183 @@
+{#
+    Shared certificate face macros. Each takes a single `cert` dict built by
+    the calling route (see app/certificates.py + the routes that render
+    these) so account/certificate.html and the admin preview route stay in
+    sync by construction — one macro per template, no duplicated markup.
+
+    Expected keys on `cert`:
+    title, student_name, course_title, date (formatted string), cert_id,
+    issuer_name, issuer_subtitle, signatory_name, signatory_title,
+    logo_url, signature_url, accent_color, show_id, show_qr, qr_data_uri,
+    verify_url, disclaimer, revoked (bool)
+#}
+
+{% macro classic(cert) %}
+<div class="cert-face" style="border: 10px solid {{ cert.accent_color }}; border-radius: 4px; padding: 56px 48px; text-align: center; background: #fff; position: relative;">
+    <div style="border: 1px solid {{ cert.accent_color }}; padding: 36px 28px;">
+        {% if cert.logo_url %}
+        <img src="{{ cert.logo_url }}" alt="{{ cert.issuer_name }}" style="height: 56px; margin: 0 auto 16px; display: block;">
+        {% endif %}
+        <p style="font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: {{ cert.accent_color }}; margin: 0 0 4px;">{{ cert.issuer_name }}</p>
+        <p style="font-size: 11px; color: #64748b; margin: 0 0 28px;">{{ cert.issuer_subtitle }}</p>
+
+        <h1 style="font-family: Georgia, 'Times New Roman', serif; font-size: 30px; font-weight: 700; color: #0f1829; margin: 0 0 28px; letter-spacing: 0.03em; text-transform: uppercase;">{{ cert.title }}</h1>
+
+        <p style="font-size: 13px; color: #64748b; margin: 0 0 6px;">This certifies that</p>
+        <p style="font-family: Georgia, 'Times New Roman', serif; font-size: 32px; font-weight: 700; color: #0f1829; margin: 0 0 6px;">{{ cert.student_name }}</p>
+        <div style="width: 120px; height: 2px; background: {{ cert.accent_color }}; margin: 10px auto 20px;"></div>
+        <p style="font-size: 13px; color: #64748b; margin: 0 0 4px;">has successfully completed the</p>
+        <p style="font-size: 19px; font-weight: 600; color: #0f1829; margin: 0 0 32px;">{{ cert.course_title }}</p>
+        <p style="font-size: 12px; color: #94a3b8; margin: 0 0 36px;">offered by {{ cert.issuer_name }}</p>
+
+        <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-top: 24px; text-align: left;">
+            <div>
+                <p style="font-size: 12px; color: #64748b; margin: 0;">Date of Completion</p>
+                <p style="font-size: 14px; font-weight: 600; color: #0f1829; margin: 2px 0 0;">{{ cert.date }}</p>
+            </div>
+            <div style="text-align: center;">
+                {% if cert.signature_url %}
+                <img src="{{ cert.signature_url }}" alt="Signature" style="height: 40px; margin: 0 auto 4px; display: block;">
+                {% else %}
+                <p style="font-family: 'Brush Script MT', cursive, Georgia, serif; font-size: 24px; color: #0f1829; margin: 0 0 2px;">{{ cert.signatory_name }}</p>
+                {% endif %}
+                <div style="width: 160px; border-top: 1px solid #cbd5e1; margin: 2px auto 4px;"></div>
+                <p style="font-size: 12px; font-weight: 600; color: #0f1829; margin: 0;">{{ cert.signatory_name }}</p>
+                <p style="font-size: 11px; color: #64748b; margin: 0;">{{ cert.signatory_title }}</p>
+            </div>
+            <div style="text-align: right;">
+                {% if cert.show_id %}
+                <p style="font-size: 12px; color: #64748b; margin: 0;">Certificate ID</p>
+                <p style="font-size: 13px; font-weight: 600; color: #0f1829; margin: 2px 0 0; font-family: monospace;">{{ cert.cert_id }}</p>
+                {% endif %}
+                {% if cert.show_qr and cert.qr_data_uri %}
+                <img src="{{ cert.qr_data_uri }}" alt="Verify" style="width: 56px; height: 56px; margin-top: 8px;">
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if cert.revoked %}
+    <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <span style="transform: rotate(-18deg); border: 6px solid #dc2626; color: #dc2626; font-size: 40px; font-weight: 800; letter-spacing: 0.15em; padding: 8px 28px; text-transform: uppercase; background: rgba(255,255,255,0.85);">Revoked</span>
+    </div>
+    {% endif %}
+</div>
+<p style="max-width: 640px; margin: 20px auto 0; font-size: 10px; line-height: 1.5; color: #94a3b8; text-align: center;">{{ cert.disclaimer }}</p>
+{% endmacro %}
+
+{% macro modern(cert) %}
+<div class="cert-face" style="border-radius: 16px; overflow: hidden; background: #fff; border: 1px solid #e2e8f0; position: relative;">
+    <div style="background: {{ cert.accent_color }}; height: 10px;"></div>
+    <div style="padding: 48px 52px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 40px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                {% if cert.logo_url %}
+                <img src="{{ cert.logo_url }}" alt="{{ cert.issuer_name }}" style="height: 40px;">
+                {% endif %}
+                <div>
+                    <p style="font-size: 13px; font-weight: 700; color: #0f1829; margin: 0;">{{ cert.issuer_name }}</p>
+                    <p style="font-size: 10px; color: #94a3b8; margin: 0;">{{ cert.issuer_subtitle }}</p>
+                </div>
+            </div>
+            {% if cert.show_id %}
+            <p style="font-size: 11px; font-family: monospace; color: #94a3b8; margin: 0;">{{ cert.cert_id }}</p>
+            {% endif %}
+        </div>
+
+        <p style="font-size: 11px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: {{ cert.accent_color }}; margin: 0 0 10px;">{{ cert.title }}</p>
+        <h1 style="font-size: 34px; font-weight: 800; color: #0f1829; margin: 0 0 6px; letter-spacing: -0.02em;">{{ cert.student_name }}</h1>
+        <p style="font-size: 14px; color: #475569; margin: 0 0 32px; max-width: 480px;">has successfully completed <strong style="color: #0f1829;">{{ cert.course_title }}</strong>, offered by {{ cert.issuer_name }}.</p>
+
+        <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding-top: 28px; border-top: 1px solid #e2e8f0;">
+            <div>
+                <p style="font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8; margin: 0;">Completed</p>
+                <p style="font-size: 14px; font-weight: 600; color: #0f1829; margin: 2px 0 0;">{{ cert.date }}</p>
+            </div>
+            <div style="text-align: center;">
+                {% if cert.signature_url %}
+                <img src="{{ cert.signature_url }}" alt="Signature" style="height: 36px; margin: 0 auto 4px; display: block;">
+                {% endif %}
+                <p style="font-size: 13px; font-weight: 700; color: #0f1829; margin: 0;">{{ cert.signatory_name }}</p>
+                <p style="font-size: 10px; color: #94a3b8; margin: 0;">{{ cert.signatory_title }}</p>
+            </div>
+            {% if cert.show_qr and cert.qr_data_uri %}
+            <img src="{{ cert.qr_data_uri }}" alt="Verify" style="width: 52px; height: 52px;">
+            {% endif %}
+        </div>
+    </div>
+
+    {% if cert.revoked %}
+    <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <span style="transform: rotate(-18deg); border: 6px solid #dc2626; color: #dc2626; font-size: 40px; font-weight: 800; letter-spacing: 0.15em; padding: 8px 28px; text-transform: uppercase; background: rgba(255,255,255,0.85);">Revoked</span>
+    </div>
+    {% endif %}
+</div>
+<p style="max-width: 640px; margin: 20px auto 0; font-size: 10px; line-height: 1.5; color: #94a3b8; text-align: center;">{{ cert.disclaimer }}</p>
+{% endmacro %}
+
+{% macro premium(cert) %}
+<div class="cert-face" style="border: 3px double {{ cert.accent_color }}; padding: 10px; background: #fdfbf5; position: relative;">
+    <div style="border: 1px solid {{ cert.accent_color }}; padding: 44px 48px; text-align: center; position: relative;">
+        <div style="position: absolute; top: 10px; left: 10px; width: 22px; height: 22px; border-top: 2px solid {{ cert.accent_color }}; border-left: 2px solid {{ cert.accent_color }};"></div>
+        <div style="position: absolute; top: 10px; right: 10px; width: 22px; height: 22px; border-top: 2px solid {{ cert.accent_color }}; border-right: 2px solid {{ cert.accent_color }};"></div>
+        <div style="position: absolute; bottom: 10px; left: 10px; width: 22px; height: 22px; border-bottom: 2px solid {{ cert.accent_color }}; border-left: 2px solid {{ cert.accent_color }};"></div>
+        <div style="position: absolute; bottom: 10px; right: 10px; width: 22px; height: 22px; border-bottom: 2px solid {{ cert.accent_color }}; border-right: 2px solid {{ cert.accent_color }};"></div>
+
+        {% if cert.logo_url %}
+        <img src="{{ cert.logo_url }}" alt="{{ cert.issuer_name }}" style="height: 50px; margin: 0 auto 14px; display: block;">
+        {% endif %}
+        <p style="font-family: 'Palatino Linotype', Palatino, Georgia, serif; font-size: 13px; letter-spacing: 0.3em; text-transform: uppercase; color: #0f1829; margin: 0;">{{ cert.issuer_name }}</p>
+        <p style="font-size: 11px; color: #7c6a3f; margin: 2px 0 24px; letter-spacing: 0.05em;">{{ cert.issuer_subtitle }}</p>
+
+        <p style="font-family: 'Palatino Linotype', Palatino, Georgia, serif; font-size: 24px; letter-spacing: 0.15em; text-transform: uppercase; color: {{ cert.accent_color }}; margin: 0 0 26px;">{{ cert.title }}</p>
+
+        <p style="font-family: 'Palatino Linotype', Palatino, Georgia, serif; font-size: 13px; font-style: italic; color: #475569; margin: 0 0 12px;">This is to certify that</p>
+        <p style="font-family: 'Palatino Linotype', Palatino, Georgia, serif; font-size: 34px; color: #0f1829; margin: 0 0 12px;">{{ cert.student_name }}</p>
+        <p style="font-family: 'Palatino Linotype', Palatino, Georgia, serif; font-size: 13px; font-style: italic; color: #475569; margin: 0 0 6px;">has successfully completed the course of study entitled</p>
+        <p style="font-size: 18px; font-weight: 700; color: #0f1829; margin: 0 0 6px;">{{ cert.course_title }}</p>
+        <p style="font-size: 11px; color: #7c6a3f; margin: 0 0 34px; letter-spacing: 0.05em;">presented by {{ cert.issuer_name }}</p>
+
+        <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; text-align: left;">
+            <div>
+                <div style="width: 140px; border-top: 1px solid {{ cert.accent_color }}; margin-bottom: 4px;"></div>
+                <p style="font-size: 11px; color: #7c6a3f; margin: 0;">Date of Completion</p>
+                <p style="font-size: 13px; font-weight: 600; color: #0f1829; margin: 2px 0 0;">{{ cert.date }}</p>
+            </div>
+            <div style="text-align: center;">
+                {% if cert.signature_url %}
+                <img src="{{ cert.signature_url }}" alt="Signature" style="height: 38px; margin: 0 auto 4px; display: block;">
+                {% else %}
+                <p style="font-family: 'Brush Script MT', cursive, Georgia, serif; font-size: 22px; color: #0f1829; margin: 0 0 2px;">{{ cert.signatory_name }}</p>
+                {% endif %}
+                <div style="width: 160px; border-top: 1px solid {{ cert.accent_color }}; margin: 2px auto 4px;"></div>
+                <p style="font-size: 12px; font-weight: 600; color: #0f1829; margin: 0;">{{ cert.signatory_name }}</p>
+                <p style="font-size: 11px; color: #7c6a3f; margin: 0;">{{ cert.signatory_title }}</p>
+            </div>
+            <div style="text-align: right;">
+                {% if cert.show_id %}
+                <div style="width: 140px; border-top: 1px solid {{ cert.accent_color }}; margin-bottom: 4px; margin-left: auto;"></div>
+                <p style="font-size: 11px; color: #7c6a3f; margin: 0;">Certificate ID</p>
+                <p style="font-size: 12px; font-weight: 600; color: #0f1829; margin: 2px 0 0; font-family: monospace;">{{ cert.cert_id }}</p>
+                {% endif %}
+                {% if cert.show_qr and cert.qr_data_uri %}
+                <img src="{{ cert.qr_data_uri }}" alt="Verify" style="width: 54px; height: 54px; margin-top: 8px;">
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if cert.revoked %}
+    <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <span style="transform: rotate(-18deg); border: 6px solid #dc2626; color: #dc2626; font-size: 40px; font-weight: 800; letter-spacing: 0.15em; padding: 8px 28px; text-transform: uppercase; background: rgba(255,255,255,0.85);">Revoked</span>
+    </div>
+    {% endif %}
+</div>
+<p style="max-width: 640px; margin: 20px auto 0; font-size: 10px; line-height: 1.5; color: #94a3b8; text-align: center;">{{ cert.disclaimer }}</p>
+{% endmacro %}
+
+{% macro render(template_name, cert) %}
+    {% if template_name == 'modern' %}{{ modern(cert) }}
+    {% elif template_name == 'premium' %}{{ premium(cert) }}
+    {% else %}{{ classic(cert) }}
+    {% endif %}
+{% endmacro %}

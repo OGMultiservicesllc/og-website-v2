@@ -1,0 +1,24 @@
+{# Price section (customer). `price` = pricing.customer_view(). No amount is ever written here: it all comes from the pricing engine. #}
+<div class="mt-4">
+    {% if price.state == 'confirmed' %}
+    <div class="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-4">
+        <p class="text-[13px] font-bold uppercase tracking-wider text-emerald-700">{{ 'Confirmed price' if en else 'Precio confirmado' }}</p>
+        <p class="mt-1 text-[28px] font-extrabold text-brand-800">{{ price.final }}</p>
+    </div>
+    {% elif price.lines %}
+    <div class="rounded-xl border border-slate-200 bg-white px-4 py-4">
+        <p class="text-[13px] font-bold uppercase tracking-wider text-slate-500 mb-2">{{ 'Estimated OG Services' if en else 'Servicios Estimados de OG' }}</p>
+        <dl class="text-[15px] space-y-2">
+            {% for l in price.lines %}<div class="flex items-center justify-between gap-3"><dt class="text-slate-700">{{ l.label }}</dt><dd class="font-semibold {{ 'text-amber-700' if l.amount in ('Needs review', 'Requiere revisión') else 'text-brand-800' }}">{{ l.amount }}</dd></div>{% endfor %}
+        </dl>
+        <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between gap-3"><dt class="font-bold text-brand-800">{{ 'Estimated total' if en else 'Total estimado' }}</dt><dd class="text-[24px] font-extrabold text-brand-800">{{ price.subtotal }}{% if price.has_review_item %} +{% endif %}</dd></div>
+        {% if price.has_review_item %}<p class="mt-1 text-[13px] text-amber-800">{{ '+ document(s) under review' if en else '+ documento(s) en revisión' }}</p>{% endif %}
+    </div>
+    <p class="mt-3 text-[14px] text-slate-600 leading-relaxed">{{ 'This estimate is based on your answers. OG confirms the final price before doing the work.' if en else 'Este estimado se basa en tus respuestas. OG confirma el precio final antes de hacer el trabajo.' }}</p>
+    <p class="mt-1 text-[13px] text-slate-500">{{ 'You are not charged now.' if en else 'No se te cobra ahora.' }}</p>
+    {% else %}
+    <div class="rounded-xl border border-slate-200 bg-white px-4 py-4">
+        <p class="text-[15px] text-slate-700">{{ 'Based on your answers, no translations or appointment assistance are needed right now.' if en else 'Según tus respuestas, no se necesitan traducciones ni asistencia con citas por ahora.' }}</p>
+    </div>
+    {% endif %}
+</div>

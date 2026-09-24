@@ -1,0 +1,83 @@
+{% extends "intake_base.html" %}
+{% from "partials/ui.html" import pill, info_panel, context_chip %}
+{% from "partials/icons.html" import icon %}
+{% block title %}{{ t('intake_review_title') }} — {{ form.title(lang) }}{% endblock %}
+
+{% block header_actions %}
+<div class="flex items-center gap-0.5 rounded-full border border-slate-200 bg-white p-0.5 text-xs font-bold" role="group" aria-label="Language">
+    {% for code in ('en', 'es') %}
+    <a href="{{ url_for('public.og_form_review', lang=code, slug=form.slug, t=submission.resume_token) }}" class="px-2.5 py-1.5 rounded-full {{ 'text-white bg-accent-600' if lang == code else 'text-slate-500 hover:text-slate-800' }}" {% if lang == code %}aria-current="true"{% endif %}>{{ code|upper }}</a>
+    {% endfor %}
+</div>
+<a href="{{ url_for('account.applications', lang=lang) }}" class="min-h-[40px] inline-flex items-center px-3 rounded-full text-sm font-semibold text-slate-600 hover:text-brand-800 hover:bg-mist-100 transition">{{ t('intake_save_exit') }}</a>
+{% endblock %}
+
+{% block content %}
+<p class="text-xs font-bold uppercase tracking-wider text-accent-700">{{ service.title(lang) if service else form.title(lang) }}{% if form.source_form_name and form.source_form_name not in (service.title(lang) if service else '') %} · {{ 'Form' if lang == 'en' else 'Formulario' }} {{ form.source_form_name }}{% endif %}</p>
+<h1 class="mt-1 text-[1.6rem] sm:text-3xl leading-tight font-extrabold tracking-tight text-brand-800">{{ t('intake_review_title') }}</h1>
+<p class="mt-1.5 text-[15px] text-slate-600">{{ t('intake_review_sub') }}</p>
+
+{% if blockers %}
+<div class="mt-4" role="alert">{{ info_panel(t('intake_review_incomplete'), blocker_labels|join(' · '), 'notice') }}</div>
+{% endif %}
+
+<div class="mt-5 space-y-4">
+    {% set ns = namespace(ctx=none, sup=none, grp=none) %}
+    {% for s in sections %}
+    {% set gt = group_titles.get(s.page.group_key) if group_titles and s.page.group_key else none %}
+    {% if gt and ns.grp != s.page.group_key %}{% set ns.grp = s.page.group_key %}
+    <p class="{{ 'pt-3' if not loop.first else '' }} text-[12px] font-extrabold uppercase tracking-wider text-brand-800" data-review-group="{{ s.page.group_key }}">{{ gt.title }}{% if gt.tag %} <span class="ml-1 rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[10px] font-bold normal-case text-amber-800">{{ gt.tag }}</span>{% endif %}</p>
+    {% endif %}
+    {% set cx = contexts.get(s.page.context_key) if s.page.context_key else none %}
+    {% if cx and (ns.ctx is none or ns.ctx != cx.key) %}
+    {% set ns.ctx = cx.key %}
+    <div class="{{ 'pt-3' if not loop.first else '' }}">{{ context_chip(cx, true) }}<p class="mt-1 text-[13px] text-slate-500">{{ cx.subtitle }}</p></div>
+    {% endif %}
+    {% set sp = supplements.get(s.page.group_key) if supplements is defined and s.page.group_key else none %}
+    {% if sp and ns.sup != sp.key %}
+    {% set ns.sup = sp.key %}
+    <div class="pt-2"><p class="text-[13px] font-extrabold uppercase tracking-wider text-brand-800">{{ sp.title }}</p><p class="text-[12px] text-slate-500">{{ 'Form' if lang == 'en' else 'Formulario' }} {{ sp.form }} &middot; {{ sp.official }}</p></div>
+    {% elif not sp %}{% set ns.sup = none %}{% endif %}
+    <section class="rounded-card bg-white border {{ 'border-l-4 border-l-accent-500' if cx and cx.tone == 'accent' else ('border-l-4 border-l-brand-700' if cx and cx.tone == 'brand' else '') }} {{ 'border-amber-300' if s.missing_count else 'border-slate-100' }} shadow-card p-4 sm:p-5" aria-labelledby="sec-{{ loop.index }}">
+        <div class="flex items-center justify-between gap-3 mb-3">
+            <h2 id="sec-{{ loop.index }}" class="text-[15px] font-bold text-brand-800">{{ s.title }}</h2>
+            <a href="{{ url_for('public.og_form_view', lang=lang, slug=form.slug, page=form.pages.index(s.target) + 1, t=submission.resume_token, review=1) }}"
+               class="inline-flex items-center min-h-[40px] px-3.5 rounded-xl border border-slate-200 text-sm font-semibold text-accent-700 hover:border-accent-300 transition" aria-label="{{ t('intake_edit') }}: {{ s.title }}">{{ t('intake_edit') }}</a>
+        </div>
+        {% if s.missing_count %}<p class="mb-2">{{ pill(t('intake_needs_attention'), 'warn', 'alert') }}</p>{% endif %}
+        <dl class="space-y-3">
+            {% for it in s['items'] %}
+            <div>
+                <dt class="text-xs font-medium text-slate-400">{{ it.label }}</dt>
+                <dd class="text-[15px] break-words whitespace-pre-line {{ 'text-brand-800' if it.value or it.files else 'text-slate-400 italic' }}">
+                    {% if it.files %}
+                        {% for f in it.files %}<span class="inline-flex items-center gap-1.5 mr-2">{{ icon('documents', 'w-4 h-4 text-slate-400') }}{{ f.original_filename }}</span>{% endfor %}
+                    {% elif it.value %}{{ it.value }}
+                    {% else %}{{ t('intake_not_answered') }}{% endif %}
+                    {% if it.missing or it.error %}<span class="ml-1 text-[13px] font-semibold text-amber-700 not-italic">· {{ it.error or t('intake_needs_attention') }}</span>{% endif %}
+                </dd>
+            </div>
+            {% endfor %}
+        </dl>
+    </section>
+    {% endfor %}
+    {% if docs_block %}
+    <p class="pt-3 text-[12px] font-extrabold uppercase tracking-wider text-brand-800" data-review-group="documents">{{ docs_block.title }}</p>
+    <section class="rounded-card bg-white border border-slate-100 shadow-card p-4 sm:p-5">{{ docs_block.html|safe }}</section>
+    {% endif %}
+</div>
+
+<form method="POST" action="{{ url_for('public.og_form_finalize', lang=lang, slug=form.slug) }}" class="mt-6" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="resume_token" value="{{ submission.resume_token }}">
+    {% if check_url %}<p class="mb-3 text-[13px]"><a href="{{ check_url }}" class="font-semibold text-accent-700 hover:underline">{{ t('intake_check_link') }}</a></p>{% endif %}
+    <div class="rounded-card bg-mist-50 border border-mist-200 px-4 py-3 text-[13px] text-slate-600 leading-relaxed mb-4">{{ t('intake_submit_note') }}</div>
+    <div class="flex items-center gap-3">
+        <a href="{{ url_for('public.og_form_view', lang=lang, slug=form.slug, page=back_page, t=submission.resume_token) }}" class="inline-flex items-center min-h-[52px] px-5 rounded-[14px] border border-slate-200 bg-white text-[15px] font-semibold text-brand-800 hover:border-accent-300 transition">&larr; {{ t('intake_back') }}</a>
+        <button type="submit" {{ 'disabled aria-disabled=true' if blockers else '' }}
+                class="flex-1 min-h-[52px] rounded-[14px] text-white text-[15px] font-semibold px-8 transition {{ 'bg-slate-300 cursor-not-allowed' if blockers else 'bg-accent-600 hover:bg-accent-700 shadow-sm shadow-accent-600/25' }}">
+            {{ t('intake_submit_to_og') }}
+        </button>
+    </div>
+</form>
+{% endblock %}

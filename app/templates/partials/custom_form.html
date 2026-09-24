@@ -1,0 +1,42 @@
+{% macro render_custom_form(form, lang, csrf_token, action_url) %}
+<div class="rounded-2xl bg-brand-800 text-white p-8 sm:p-10">
+    <h2 class="text-2xl font-bold">{{ form.title(lang) }}</h2>
+    {% if form.intro(lang) %}
+    <p class="mt-2 text-slate-300">{{ form.intro(lang) }}</p>
+    {% endif %}
+
+    <form method="POST" action="{{ action_url }}" class="mt-8 space-y-4">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        {% for f in form.fields %}
+        <div>
+            <label class="block text-sm font-medium text-slate-200 mb-1.5">{{ f.label(lang) }}{% if not f.required %} <span class="text-slate-400 font-normal">(optional)</span>{% endif %}</label>
+            {% if f.field_type == 'textarea' %}
+            <textarea name="{{ f.input_name() }}" rows="4" {{ 'required' if f.required else '' }} placeholder="{{ f.placeholder(lang) }}"
+                      class="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-accent-500"></textarea>
+            {% elif f.field_type == 'select' %}
+            <select name="{{ f.input_name() }}" {{ 'required' if f.required else '' }}
+                    class="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-accent-500">
+                <option value="" class="text-slate-800">—</option>
+                {% for opt in f.options(lang) %}
+                <option value="{{ opt }}" class="text-slate-800">{{ opt }}</option>
+                {% endfor %}
+            </select>
+            {% elif f.field_type == 'checkbox' %}
+            <label class="flex items-center gap-2 text-sm text-slate-200">
+                <input type="checkbox" name="{{ f.input_name() }}" value="yes" {{ 'required' if f.required else '' }}
+                       class="w-4 h-4 rounded border-slate-300 text-accent-600 focus:ring-accent-500">
+                {{ f.placeholder(lang) or f.label(lang) }}
+            </label>
+            {% else %}
+            <input type="{{ f.field_type }}" name="{{ f.input_name() }}" {{ 'required' if f.required else '' }} placeholder="{{ f.placeholder(lang) }}"
+                   class="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-accent-500">
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <button type="submit" class="w-full rounded-lg bg-accent-600 text-white font-semibold py-3 hover:bg-accent-700 transition">
+            {{ form.submit_label(lang) }}
+        </button>
+    </form>
+</div>
+{% endmacro %}

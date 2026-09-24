@@ -1,0 +1,125 @@
+{# Shared admin editor building blocks: bilingual field pairs, toggles, tab nav,
+   repeating-row editor. Keeps every structured editor looking and behaving the same. #}
+
+{% macro bi(label, name, obj, type='text', rows=3, hint=None, required=False, maxlength=None) -%}
+<div class="mb-4">
+    <div class="flex items-baseline justify-between gap-2 mb-1.5">
+        <span class="text-sm font-medium text-slate-700">{{ label }}{% if required %} <span class="text-red-500">*</span>{% endif %}</span>
+        {% if hint %}<span class="text-[11px] text-slate-400 text-right">{{ hint }}</span>{% endif %}
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {% for lang, tag in (('en', 'EN'), ('es', 'ES')) %}
+        <div class="relative">
+            <span class="absolute left-2.5 top-2 text-[10px] font-bold text-slate-400 select-none">{{ tag }}</span>
+            {% set value = (obj[name ~ '_' ~ lang] if obj else '') or '' %}
+            {% if type == 'textarea' %}
+            <textarea name="{{ name }}_{{ lang }}" rows="{{ rows }}" {{ 'required' if required else '' }}
+                      class="w-full rounded-lg border border-slate-200 pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ value }}</textarea>
+            {% else %}
+            <input type="text" name="{{ name }}_{{ lang }}" value="{{ value }}" {{ 'required' if required else '' }} {% if maxlength %}maxlength="{{ maxlength }}"{% endif %}
+                   class="w-full rounded-lg border border-slate-200 pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{%- endmacro %}
+
+{% macro toggle(name, label, checked, hint=None) -%}
+<label class="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 cursor-pointer hover:border-slate-300 transition">
+    <input type="checkbox" name="{{ name }}" {{ 'checked' if checked else '' }} class="mt-0.5 w-4 h-4 rounded border-slate-300 text-accent-600 focus:ring-accent-500">
+    <span><span class="block text-sm font-medium text-slate-800">{{ label }}</span>{% if hint %}<span class="block text-xs text-slate-500 mt-0.5">{{ hint }}</span>{% endif %}</span>
+</label>
+{%- endmacro %}
+
+{% macro tab_nav(tabs, active) -%}
+<div class="flex gap-1 overflow-x-auto border-b border-slate-200 mb-6 -mx-1 px-1" role="tablist">
+    {% for tid, tlabel in tabs %}
+    <button type="button" role="tab" data-tab-btn="{{ tid }}"
+            class="shrink-0 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition {{ 'border-accent-600 text-accent-700' if tid == active else 'border-transparent text-slate-500 hover:text-slate-800' }}">{{ tlabel }}</button>
+    {% endfor %}
+</div>
+{%- endmacro %}
+
+{% macro tab_script(active) -%}
+<script>
+(function () {
+    var buttons = document.querySelectorAll('[data-tab-btn]');
+    var panels = document.querySelectorAll('[data-tab-panel]');
+    var hidden = document.querySelector('input[name="tab"]');
+    function show(id) {
+        panels.forEach(function (p) { p.classList.toggle('hidden', p.dataset.tabPanel !== id); });
+        buttons.forEach(function (b) {
+            var on = b.dataset.tabBtn === id;
+            b.classList.toggle('border-accent-600', on); b.classList.toggle('text-accent-700', on);
+            b.classList.toggle('border-transparent', !on); b.classList.toggle('text-slate-500', !on);
+        });
+        if (hidden) hidden.value = id;
+    }
+    buttons.forEach(function (b) { b.addEventListener('click', function () { show(b.dataset.tabBtn); }); });
+    var ids = Array.prototype.map.call(panels, function (p) { return p.dataset.tabPanel; });
+    show(ids.indexOf({{ active|tojson }}) !== -1 ? {{ active|tojson }} : ids[0]);
+})();
+</script>
+{%- endmacro %}
+
+{# Repeating rows (FAQ entries, steps, bullets…). Rows post as parallel arrays in visual order. #}
+{% macro items_editor(owner, kinds) -%}
+<input type="hidden" name="items_present" value="1">
+{% for kind, label, title_label, body_label in kinds %}
+<fieldset class="mb-6 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5" data-items="{{ kind }}">
+    <legend class="px-2 text-sm font-semibold text-slate-800">{{ label }}</legend>
+    <div data-rows class="space-y-3">
+        {% for item in owner.items if item.kind == kind %}
+        {{ item_row(kind, item, title_label, body_label) }}
+        {% endfor %}
+    </div>
+    <button type="button" data-add-row class="mt-3 rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-accent-400 hover:text-accent-700 transition">+ Add</button>
+    <template data-row-template>{{ item_row(kind, None, title_label, body_label) }}</template>
+</fieldset>
+{% endfor %}
+<script>
+(function () {
+    document.querySelectorAll('[data-items]').forEach(function (box) {
+        var rows = box.querySelector('[data-rows]');
+        var tpl = box.querySelector('[data-row-template]');
+        box.querySelector('[data-add-row]').addEventListener('click', function () {
+            rows.appendChild(tpl.content.cloneNode(true));
+            var last = rows.lastElementChild; if (last) { var i = last.querySelector('input,textarea'); if (i) i.focus(); }
+        });
+        box.addEventListener('click', function (e) {
+            var row = e.target.closest('[data-row]');
+            if (!row) return;
+            if (e.target.closest('[data-row-remove]')) row.remove();
+            else if (e.target.closest('[data-row-up]') && row.previousElementSibling) rows.insertBefore(row, row.previousElementSibling);
+            else if (e.target.closest('[data-row-down]') && row.nextElementSibling) rows.insertBefore(row.nextElementSibling, row);
+        });
+    });
+})();
+</script>
+{%- endmacro %}
+
+{% macro item_row(kind, item, title_label, body_label) -%}
+<div data-row class="rounded-xl bg-slate-50 border border-slate-100 p-3">
+    <input type="hidden" name="item_kind" value="{{ kind }}">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+        <div class="relative"><span class="absolute left-2.5 top-2 text-[10px] font-bold text-slate-400">EN</span>
+            <input type="text" name="item_title_en" value="{{ item.title_en if item else '' }}" placeholder="{{ title_label }}" class="w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500"></div>
+        <div class="relative"><span class="absolute left-2.5 top-2 text-[10px] font-bold text-slate-400">ES</span>
+            <input type="text" name="item_title_es" value="{{ item.title_es if item else '' }}" placeholder="{{ title_label }}" class="w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500"></div>
+        {% if body_label %}
+        <div class="relative"><span class="absolute left-2.5 top-2 text-[10px] font-bold text-slate-400">EN</span>
+            <textarea name="item_body_en" rows="2" placeholder="{{ body_label }}" class="w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ item.body_en if item and item.body_en else '' }}</textarea></div>
+        <div class="relative"><span class="absolute left-2.5 top-2 text-[10px] font-bold text-slate-400">ES</span>
+            <textarea name="item_body_es" rows="2" placeholder="{{ body_label }}" class="w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ item.body_es if item and item.body_es else '' }}</textarea></div>
+        {% else %}
+        <input type="hidden" name="item_body_en" value=""><input type="hidden" name="item_body_es" value="">
+        {% endif %}
+    </div>
+    <div class="mt-2 flex items-center gap-1 text-xs">
+        <button type="button" data-row-up class="px-2 py-1 rounded-md text-slate-500 hover:bg-white" aria-label="Move up">↑</button>
+        <button type="button" data-row-down class="px-2 py-1 rounded-md text-slate-500 hover:bg-white" aria-label="Move down">↓</button>
+        <button type="button" data-row-remove class="ml-auto px-2 py-1 rounded-md text-red-500 hover:bg-red-50">Remove</button>
+    </div>
+</div>
+{%- endmacro %}

@@ -1,0 +1,27 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}MVC locations{% endblock %}
+{% block content %}
+<a href="{{ url_for('admin.dl_list') }}" class="text-sm text-slate-500 hover:text-accent-600">&larr; Driver License cases</a>
+<h1 class="text-2xl font-bold text-brand-800 mt-2">MVC locations</h1>
+<p class="text-sm text-slate-500 mt-1 mb-5">The locations customers can choose as 1st/2nd/3rd preference for appointment assistance. Never scraped from MVC — update this list as locations change.</p>
+<form method="post" action="{{ url_for('admin.dl_location_new') }}" class="mb-5 flex flex-wrap gap-2">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input name="name" placeholder="Location name" required class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+    <button class="rounded-lg bg-accent-600 text-white font-semibold px-4 py-2 text-sm hover:bg-accent-700">Add location</button>
+</form>
+<div class="bg-white border border-slate-100 rounded-2xl overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead class="text-left text-[11px] uppercase tracking-wide text-slate-400"><tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Order</th><th class="px-4 py-3"></th></tr></thead>
+        <tbody>
+        {% for r in rows %}
+        <tr class="border-t border-slate-100">
+            <td class="px-4 py-3 font-semibold text-brand-800">{{ r.name }}</td>
+            <td class="px-4 py-3">{{ 'Active' if r.active else 'Inactive' }}</td>
+            <td class="px-4 py-3">{{ r.sort_order }}</td>
+            <td class="px-4 py-3 text-right"><form method="post" action="{{ url_for('admin.dl_location_edit', loc_id=r.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="action" value="toggle"><button class="text-accent-700 font-semibold hover:underline">{{ 'Deactivate' if r.active else 'Activate' }}</button></form></td>
+        </tr>
+        {% else %}<tr><td colspan="4" class="px-4 py-8 text-center text-slate-400">No locations yet.</td></tr>{% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

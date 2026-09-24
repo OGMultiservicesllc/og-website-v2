@@ -1,0 +1,296 @@
+{# OG UI kit — the reusable components of the OG design system.
+   Import with:  {% from "partials/ui.html" import btn, pill, ... %}
+   Every public page should be assembled from these instead of page-specific markup. #}
+{% from "partials/icons.html" import icon %}
+
+{# ---------------------------------------------------------------- Buttons
+   variant: primary | navy | secondary | soft | whatsapp | academy | light | ghost
+   size:    sm | md | lg                                                         #}
+{% macro btn(label, href, variant='primary', icon_name=None, size='md', external=False, cls='', full=False, trailing_icon=None) -%}
+{%- set variants = {
+    'primary': 'bg-accent-600 text-white hover:bg-accent-700 shadow-sm shadow-accent-600/25',
+    'navy': 'bg-brand-800 text-white hover:bg-brand-700',
+    'secondary': 'bg-white text-brand-800 border border-slate-200 hover:border-accent-300 hover:text-accent-700',
+    'soft': 'bg-mist-100 text-accent-700 hover:bg-mist-200',
+    'whatsapp': 'bg-wa text-white hover:bg-wa-600 shadow-sm shadow-wa/30',
+    'academy': 'bg-academy-500 text-white hover:bg-academy-600',
+    'light': 'bg-white text-brand-800 hover:bg-mist-50',
+    'ghost': 'text-accent-700 hover:bg-mist-100',
+} -%}
+{%- set sizes = {'sm': 'text-sm px-4 py-2 min-h-[38px]', 'md': 'text-[15px] px-5 py-3 min-h-[46px]', 'lg': 'text-base px-6 py-3.5 min-h-[52px]'} -%}
+<a href="{{ href }}"{% if external %} target="_blank" rel="noopener"{% endif %}
+   class="inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition text-center {{ variants[variant] }} {{ sizes[size] }}{{ ' w-full' if full else '' }} {{ cls }}">
+    {%- if icon_name %}{{ icon(icon_name, 'w-[18px] h-[18px] shrink-0') }}{% endif %}{{ label }}{% if trailing_icon %}{{ icon(trailing_icon, 'w-4 h-4 shrink-0') }}{% endif -%}
+</a>
+{%- endmacro %}
+
+{# Square/round icon-only button (accessible label required). #}
+{% macro icon_btn(icon_name, label, href, variant='soft', cls='') -%}
+{%- set variants = {'soft': 'bg-mist-100 text-accent-700 hover:bg-mist-200', 'wa': 'bg-wa text-white hover:bg-wa-600', 'dark': 'bg-brand-800 text-white hover:bg-brand-700'} -%}
+<a href="{{ href }}" aria-label="{{ label }}" class="inline-flex items-center justify-center w-11 h-11 rounded-xl transition {{ variants[variant] }} {{ cls }}">{{ icon(icon_name, 'w-5 h-5') }}</a>
+{%- endmacro %}
+
+{# ---------------------------------------------------------------- Pills / badges
+   tone: accent | navy | neutral | academy | success | warn                        #}
+{% macro pill(text, tone='accent', icon_name=None) -%}
+{%- set tones = {
+    'accent': 'bg-accent-50 text-accent-700',
+    'navy': 'bg-brand-800 text-white',
+    'neutral': 'bg-fog-100 text-slate-600',
+    'academy': 'bg-academy-50 text-academy-700',
+    'success': 'bg-emerald-50 text-emerald-700',
+    'warn': 'bg-amber-50 text-amber-800',
+} -%}
+<span class="inline-flex items-center gap-1.5 rounded-full text-[11px] font-bold tracking-wide px-2.5 py-1 {{ tones[tone] }}">
+    {%- if icon_name %}{{ icon(icon_name, 'w-3.5 h-3.5') }}{% endif %}{{ text }}
+</span>
+{%- endmacro %}
+
+{# ---------------------------------------------------------------- Image slot
+   One controlled way to show any admin-managed image. Falls back to a polished
+   placeholder when no image has been chosen yet, and to the standard image when
+   there is no mobile-specific one.
+   ratio: 16-9 | 21-9 | 4-3 | 3-2 | 1-1   focus: center | top | bottom | left | right #}
+{% macro media(url=None, alt='', ratio='16-9', focus='center', mobile_url=None, icon_name='image', cls='', priority=False) -%}
+<div class="og-media og-ratio-{{ ratio }} og-focus-{{ focus or 'center' }} {{ cls }}">
+    {%- if url %}
+    <picture>
+        {%- if mobile_url %}<source media="(max-width: 767px)" srcset="{{ mobile_url }}">{% endif %}
+        <img src="{{ url }}" alt="{{ alt }}" {{ 'fetchpriority=high' if priority else 'loading=lazy' }} decoding="async">
+    </picture>
+    {%- else %}
+    <div class="absolute inset-0 flex items-center justify-center text-accent-400/70" aria-hidden="true">
+        <span class="w-14 h-14 rounded-2xl bg-white/70 flex items-center justify-center shadow-card">{{ icon(icon_name, 'w-7 h-7') }}</span>
+    </div>
+    {%- endif %}
+</div>
+{%- endmacro %}
+
+{# ---------------------------------------------------------------- Founder photo (one canonical source)
+   `asset` = site_asset('founder_photo') (a MediaAsset or None). Renders the real photo once Admin
+   uploads one; until then, a deliberate initials-avatar placeholder — never a stock/fake portrait —
+   so it's visually obvious this is temporary. `size` sets the circle's Tailwind width/height classes. #}
+{% macro founder_avatar(asset, focus, alt, size='w-28 h-28 sm:w-36 sm:h-36') -%}
+{%- if asset %}
+<div class="og-media og-ratio-1-1 og-focus-{{ focus or 'center' }} {{ size }} rounded-full shadow-card border-4 border-white">
+    <img src="{{ media_url(asset, 480) }}" alt="{{ alt }}" loading="lazy" decoding="async">
+</div>
+{%- else %}
+<span class="{{ size }} rounded-full bg-brand-800 text-white shadow-card border-4 border-white flex items-center justify-center font-extrabold text-2xl sm:text-3xl tracking-wide" role="img" aria-label="{{ alt }}">MO</span>
+{%- endif %}
+{%- endmacro %}
+
+{# ---------------------------------------------------------------- Section header #}
+{% macro section_header(title, subtitle=None, eyebrow=None, align='left', link_label=None, link_href=None, tag='h2') -%}
+<div class="mb-4 sm:mb-6 flex items-end justify-between gap-4 {{ 'text-center flex-col items-center' if align == 'center' else '' }}">
+    <div class="min-w-0">
+        {%- if eyebrow %}<p class="text-[11px] font-bold uppercase tracking-wider text-accent-600 mb-1">{{ eyebrow }}</p>{% endif %}
+        <{{ tag }} class="text-xl sm:text-2xl font-extrabold tracking-tight text-brand-800 text-balance">{{ title }}</{{ tag }}>
+        {%- if subtitle %}<p class="mt-1 text-sm sm:text-[15px] text-slate-500 {{ 'max-w-xl mx-auto' if align == 'center' else 'max-w-2xl' }}">{{ subtitle }}</p>{% endif %}
+    </div>
+    {%- if link_label and link_href %}
+    <a href="{{ link_href }}" class="shrink-0 inline-flex items-center gap-1 text-sm font-semibold text-accent-700 hover:text-accent-600">{{ link_label }} {{ icon('arrow-right', 'w-4 h-4') }}</a>
+    {%- endif %}
+</div>
+{%- endmacro %}
+
+{# ---------------------------------------------------------------- Service card
+   variant: row (compact horizontal, default) | tile (two-up on mobile) | featured
+   badge:   optional small pill text (e.g. "Popular")                             #}
+{% macro service_card(icon_name, title, text, href, variant='row', badge=None, cta='Explore', image_url=None, external=False) -%}
+{%- if variant == 'row' %}
+<a href="{{ href }}"{% if external %} target="_blank" rel="noopener"{% endif %} class="group flex items-center gap-3.5 rounded-card bg-white border border-slate-100 p-3.5 shadow-card hover:border-accent-300 transition">
+    <span class="w-11 h-11 rounded-xl bg-mist-100 text-accent-600 flex items-center justify-center shrink-0 group-hover:bg-accent-600 group-hover:text-white transition">{{ icon(icon_name, 'w-5 h-5') }}</span>
+    <span class="min-w-0 flex-1">
+        <span class="flex items-center gap-2">
+            <span class="block font-semibold text-[15px] leading-snug text-brand-800">{{ title }}</span>
+            {%- if badge %}{{ pill(badge, 'accent') }}{% endif %}
+        </span>
+        {%- if text %}<span class="og-line-clamp-2 text-[13px] text-slate-500 leading-snug mt-0.5">{{ text }}</span>{% endif %}
+    </span>
+    <span class="text-slate-300 group-hover:text-accent-600 transition shrink-0">{{ icon('chevron-right', 'w-5 h-5') }}</span>
+</a>
+{%- elif variant == 'tile' %}
+<a href="{{ href }}"{% if external %} target="_blank" rel="noopener"{% endif %} class="group relative flex flex-col rounded-card bg-white border border-slate-100 p-4 shadow-card hover:border-accent-300 transition h-full">
+    {%- if badge %}<span class="absolute top-3 right-3">{{ pill(badge, 'accent') }}</span>{% endif %}
+    <span class="w-11 h-11 rounded-xl bg-mist-100 text-accent-600 flex items-center justify-center group-hover:bg-accent-600 group-hover:text-white transition">{{ icon(icon_name, 'w-5 h-5') }}</span>
+    <span class="mt-3 block font-semibold text-[15px] leading-snug text-brand-800">{{ title }}</span>
+    {%- if text %}<span class="og-line-clamp-2 mt-1 text-[13px] text-slate-500 leading-snug">{{ text }}</span>{% endif %}
+    <span class="mt-3 inline-flex items-center gap-1 text-[13px] font-semibold text-accent-700">{{ cta }} {{ icon('arrow-right', 'w-3.5 h-3.5') }}</span>
+</a>
+{%- else %}
+<a href="{{ href }}"{% if external %} target="_blank" rel="noopener"{% endif %} class="group relative flex flex-col overflow-hidden rounded-panel bg-brand-800 text-white shadow-pop h-full">
+    {%- if image_url %}{{ media(image_url, '', '16-9', 'center', cls='opacity-70') }}{% endif %}
+    <span class="relative flex flex-col flex-1 p-5 bg-gradient-to-br from-brand-800 via-brand-800 to-brand-600">
+        {%- if badge %}<span class="mb-3 self-start">{{ pill(badge, 'accent') }}</span>{% endif %}
+        <span class="w-11 h-11 rounded-xl bg-white/10 text-accent-400 flex items-center justify-center">{{ icon(icon_name, 'w-5 h-5') }}</span>
+        <span class="mt-3 block font-bold text-lg leading-snug">{{ title }}</span>
+        {%- if text %}<span class="mt-1 block text-sm text-slate-300 leading-snug flex-1">{{ text }}</span>{% endif %}
+        <span class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-accent-400">{{ cta }} {{ icon('arrow-right', 'w-4 h-4') }}</span>
+    </span>
+</a>
+{%- endif %}
+{%- endmacro %}
+
+{# ---------------------------------------------------------------- Page hero
+   Compact by default. primary/secondary are dicts: {label, href, icon, external, variant}.
+   image_url / mobile_url / focus come from the page's Hero Image slot.            #}
+{% macro page_hero(title, text=None, badge=None, icon_name=None, primary=None, secondary=None, tertiary=None, image_url=None, mobile_image_url=None, focus='center', notice=None, breadcrumbs=None, image_alt=None) -%}
+<section class="bg-gradient-to-b from-mist-100 to-white">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-7 sm:pt-10 sm:pb-12">
+        {%- if breadcrumbs %}
+        <nav aria-label="Breadcrumb" class="mb-3 text-xs text-slate-500 flex flex-wrap items-center gap-1">
+            {%- for b in breadcrumbs %}
+                {%- if b.href %}<a href="{{ b.href }}" class="hover:text-accent-700">{{ b.label }}</a>{% else %}<span class="text-slate-700 font-medium">{{ b.label }}</span>{% endif %}
+                {%- if not loop.last %}<span aria-hidden="true">{{ icon('chevron-right', 'w-3 h-3') }}</span>{% endif %}
+            {%- endfor %}
+        </nav>
+        {%- endif %}
+        <div class="grid grid-cols-1 md:grid-cols-[1.15fr_.85fr] gap-5 md:gap-10 items-center">
+            <div>
+                <div class="flex items-center gap-3">
+                    {%- if icon_name %}<span class="w-11 h-11 rounded-xl bg-white text-accent-600 shadow-card flex items-center justify-center shrink-0">{{ icon(icon_name, 'w-6 h-6') }}</span>{% endif %}
+                    {%- if badge %}{{ pill(badge, 'accent') }}{% endif %}
+                </div>
+                <h1 class="mt-3 text-[1.65rem] leading-[1.15] sm:text-4xl lg:text-[2.6rem] font-extrabold tracking-tight text-brand-800 text-balance">{{ title }}</h1>
+                {%- if text %}<p class="mt-2.5 text-[15px] sm:text-lg text-slate-600 leading-relaxed max-w-xl">{{ text }}</p>{% endif %}
+                {%- if primary or secondary or tertiary %}
+                <div class="mt-5 flex flex-col sm:flex-row sm:flex-wrap gap-2.5">
+                    {%- if primary %}{{ btn(primary.label, primary.href, primary.variant or 'primary', primary.icon, 'lg', primary.external) }}{% endif %}
+                    {%- if secondary %}{{ btn(secondary.label, secondary.href, secondary.variant or 'secondary', secondary.icon, 'lg', secondary.external) }}{% endif %}
+                    {%- if tertiary %}{{ btn(tertiary.label, tertiary.href, tertiary.variant or 'ghost', tertiary.icon, 'lg', tertiary.external) }}{% endif %}
+                </div>
+                {%- endif %}
+                {%- if notice %}<p class="mt-4 text-xs text-slate-500 leading-relaxed max-w-xl flex gap-1.5">{{ icon('info', 'w-4 h-4 shrink-0 text-accent-600 mt-px') }}<span>{{ notice }}</span></p>{% endif %}
+            </div>
+            <div class="{{ '' if image_url else 'hidden md:block' }}">
+                {{ media(image_url, image_alt or title, '16-9', focus, mobile_image_url, icon_name or 'image', 'rounded-panel shadow-card', True) }}
+            </div>
+        </div>
+    </div>
+</section>
+{%- endmacro %}
+
+{# ---------------------------------------------------------------- Information panel
+   tone: info | notice | legal | success                                            #}
+{% macro info_panel(title, body, tone='info', icon_name=None) -%}
+{%- set tones = {
+    'info': 'bg-mist-50 border-mist-200 text-brand-800',
+    'notice': 'bg-amber-50 border-amber-200 text-amber-900',
+    'legal': 'bg-fog-50 border-fog-200 text-slate-700',
+    'success': 'bg-emerald-50 border-emerald-200 text-emerald-900',
+} -%}
+{%- set icons = {'info': 'info', 'notice': 'alert', 'legal': 'shield', 'success': 'check'} -%}
+<div class="rounded-card border p-4 sm:p-5 flex gap-3 {{ tones[tone] }}" role="note">
+    <span class="shrink-0 mt-0.5">{{ icon(icon_name or icons[tone], 'w-5 h-5') }}</span>
+    <div class="min-w-0">
+        {%- if title %}<p class="font-semibold text-sm">{{ title }}</p>{% endif %}
+        {%- if body %}<div class="text-[13px] sm:text-sm leading-relaxed {{ 'mt-1' if title else '' }} opacity-90">{{ body }}</div>{% endif %}
+    </div>
+</div>
+{%- endmacro %}
+
+{# ---------------------------------------------------------------- CTA block #}
+{% macro cta_block(title, text=None, primary=None, secondary=None, tone='navy') -%}
+<div class="rounded-panel p-6 sm:p-9 text-center {{ 'bg-brand-800 text-white' if tone == 'navy' else 'bg-mist-100 text-brand-800' }}">
+    <h2 class="text-xl sm:text-2xl font-extrabold tracking-tight text-balance">{{ title }}</h2>
+    {%- if text %}<p class="mt-2 text-sm sm:text-base max-w-xl mx-auto {{ 'text-slate-300' if tone == 'navy' else 'text-slate-600' }}">{{ text }}</p>{% endif %}
+    <div class="mt-5 flex flex-col sm:flex-row sm:flex-wrap gap-2.5 justify-center">
+        {%- if primary %}{{ btn(primary.label, primary.href, primary.variant or 'primary', primary.icon, 'lg', primary.external) }}{% endif %}
+        {%- if secondary %}{{ btn(secondary.label, secondary.href, secondary.variant or 'whatsapp', secondary.icon, 'lg', secondary.external) }}{% endif %}
+    </div>
+</div>
+{%- endmacro %}
+
+{# ---------------------------------------------------------------- Checklist row #}
+{% macro check_item(text) -%}
+<li class="flex items-start gap-2.5 text-sm text-slate-700 leading-relaxed">
+    <span class="mt-0.5 w-5 h-5 rounded-full bg-accent-50 text-accent-600 flex items-center justify-center shrink-0">{{ icon('check', 'w-3 h-3') }}</span>
+    <span>{{ text }}</span>
+</li>
+{%- endmacro %}
+
+{# ---------------------------------------------------------------- Empty state #}
+{% macro empty_state(title, text=None, icon_name='info') -%}
+<div class="rounded-card border border-dashed border-slate-200 bg-fog-50 p-8 text-center">
+    <span class="mx-auto w-11 h-11 rounded-xl bg-white text-slate-400 flex items-center justify-center shadow-card">{{ icon(icon_name, 'w-5 h-5') }}</span>
+    <p class="mt-3 font-semibold text-slate-700 text-sm">{{ title }}</p>
+    {%- if text %}<p class="mt-1 text-sm text-slate-500">{{ text }}</p>{% endif %}
+</div>
+{%- endmacro %}
+
+{# ---------------------------------------------------------------- Progress bar (forms, courses) #}
+{% macro progress(current, total, label=None) -%}
+{%- set pct = ((current / total) * 100)|round|int if total else 0 -%}
+<div>
+    <div class="flex items-center justify-between text-xs font-semibold text-slate-500 mb-1.5">
+        <span>{{ label or ('Step ' ~ current ~ ' of ' ~ total) }}</span><span>{{ pct }}%</span>
+    </div>
+    <div class="h-2 rounded-full bg-fog-200 overflow-hidden" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ pct }}">
+        <div class="h-full rounded-full bg-accent-600 transition-all" style="width: {{ pct }}%"></div>
+    </div>
+</div>
+{%- endmacro %}
+
+{# ---------------------------------------------------------------- Loading / saving indicator (autosave) #}
+{% macro save_status(saving_label='Saving…', saved_label='Saved') -%}
+<span class="og-save-status inline-flex items-center gap-1.5 text-xs font-medium text-slate-400" data-save-status aria-live="polite">
+    <span data-save-saving class="hidden items-center gap-1.5">
+        <svg class="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" opacity=".25"/><path d="M21 12a9 9 0 00-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>{{ saving_label }}
+    </span>
+    <span data-save-saved class="hidden items-center gap-1.5 text-emerald-600">{{ icon('check', 'w-3.5 h-3.5') }}{{ saved_label }}</span>
+</span>
+{%- endmacro %}
+
+{# ---------------------------------------------------------------- FAQ accordion (ServiceContentItem rows) #}
+{% macro faq_list(items, lang) -%}
+<div class="space-y-2.5">
+    {%- for item in items %}
+    <details class="group rounded-card border border-slate-100 bg-white shadow-card open:border-accent-200 open:shadow-none transition">
+        <summary class="cursor-pointer list-none flex items-center justify-between gap-4 px-4 py-3.5 font-semibold text-[15px] text-brand-800 marker:content-['']">
+            <span>{{ item.title(lang) }}</span>
+            <span class="shrink-0 text-slate-400 group-open:rotate-180 transition">{{ icon('chevron-down', 'w-4 h-4') }}</span>
+        </summary>
+        <div class="px-4 pb-4 -mt-0.5 text-sm text-slate-600 leading-relaxed">{{ item.body(lang) }}</div>
+    </details>
+    {%- endfor %}
+</div>
+{%- endmacro %}
+
+{# ---------------------------------------------------------------- Compact process steps (shown AFTER the services) #}
+{% macro steps_row(items, lang) -%}
+<ol class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-{{ [items|length, 4]|min }} gap-2.5">
+    {%- for item in items %}
+    <li class="flex items-start gap-3 rounded-card bg-mist-50 border border-mist-200 px-3.5 py-3">
+        <span class="w-7 h-7 rounded-full bg-accent-600 text-white text-xs font-bold flex items-center justify-center shrink-0">{{ loop.index }}</span>
+        <span class="min-w-0">
+            <span class="block text-sm font-semibold text-brand-800 leading-snug">{{ item.title(lang) }}</span>
+            {%- if item.body(lang) %}<span class="block text-[13px] text-slate-500 leading-snug mt-0.5">{{ item.body(lang) }}</span>{% endif %}
+        </span>
+    </li>
+    {%- endfor %}
+</ol>
+{%- endmacro %}
+
+{# ---------------------------------------------------------------- Chip list (documents we handle, etc.) #}
+{% macro chips(items, lang) -%}
+<ul class="flex flex-wrap gap-2">
+    {%- for item in items %}
+    <li class="rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-[13px] text-slate-700">{{ item.title(lang) }}</li>
+    {%- endfor %}
+</ul>
+{%- endmacro %}
+
+
+{# A subtle persistent label for steps about one person in a multi-person intake (petitioner / beneficiary). #}
+{% macro context_chip(ctx, big=false) -%}
+{%- set tones = {'accent': 'bg-accent-50 text-accent-800 border-accent-200', 'brand': 'bg-slate-100 text-brand-800 border-slate-300', 'slate': 'bg-fog-50 text-slate-700 border-fog-200'} -%}
+{%- set icons = {
+    'person': '<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6.75a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.1a7.5 7.5 0 0115 0"/>',
+    'people': '<path stroke-linecap="round" stroke-linejoin="round" d="M15 19.13a6 6 0 00-9.75-4.68M12.75 6.75a3 3 0 11-6 0 3 3 0 016 0zM21 19.13a5 5 0 00-6.4-4.8M20.25 8.25a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/>',
+    'link': '<path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.69a4.5 4.5 0 016.36 6.36l-3 3a4.5 4.5 0 01-6.36 0M10.81 15.31a4.5 4.5 0 01-6.36-6.36l3-3a4.5 4.5 0 016.36 0"/>'} -%}
+<div class="inline-flex max-w-full items-center gap-2 rounded-full border px-3 {{ 'py-2' if big else 'py-1.5' }} {{ tones[ctx.tone] or tones['accent'] }}" data-context="{{ ctx.key }}">
+    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">{{ icons[ctx.icon]|safe }}</svg>
+    <span class="min-w-0 text-[12px] font-bold uppercase tracking-wider leading-tight">{{ ctx.title }}{% if ctx.name %} · <span class="normal-case tracking-normal font-semibold">{{ ctx.name }}</span>{% endif %}</span>
+</div>
+{%- endmacro %}

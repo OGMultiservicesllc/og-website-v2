@@ -1,0 +1,52 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}{{ inquiry.name or (inquiry.form.name_admin if inquiry.form else 'Form submission') }}{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('admin.inquiries_list') }}" class="text-sm text-slate-500 hover:text-accent-600">&larr; All inquiries</a>
+
+<div class="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 max-w-2xl mt-4">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-xl font-bold text-brand-800">{{ inquiry.name or (inquiry.form.name_admin if inquiry.form else 'Form submission') }}</h1>
+            <p class="text-sm text-slate-500">
+                {% if inquiry.form %}via {{ inquiry.form.name_admin }}{% else %}{{ inquiry.source.replace('_', ' ')|title }}{% endif %}
+                · {{ inquiry.created_at.strftime('%B %d, %Y %I:%M %p') }}
+            </p>
+        </div>
+        <span class="text-xs font-semibold px-2.5 py-1 rounded-full
+            {{ 'bg-accent-50 text-accent-700' if inquiry.status == 'new' else ('bg-amber-50 text-amber-700' if inquiry.status == 'contacted' else 'bg-slate-100 text-slate-500') }}">
+            {{ inquiry.status }}
+        </span>
+    </div>
+
+    <dl class="space-y-3 text-sm mb-6">
+        {% if inquiry.email %}
+        <div class="flex gap-2"><dt class="w-28 text-slate-400">Email</dt><dd><a href="mailto:{{ inquiry.email }}" class="text-accent-600 hover:underline">{{ inquiry.email }}</a></dd></div>
+        {% endif %}
+        {% if inquiry.phone %}
+        <div class="flex gap-2"><dt class="w-28 text-slate-400">Phone</dt><dd>{{ inquiry.phone }}</dd></div>
+        {% endif %}
+        {% if inquiry.target_language %}
+        <div class="flex gap-2"><dt class="w-28 text-slate-400">{{ 'Service' if inquiry.source == 'immigration' else 'Translation' }}</dt><dd>{{ inquiry.target_language }}</dd></div>
+        {% endif %}
+        <div class="flex gap-2"><dt class="w-28 text-slate-400">Language</dt><dd>{{ 'Español' if inquiry.language == 'es' else 'English' }}</dd></div>
+        {% if inquiry.file_filename %}
+        <div class="flex gap-2"><dt class="w-28 text-slate-400">Attachment</dt><dd><a href="{{ url_for('admin.inquiry_file', inquiry_id=inquiry.id) }}" target="_blank" class="text-accent-600 hover:underline">Download file</a></dd></div>
+        {% endif %}
+        {% for label, value in inquiry.extra_items() %}
+        <div class="flex gap-2"><dt class="w-28 text-slate-400 shrink-0">{{ label }}</dt><dd class="whitespace-pre-wrap">{{ value }}</dd></div>
+        {% endfor %}
+    </dl>
+
+    {% if inquiry.message %}
+    <p class="text-sm text-slate-700 bg-slate-50 rounded-lg p-4 whitespace-pre-wrap mb-6">{{ inquiry.message }}</p>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('admin.inquiry_status', inquiry_id=inquiry.id) }}" class="flex gap-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" name="status" value="new" class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium hover:bg-slate-50 transition">New</button>
+        <button type="submit" name="status" value="contacted" class="rounded-lg border border-amber-200 text-amber-700 px-4 py-2 text-sm font-medium hover:bg-amber-50 transition">Mark Contacted</button>
+        <button type="submit" name="status" value="closed" class="rounded-lg border border-slate-200 text-slate-500 px-4 py-2 text-sm font-medium hover:bg-slate-50 transition">Close</button>
+    </form>
+</div>
+{% endblock %}

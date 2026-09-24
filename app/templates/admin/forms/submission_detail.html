@@ -1,0 +1,450 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}{{ submission.code }} — {{ form.name_admin }}{% endblock %}
+
+{% from "partials/ui.html" import context_chip %}
+{% macro status_pill(key, label) %}
+{% set tone = {'draft': 'bg-slate-100 text-slate-600', 'new': 'bg-accent-50 text-accent-700', 'in_review': 'bg-amber-50 text-amber-800', 'waiting_client': 'bg-orange-50 text-orange-800', 'completed': 'bg-emerald-50 text-emerald-700', 'ready_for_ceac': 'bg-emerald-50 text-emerald-700', 'archived': 'bg-slate-100 text-slate-500'}.get(key, 'bg-slate-100 text-slate-600') %}
+<span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold {{ tone }}">{{ label }}</span>
+{% endmacro %}
+
+{% macro file_link(file_id, name, size) %}
+<a href="{{ url_for('admin.submission_file', file_id=file_id) }}" class="flex items-center gap-2 text-sm text-accent-600 hover:underline break-all">
+    📎 {{ name }}{% if size %} <span class="text-slate-400 text-xs">({{ ((size or 0) / 1024)|round|int }} KB)</span>{% endif %}
+</a>
+{% endmacro %}
+
+{% block content %}
+<a href="{{ url_for('admin.form_submissions', form_id=form.id) }}" class="text-sm text-slate-500 hover:text-accent-600">&larr; Submissions</a>
+
+<div class="flex items-start justify-between mt-2 mb-6 flex-wrap gap-3">
+    <div>
+        <div class="flex items-center gap-3 flex-wrap">
+            <h1 class="text-2xl font-bold text-brand-800">{{ submission.service.title_en if submission.service else form.name_admin }}</h1>
+            {{ status_pill(status_key, status_label) }}
+        </div>
+        <p class="text-sm text-slate-500 mt-1">
+            #{{ submission.code }} · {{ form.name_admin }}
+            {% if form.source_form_name %}· Form {{ form.source_form_name }}{% endif %}
+            {% if submission.source_edition_snapshot and form.source_form_name != 'DS-260' %}· USCIS edition {{ submission.source_edition_snapshot }}{% endif %}{% if ds260 and ds260.source %}· source snapshot {{ ds260.source.code }}{% endif %}
+            · form v{{ submission.form_version }} · {{ submission.language|upper }}
+            {% if submission.case %}· Case <a href="{{ url_for('admin.ocase_detail', case_id=submission.case.id) }}" class="font-mono text-accent-700 hover:underline">{{ submission.case.case_number }}</a>{% endif %}
+        </p>
+    </div>
+    <div class="flex items-center gap-2 flex-wrap">
+        <button onclick="window.print()" class="rounded-lg border border-slate-200 text-slate-600 font-semibold px-4 py-2 text-sm hover:border-accent-300 transition">Print</button>
+        {% if submission.is_complete and form.is_service_intake %}
+        <button type="button" id="reopen-btn" class="rounded-lg border border-amber-300 bg-amber-50 text-amber-900 font-semibold px-4 py-2 text-sm hover:bg-amber-100 transition">Reopen for Customer Editing</button>
+        {% elif is_reopened %}
+        <form method="POST" action="{{ url_for('admin.form_submission_lock', submission_id=submission.id) }}" data-confirm="Close editing and mark this application Submitted again?">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="rounded-lg border border-slate-200 text-slate-700 font-semibold px-4 py-2 text-sm hover:border-accent-300 transition">Close editing</button>
+        </form>
+        {% endif %}
+        {% if submission.is_complete %}
+        <form method="POST" action="{{ url_for('admin.form_submission_status', submission_id=submission.id) }}" class="flex items-center gap-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <select name="status" aria-label="Status" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                {% if submission.status == 'ready_for_ceac' %}<option value="ready_for_ceac" selected disabled>Ready for CEAC</option>{% endif %}{% for s in statuses %}<option value="{{ s }}" {{ 'selected' if submission.status == s else '' }}>{{ {'new': 'Submitted', 'in_review': 'In Review', 'waiting_client': 'Waiting for Client', 'completed': 'Completed', 'archived': 'Archived'}.get(s, s) }}</option>{% endfor %}
+            </select>
+            <button type="submit" class="rounded-lg bg-accent-600 text-white font-semibold px-4 py-2 text-sm hover:bg-accent-700 transition">Update Status</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 space-y-4">
+        {% if is_reopened %}
+        <div class="rounded-2xl border border-amber-300 bg-amber-50 px-5 py-3 text-sm text-amber-900">
+            <span class="font-semibold">Reopened for customer editing</span> since {{ submission.reopened_at.strftime('%B %d, %Y %H:%M') if submission.reopened_at else '—' }}.
+            The customer can change their answers and resubmit; the application id, documents, notes and original submission date stay as they are.
+            {% if submission.reopen_message %}<span class="block mt-1"><span class="font-semibold">Message sent to the customer:</span> {{ submission.reopen_message }}</span>{% endif %}
+        </div>
+        {% elif not submission.is_complete %}
+        <div class="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-900">
+            <span class="font-semibold">Draft</span> — the customer has not submitted this yet.
+            Last saved {{ submission.updated_at.strftime('%B %d, %Y %H:%M') if submission.updated_at else '—' }}{% if progress %}, step {{ progress.step }} of {{ progress.total }} ({{ progress.percent }}%){% endif %}.
+        </div>
+        {% endif %}
+
+        {% if supplement_state and supplement_state.state == 'needed' %}
+        <div class="rounded-2xl border border-amber-300 bg-amber-50 px-5 py-3 text-sm text-amber-900" role="alert">
+            <span class="font-semibold">Supplemental information may still be needed ({{ supplement_state.form }}).</span>
+            This spouse petition was submitted before the Form {{ supplement_state.form }} spouse information was part of the intake. The spouse's address history, last address outside the U.S., parents and employment history have not been collected.
+            Use <span class="font-semibold">Reopen for Customer Editing</span> to let the customer provide it in this same application. The submitted answers below are unchanged.
+        </div>
+        {% endif %}
+        {% if ds260 %}{% include "admin/forms/_ds260_panel.html" %}{% endif %}
+        {% if w7 %}{% include "admin/forms/_w7_panel.html" %}{% endif %}
+        {% if i751 %}
+        <div class="bg-white border border-slate-100 rounded-2xl p-5" id="i751-panel">
+            <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-3">Removal of Conditions (I-751) summary</h2>
+            <div class="grid sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                <div>
+                    <h3 class="text-[11px] font-bold uppercase tracking-wide text-slate-400">Conditional resident (petitioner)</h3>
+                    <p class="font-semibold text-slate-800">{% if i751.resident %}<a href="{{ url_for('admin.person_detail', person_id=i751.resident.id) }}" class="text-accent-700 hover:underline">{{ i751.resident.full_name }}</a>{% else %}&mdash;{% endif %}</p>
+                    <p class="text-slate-600">{% for k, v in i751.ids %}{{ k }}: {{ v or '&mdash;'|safe }}{% if not loop.last %} &middot; {% endif %}{% endfor %}</p>
+                </div>
+                <div>
+                    <h3 class="text-[11px] font-bold uppercase tracking-wide text-slate-400">Person in Part 4</h3>
+                    <p class="font-semibold text-slate-800">{% if i751.relevant %}<a href="{{ url_for('admin.person_detail', person_id=i751.relevant.id) }}" class="text-accent-700 hover:underline">{{ i751.relevant.full_name }}</a>{% else %}&mdash;{% endif %}</p>
+                    <p class="text-slate-600">Relationship (Item 1): {{ i751.p4 }} &middot; role in this case: {{ i751.relevant_role }}</p>
+                </div>
+            </div>
+            <h3 class="mt-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Filing basis (Part 3) {% if i751.sensitive %}<span class="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">PRIVATE &mdash; visible to OG only</span>{% endif %}</h3>
+            <p class="text-sm font-semibold text-slate-800">{{ i751.route }}</p>
+            {% if i751.basis %}<ul class="mt-1 space-y-0.5 text-sm text-slate-700 list-disc pl-4">{% for b in i751.basis %}<li>{{ b }}</li>{% endfor %}</ul>{% endif %}
+            {% if i751.basis_unsure %}<p class="text-[13px] font-semibold text-amber-700">Customer is not sure how they are filing &mdash; OG to review.</p>{% endif %}
+            <p class="text-[13px] text-slate-600">Part 8 (spouse's statement): {{ 'asked (joint filing)' if i751.part8 else 'not asked' }}</p>
+            <p class="text-[12px] text-slate-500">Stored exactly as given; the intake never decides which way of filing applies, or whether a waiver applies.</p>
+            <h3 class="mt-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Marriage and conditional residence</h3>
+            <p class="text-sm text-slate-700">{% for k, v in i751.marriage %}{{ k }}: <span class="text-slate-800">{{ v }}</span>{% if not loop.last %} &middot; {% endif %}{% endfor %}</p>
+            <h3 class="mt-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Additional questions (Items 18&ndash;23)</h3>
+            <ul class="mt-1 space-y-0.5 text-sm">{% for k, v in i751.questions %}<li>{{ k }}: <span class="font-semibold {{ 'text-amber-700' if v == 'Yes' else 'text-slate-800' }}">{{ v }}</span></li>{% endfor %}</ul>
+            <p class="mt-1 text-[13px] text-slate-600">Residence history since becoming a permanent resident: {{ i751.history_status }}</p>
+            <h3 class="mt-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Children (Part 5)</h3>
+            {% if i751.children %}
+            <ul class="mt-1 space-y-0.5 text-sm">{% for k in i751.children %}<li>{{ k.n }}. {{ k.name }} &middot; born {{ k.dob }} &middot; A-Number {{ k.a_number }} &middot; living with petitioner: {{ k.living }} &middot; applying with petitioner: {{ k.applying }}{% if k.linked %} &middot; linked Person{% endif %}{% if k.part11 %} <span class="text-amber-700">(goes to Part 11)</span>{% endif %}</li>{% endfor %}</ul>
+            {% else %}<p class="text-sm text-slate-500">No children listed.</p>{% endif %}
+            <h3 class="mt-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Accommodations (Part 6)</h3>
+            <p class="text-sm text-slate-700">{% for k, v in i751.accommodations %}{{ k }}: {{ v }}{% if not loop.last %} &middot; {% endif %}{% endfor %}</p>
+            <h3 class="mt-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Interpreter / preparer</h3>
+            <p class="text-sm text-slate-700">Interpreter: {% if i751.interpreter_used %}{% for k, v in i751.interpreter %}{{ v }}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}not used{% endif %}</p>
+            <p class="text-sm text-slate-700">Preparer (Part 10): {% for k, v in i751.preparer %}{{ v }}{% if not loop.last %}, {% endif %}{% endfor %}</p>
+            <p class="text-[12px] text-slate-500">Item {{ i751.prep_item }} &mdash; {{ i751.prep_text }}</p>
+            {% if i751.additional %}
+            <h3 class="mt-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Part 11 &mdash; generated Additional Information entries</h3>
+            <ul class="mt-1 space-y-1 text-sm">{% for label, text in i751.additional %}<li><span class="text-slate-500">{{ label }}:</span> {{ text }}</li>{% endfor %}</ul>
+            {% endif %}
+            {% if i751.flags %}
+            <h3 class="mt-4 text-[11px] font-bold uppercase tracking-wide text-amber-700">For OG to review</h3>
+            <ul class="mt-1 space-y-0.5 text-[13px] text-amber-800 list-disc pl-4">{% for f in i751.flags %}<li>{{ f }}</li>{% endfor %}</ul>
+            {% endif %}
+            <p class="mt-4 text-[11px] text-slate-400">Information only. Whether the petition is timely, whether a waiver applies, and whether anyone qualifies are OG's review, not decided here. {{ i751.unsigned_note }}</p>
+        </div>
+        {% endif %}
+        {% if i765 %}
+        <div class="bg-white border border-slate-100 rounded-2xl p-5" id="i765-panel">
+            <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-3">Employment Authorization (I-765) summary</h2>
+            <div class="grid sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                <div>
+                    <h3 class="text-[11px] font-bold uppercase tracking-wide text-slate-400">Applicant</h3>
+                    <p class="font-semibold text-slate-800">{% if i765.person %}<a href="{{ url_for('admin.person_detail', person_id=i765.person.id) }}" class="text-accent-700 hover:underline">{{ i765.person.full_name }}</a>{% else %}&mdash;{% endif %}</p>
+                    <p class="text-slate-600">Reason (Part 1): {{ i765.reason }}</p>
+                    <p class="text-slate-600">Previously filed an I-765 (Item 12): {{ i765.prior }}{% if i765.prior_others %} &middot; OG also has {% for o in i765.prior_others %}<span class="font-mono text-xs">{{ o.code }}</span>{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}</p>
+                    <p class="text-slate-600">Countries of citizenship: {{ i765.countries|join(', ') or '&mdash;'|safe }}</p>
+                </div>
+                <div>
+                    <h3 class="text-[11px] font-bold uppercase tracking-wide text-slate-400">Eligibility category (Item 27)</h3>
+                    {% if i765.category_known %}<p class="font-semibold text-slate-800">{{ i765.category or 'Entered, but not in the printed format' }}</p>{% elif i765.category_unsure %}<p class="font-semibold text-amber-700">Customer is not sure &mdash; OG to review</p>{% else %}<p class="text-slate-500">&mdash;</p>{% endif %}
+                    {% if i765.category_malformed %}<p class="text-[13px] text-amber-700">The entry does not match the printed format.</p>{% endif %}
+                    <p class="text-[12px] text-slate-500">Stored exactly as given; the intake never decides or suggests a category.</p>
+                </div>
+            </div>
+            {% if i765.specific %}
+            <h3 class="mt-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Category-specific answers (Items 28&ndash;31)</h3>
+            <ul class="mt-1 space-y-0.5 text-sm">{% for k, v in i765.specific %}<li>{{ k }}: <span class="font-semibold text-slate-800">{{ v or '&mdash;'|safe }}</span></li>{% endfor %}</ul>
+            {% endif %}
+            <h3 class="mt-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Identifiers (masked)</h3>
+            <p class="text-sm text-slate-700">{% for k, v in i765.ids %}{{ k }}: {{ v or '&mdash;'|safe }}{% if not loop.last %} &middot; {% endif %}{% endfor %}</p>
+            <h3 class="mt-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Last U.S. arrival, passport and status</h3>
+            <p class="text-sm text-slate-700">{% for k, v in i765.arrival %}{{ k }}: <span class="text-slate-800">{{ v }}</span>{% if not loop.last %} &middot; {% endif %}{% endfor %}</p>
+            <h3 class="mt-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Interpreter / preparer</h3>
+            <p class="text-sm text-slate-700">Interpreter: {% if i765.interpreter_used %}{% for k, v in i765.interpreter %}{{ v }}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}not used{% endif %}</p>
+            <p class="text-sm text-slate-700">Preparer (Part 5): {% for k, v in i765.preparer %}{{ v }}{% if not loop.last %}, {% endif %}{% endfor %}</p>
+            <p class="text-[12px] text-slate-500">Item {{ i765.prep_item }} &mdash; {{ i765.prep_text }}</p>
+            <p class="mt-2 text-sm text-slate-700">ABC settlement question (Part 3 Item 6): {{ i765.abc }}</p>
+            {% if i765.additional %}
+            <h3 class="mt-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Part 6 &mdash; generated Additional Information entries</h3>
+            <ul class="mt-1 space-y-1 text-sm">{% for label, text in i765.additional %}<li><span class="text-slate-500">{{ label }}:</span> {{ text }}</li>{% endfor %}</ul>
+            {% endif %}
+            {% if i765.flags %}
+            <h3 class="mt-4 text-[11px] font-bold uppercase tracking-wide text-amber-700">For OG to review</h3>
+            <ul class="mt-1 space-y-0.5 text-[13px] text-amber-800 list-disc pl-4">{% for f in i765.flags %}<li>{{ f }}</li>{% endfor %}</ul>
+            {% endif %}
+            <p class="mt-4 text-[11px] text-slate-400">Information only. Whether the applicant qualifies, and which category applies, are OG's review, not decided here. Signatures (Part 3, 4 and 5) are never collected.</p>
+        </div>
+        {% endif %}
+        {% if i864 %}
+        <div class="bg-white border border-slate-100 rounded-2xl p-5" id="i864-panel">
+            <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-3">Affidavit of Support (I-864) summary</h2>
+            <div class="grid sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                <div>
+                    <h3 class="text-[11px] font-bold uppercase tracking-wide text-slate-400">Sponsor</h3>
+                    <p class="font-semibold text-slate-800">{% if i864.sponsor %}<a href="{{ url_for('admin.person_detail', person_id=i864.sponsor.id) }}" class="text-accent-700 hover:underline">{{ i864.sponsor_name }}</a>{% else %}&mdash;{% endif %}</p>
+                    <p class="text-slate-600">Basis (Part 1): {{ i864.basis }}</p>
+                    <p class="text-slate-600">Status (Part 2): {{ i864.status }}</p>
+                    {% if i864.joint %}<p class="text-amber-700 text-[13px]">Joint / substitute sponsor role on this application. Each sponsor's finances stay on their own I-864.</p>{% endif %}
+                </div>
+                <div>
+                    <h3 class="text-[11px] font-bold uppercase tracking-wide text-slate-400">Principal immigrant</h3>
+                    <p class="font-semibold text-slate-800">{% if i864.principal %}<a href="{{ url_for('admin.person_detail', person_id=i864.principal.id) }}" class="text-accent-700 hover:underline">{{ i864.principal_name }}</a>{% else %}&mdash;{% endif %}</p>
+                    <p class="text-slate-600">Sponsored on this affidavit: {{ 'Yes' if i864.sponsoring_principal else 'No' }}</p>
+                </div>
+            </div>
+            {% if i864.linked %}
+            <h3 class="mt-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Other people named</h3>
+            <ul class="mt-1 space-y-0.5 text-sm">{% for x in i864.linked %}<li>{{ x.label }}: <span class="font-semibold text-slate-800">{% if x.person %}<a href="{{ url_for('admin.person_detail', person_id=x.person.id) }}" class="text-accent-700 hover:underline">{{ x.name }}</a>{% else %}{{ x.name }}{% endif %}</span> <span class="text-slate-500">&middot; {{ x.relationship }}{% if x.person %} &middot; existing person{% else %} &middot; typed{% endif %}</span></li>{% endfor %}</ul>
+            {% endif %}
+            <h3 class="mt-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Household (Part 5) &mdash; size {{ i864.household.size }}</h3>
+            <ul class="mt-1 space-y-0.5 text-sm">{% for r in i864.household.rows %}<li>{{ r.name }} <span class="text-slate-500">&middot; {{ r.category.replace('_', ' ') }} &middot; {% if r.counted %}counted (Item {{ r.item }}){% else %}not counted again ({{ (r.reason or '')|replace('_', ' ') }}){% endif %}</span></li>{% endfor %}</ul>
+            <p class="mt-1 text-[12px] text-slate-500">Items 1&ndash;7: {% for i in range(1, 8) %}{{ i }}={{ i864.household['items'][i] }}{% if not loop.last %}, {% endif %}{% endfor %}. Arithmetic only.</p>
+            <h3 class="mt-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Income (Part 6)</h3>
+            <p class="text-sm text-slate-700">Individual (Item 7): <span class="font-semibold">{{ i864.usd(i864.income.total_individual) }}</span> &middot; household (Item 12): <span class="font-semibold">{{ i864.usd(i864.income.total_household) }}</span></p>
+            <ul class="mt-1 space-y-0.5 text-sm">{% for s in i864.income.sources %}<li>{{ s.name or s.description or 'Self-employment' }} <span class="text-slate-500">&middot; {{ s.type }}{% if s.occupation %} &middot; {{ s.occupation }}{% endif %} &middot; {{ i864.money(s.income) }}</span></li>{% endfor %}</ul>
+            {% if i864.tax.rows %}
+            <h3 class="mt-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Federal tax returns (Items 15&ndash;17)</h3>
+            <ul class="mt-1 space-y-0.5 text-sm">{% for r in i864.tax.rows %}<li>{% if r.item %}Item {{ r.item }} &middot; {% endif %}Tax year {{ r.year }} <span class="text-slate-500">&middot; total income (adjusted gross income on IRS Form 1040EZ): {% if r.kind == 'amount' %}{{ i864.money(r.income) }}{% elif r.kind == 'zero' %}zero{% else %}N/A{% endif %}</span></li>{% endfor %}</ul>
+            {% endif %}
+            <h3 class="mt-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Assets (Part 7)</h3>
+            <p class="text-sm text-slate-700">Yours (Item 4): {{ i864.usd(i864.assets['items'][4]) }} &middot; household members (Item 5): {{ i864.usd(i864.assets['items'][5]) }} &middot; principal immigrant (Item 9): {{ i864.usd(i864.assets['items'][9]) }} &middot; total (Item 10): <span class="font-semibold">{{ i864.usd(i864.assets['items'][10]) }}</span></p>
+            {% if i864.flags %}
+            <h3 class="mt-4 text-[11px] font-bold uppercase tracking-wide text-amber-700">For OG to review</h3>
+            <ul class="mt-1 space-y-0.5 text-[13px] text-amber-800 list-disc pl-4">{% for f in i864.flags %}<li>{{ f }}</li>{% endfor %}</ul>
+            {% endif %}
+            <p class="mt-4 text-[11px] text-slate-400">Calculations only. Whether the sponsor qualifies, whether the household or assets are enough (Form I-864P), and whether a joint sponsor is needed are OG's review, not decided here. Signatures and Part 10 (preparer) are not collected.</p>
+        </div>
+        {% endif %}
+        {% if case_panel %}
+        <div class="bg-white border border-slate-100 rounded-2xl p-5" id="case-panel">
+            <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Case</h2>
+            <p class="text-sm"><a href="{{ url_for('admin.ocase_detail', case_id=case_panel.case.id) }}" class="font-mono font-semibold text-accent-700 hover:underline">{{ case_panel.case.case_number }}</a> <span class="text-slate-500">&middot; {{ case_panel.case.title }}</span></p>
+            {% if case_panel.roles %}
+            <h3 class="mt-3 text-[11px] font-bold uppercase tracking-wide text-slate-400">People in this application</h3>
+            <ul class="mt-1 space-y-0.5 text-sm">
+                {% for r in case_panel.roles %}<li><span class="font-semibold text-slate-800">{{ r.person.full_name }}</span> <span class="text-slate-500">&middot; {{ r.role }}{% if r.person.is_customer %} &middot; customer account{% endif %}</span></li>{% endfor %}
+            </ul>
+            {% endif %}
+            {% if case_panel.related %}
+            <h3 class="mt-3 text-[11px] font-bold uppercase tracking-wide text-slate-400">Related applications in this case</h3>
+            <ul class="mt-1 space-y-0.5 text-sm">
+                {% for x in case_panel.related %}<li><a href="{{ url_for('admin.form_submission_detail', submission_id=x.submission.id) }}" class="text-accent-700 hover:underline">Form {{ x.submission.form.source_form_name or x.submission.form.name_admin }}</a> <span class="font-mono text-xs text-slate-500">{{ x.submission.code }}</span> <span class="text-slate-500">&middot; {{ x.status }} &middot; {{ x.how.replace('_', ' ') }}</span></li>{% endfor %}
+            </ul>
+            {% endif %}
+            {% if case_panel.requirements %}
+            <h3 class="mt-3 text-[11px] font-bold uppercase tracking-wide text-slate-400">Documents this application needs</h3>
+            <ul class="mt-1 space-y-0.5 text-sm">
+                {% for r in case_panel.requirements %}<li>{{ r.title }} <span class="text-slate-500">&middot; {{ r.status.replace('_', ' ') }}{% if r.reused_at %} &middot; already in the vault{% endif %}{% if r.doc_basis %} &middot; {{ {'source': 'stated on the official form', 'workflow': 'OG workflow request', 'answer': 'triggered by an answer', 'admin': 'requested by OG', 'dos_nvc': 'Department of State / NVC document list', 'customer': 'added by the customer'}.get(r.doc_basis, r.doc_basis) }}{% endif %}</span></li>{% endfor %}
+            </ul>
+            {% endif %}
+            {% if case_panel.shared %}
+            <h3 class="mt-3 text-[11px] font-bold uppercase tracking-wide text-slate-400">Shared person information used here</h3>
+            <ul class="mt-1 space-y-0.5 text-[13px] text-slate-600">
+                {% for x in case_panel.shared %}<li>{{ x.person }} &middot; {{ x.label }} <span class="{{ 'text-amber-700 font-semibold' if x.state == 'needs review' else 'text-slate-400' }}">&middot; {{ x.state }}{% if x.source %} &middot; from {{ x.source }}{% endif %}</span></li>{% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% if forms_sources %}
+        <div class="bg-white border border-slate-100 rounded-2xl p-5">
+            <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Forms in this application</h2>
+            <ul class="space-y-1.5 text-sm">
+                {% for fs in forms_sources %}
+                <li class="flex flex-wrap items-baseline gap-x-2"><span class="text-emerald-600" aria-hidden="true">&#10003;</span><span class="font-semibold text-slate-800">Form {{ fs.form }}</span><span class="text-slate-500">Edition {{ fs.edition }}</span><span class="text-slate-500">&middot; {{ fs.title }}</span></li>
+                {% endfor %}
+            </ul>
+            <p class="mt-2 text-[11px] text-slate-400">One customer application. An answer used by both forms is stored once and lists every form it maps to.</p>
+        </div>
+        {% endif %}
+
+        <div class="bg-white border border-slate-100 rounded-2xl p-5 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+            <div>
+                <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1">Customer</h2>
+                {% if submission.student %}
+                <p><a href="{{ url_for('admin.customer_detail', student_id=submission.student.id) }}" class="font-semibold text-accent-700 hover:underline">{{ submission.student.name }}</a></p>
+                <p class="text-sm text-slate-500 break-all">{{ submission.student.email }}{% if submission.student.phone %} · {{ submission.student.phone }}{% endif %}</p>
+                {% else %}
+                <p class="font-semibold text-slate-900">{{ submission.display_name or '—' }}</p>
+                <p class="text-sm text-slate-500 break-all">{{ submission.display_email or '' }}{% if submission.display_email and submission.display_phone %} · {% endif %}{{ submission.display_phone or '' }}</p>
+                {% endif %}
+            </div>
+            <div>
+                <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1">Service</h2>
+                {% if submission.service %}
+                <p><a href="{{ url_for('admin.service_edit', service_id=submission.service.id) }}" class="font-semibold text-accent-700 hover:underline">{{ submission.service.title_en }}</a></p>
+                <p class="text-sm text-slate-500">{{ submission.service.category.title_en }}</p>
+                {% else %}<p class="text-sm text-slate-500">—</p>{% endif %}
+            </div>
+            <div>
+                <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1">Last updated</h2>
+                <p class="text-sm text-slate-700">{{ submission.updated_at.strftime('%b %d, %Y %H:%M') if submission.updated_at else '—' }}</p>
+            </div>
+            <div>
+                <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1">Submitted</h2>
+                <p class="text-sm text-slate-700">{{ submission.submitted_at.strftime('%b %d, %Y %H:%M') if submission.is_complete and submission.submitted_at else '—' }}</p>
+            </div>
+        </div>
+
+        {% if sections is not none %}
+        <p class="text-xs text-slate-400 px-1">Answers are grouped as the customer completed them. <span class="font-semibold">Source</span> shows the Part/Item of the official form each answer maps to (visible to admins only).</p>
+        {% set ns = namespace(ctx=none, sup=none) %}
+        {% for sec in sections %}
+        {% if sec['items'] %}
+        {% set cx = contexts.get(sec.context) if sec.context else none %}
+        {% set supk = sup_groups.get(sec.group) if sup_groups and sec.group else none %}
+        {% if supk and ns.sup != supk %}{% set ns.sup = supk %}<div class="pt-2"><p class="text-[13px] font-extrabold uppercase tracking-wider text-brand-800">{{ sup_cfg[supk].form }} &mdash; {{ sup_cfg[supk].title.en }}</p></div>
+        {% elif not supk %}{% set ns.sup = none %}{% endif %}
+        {% if cx and (ns.ctx is none or ns.ctx != cx.key) %}{% set ns.ctx = cx.key %}<div class="pt-2">{{ context_chip(cx, true) }}</div>{% endif %}
+        <div class="bg-white border border-slate-100 rounded-2xl p-5 {{ 'border-l-4 border-l-accent-500' if cx and cx.tone == 'accent' else ('border-l-4 border-l-brand-700' if cx and cx.tone == 'brand' else '') }}">
+            <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-3">{{ sec.title }}</h2>
+            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+                {% for it in sec['items'] %}
+                <div class="{{ 'sm:col-span-2' if (it.value or '')|length > 60 or it.files else '' }}">
+                    <dt class="text-xs text-slate-400">{{ it.label }}
+                        {%- if it.sources %}{% for so in it.sources %} <span class="ml-1 text-[10px] text-slate-300">· {% if so.form %}{{ so.form }} &rarr; {% endif %}{{ so.ref }}</span>{% endfor %}
+                        {%- elif it.source_ref %} <span class="ml-1 text-[10px] text-slate-300">· {{ it.source_ref }}</span>{% endif %}</dt>
+                    <dd class="text-sm text-slate-800 break-words">
+                        {%- if it.files -%}
+                            {%- for f in it.files %}{{ file_link(f.id, f.name, f.size) }}{% endfor -%}
+                        {%- elif it.value -%}<span class="whitespace-pre-wrap">{{ it.value }}</span>{% if it.sensitive %} <span class="text-[10px] font-semibold uppercase tracking-wide text-slate-400 ml-1">sensitive</span>{% endif %}
+                        {%- else -%}<span class="text-slate-300">—</span>{%- endif -%}
+                    </dd>
+                </div>
+                {% endfor %}
+            </dl>
+        </div>
+        {% endif %}
+        {% endfor %}
+        {% else %}
+        {% for page in form.pages %}
+        {% set page_fields = page.fields|rejectattr('is_content_only')|list %}
+        {% if page_fields %}
+        <div class="bg-white border border-slate-100 rounded-2xl p-5">
+            <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-3">{{ page.title('en') or 'Page' }}</h2>
+            <div class="space-y-3">
+                {% for field in page_fields %}
+                {% set files = files_by_field_id.get(field.id, []) %}
+                {% set display_val = display_by_field_id.get(field.id) %}
+                <div>
+                    <p class="text-xs text-slate-400">{{ field.label('en') or field.internal_name }}</p>
+                    {% if files %}
+                    <div class="space-y-1 mt-1">{% for file in files %}{{ file_link(file.id, file.original_filename, file.size_bytes) }}{% endfor %}</div>
+                    {% elif display_val %}
+                    <p class="text-sm text-slate-800 whitespace-pre-wrap">{{ display_val }}</p>
+                    {% else %}
+                    <p class="text-sm text-slate-300">—</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+        {% endif %}
+    </div>
+
+    <div class="space-y-4">
+        {% if submission.is_complete %}
+        <div class="bg-white border border-slate-100 rounded-2xl p-5">
+            <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1">Request information</h2>
+            <p class="text-xs text-slate-500 mb-3">Sent to the customer — <span class="font-semibold">they will see this</span> on their application. Moves it to Waiting for Client.</p>
+            {% for m in customer_messages %}
+            <div class="bg-accent-50/60 rounded-lg p-2.5 mb-2">
+                <p class="text-xs text-slate-700 whitespace-pre-wrap">{{ m.body }}</p>
+                <p class="text-[10px] text-slate-400 mt-1">{{ m.created_at.strftime('%b %d, %Y %H:%M') }}</p>
+            </div>
+            {% endfor %}
+            <form method="POST" action="{{ url_for('admin.form_submission_request_info', submission_id=submission.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <textarea name="body" rows="3" required aria-label="Message to the customer" placeholder="What do you need from the customer?" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm mb-2"></textarea>
+                <button type="submit" class="w-full rounded-lg border border-accent-300 text-accent-700 font-semibold px-4 py-2 text-sm hover:bg-accent-50 transition">Send request</button>
+            </form>
+        </div>
+        {% endif %}
+
+        <div class="bg-white border border-slate-100 rounded-2xl p-5">
+            <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1">Internal notes</h2>
+            <p class="text-xs text-slate-500 mb-3">Never visible to the customer.</p>
+            <div class="space-y-2 mb-3 max-h-64 overflow-y-auto">
+                {% for note in internal_notes %}
+                <div class="bg-slate-50 rounded-lg p-2.5">
+                    <p class="text-xs text-slate-700 whitespace-pre-wrap">{{ note.body }}</p>
+                    <p class="text-[10px] text-slate-400 mt-1">{{ note.author_name or 'OG team' }} · {{ note.created_at.strftime('%b %d, %Y %H:%M') }}</p>
+                </div>
+                {% else %}
+                <p class="text-xs text-slate-400">No notes yet.</p>
+                {% endfor %}
+            </div>
+            <form method="POST" action="{{ url_for('admin.form_submission_note_add', submission_id=submission.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <textarea name="body" rows="2" aria-label="Internal note" placeholder="Add an internal note…" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm mb-2"></textarea>
+                <button type="submit" class="w-full rounded-lg bg-accent-600 text-white font-semibold px-4 py-2 text-sm hover:bg-accent-700 transition">Add note</button>
+            </form>
+        </div>
+
+        {% if completeness %}
+        <div class="bg-white border border-slate-100 rounded-2xl p-5">
+            <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1">Completeness</h2>
+            <p class="text-xs {{ 'text-emerald-700' if completeness.ok else 'text-amber-800' }} font-semibold mb-3">{{ 'Everything looks complete' if completeness.ok else (completeness.issue_count ~ (' item needs attention' if completeness.issue_count == 1 else ' items need attention')) }}</p>
+            <ul class="space-y-2.5">
+                {% for g in completeness.groups %}
+                <li class="text-xs">
+                    <p class="font-semibold {{ 'text-emerald-700' if g.ok else 'text-amber-800' }}">{{ '✓' if g.ok else '⚠' }} {{ g.title }}</p>
+                    {% for i in g.issues %}<p class="mt-0.5 pl-4 text-slate-600 break-words">{{ i.message }}</p>{% endfor %}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if revisions %}
+        <div class="bg-white border border-slate-100 rounded-2xl p-5">
+            <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-3">Editing history</h2>
+            <ol class="space-y-4">
+                {% for rv in revisions %}
+                <li class="text-xs text-slate-700">
+                    <p class="font-semibold">Reopened {{ rv.r.reopened_at.strftime('%b %d, %Y %H:%M') if rv.r.reopened_at else '—' }}</p>
+                    <p class="text-slate-500">{% if rv.r.resubmitted_at %}Resubmitted {{ rv.r.resubmitted_at.strftime('%b %d, %Y %H:%M') }}{% else %}Not resubmitted yet{% endif %}</p>
+                    {% if rv.changes %}
+                    <ul class="mt-1.5 space-y-1.5">
+                        {% for c in rv.changes %}
+                        <li class="rounded-lg bg-slate-50 px-2.5 py-1.5"><span class="block text-[11px] font-semibold text-slate-600">{{ c.label }}</span>
+                            <span class="block text-slate-400 line-through break-words">{{ c.before or '—' }}</span>
+                            <span class="block text-slate-800 break-words">{{ c.after or '—' }}</span></li>
+                        {% endfor %}
+                    </ul>
+                    {% elif rv.r.resubmitted_at %}<p class="mt-1 text-slate-400">No answers changed.</p>{% endif %}
+                </li>
+                {% endfor %}
+            </ol>
+        </div>
+        {% endif %}
+
+        {% if activity %}
+        <div class="bg-white border border-slate-100 rounded-2xl p-5">
+            <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-3">Activity on this application</h2>
+            <ol class="space-y-2.5">
+                {% for e, text in activity %}
+                <li class="text-xs text-slate-700">{{ text }}<span class="block text-[10px] text-slate-400">{{ e.created_at.strftime('%b %d, %Y %H:%M') }}{% if e.actor_type == 'admin' %} · OG team{% endif %}</span></li>
+                {% endfor %}
+            </ol>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if submission.is_complete and form.is_service_intake %}
+<dialog id="reopen-dialog" class="rounded-2xl p-0 shadow-xl backdrop:bg-slate-900/40 w-[min(92vw,30rem)]">
+    <form method="POST" action="{{ url_for('admin.form_submission_reopen', submission_id=submission.id) }}" class="p-6">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <h2 class="text-lg font-bold text-brand-800">Reopen this application for editing?</h2>
+        <p class="mt-2 text-sm text-slate-600">The customer will be able to modify their previously submitted answers and resubmit the application to OG. It stays the same application; nothing is copied or deleted.</p>
+        <label for="reopen-message" class="block mt-4 text-sm font-medium text-slate-700">Optional message to the customer</label>
+        <textarea id="reopen-message" name="message" rows="3" maxlength="1000" placeholder="e.g. Please update your current address." class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500"></textarea>
+        <p class="mt-1 text-[11px] text-slate-400">The customer will see this message. Internal notes are never shown to them.</p>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" id="reopen-cancel" class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
+            <button type="submit" class="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600">Reopen Application</button>
+        </div>
+    </form>
+</dialog>
+<script>
+    (function () {
+        var d = document.getElementById('reopen-dialog'), b = document.getElementById('reopen-btn');
+        if (!d || !b) return;
+        b.addEventListener('click', function () { d.showModal(); });
+        document.getElementById('reopen-cancel').addEventListener('click', function () { d.close(); });
+    })();
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Students{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-brand-800">Students</h1>
+        <p class="text-sm text-slate-500 mt-1">OG Academy view of the same customer accounts: people enrolled in a course. <a href="{{ url_for('admin.customers_list') }}" class="text-accent-700 font-medium hover:underline">All customers &rarr;</a></p>
+    </div>
+    <a href="{{ url_for('admin.students_list', all=None if show_all else 1, q=query or None) }}" class="text-sm font-medium text-accent-700 hover:underline">{{ 'Only enrolled' if show_all else 'Show all accounts' }}</a>
+</div>
+
+<form method="GET" class="mb-5">
+    {% if show_all %}<input type="hidden" name="all" value="1">{% endif %}
+    <input type="text" name="q" value="{{ query }}" placeholder="Search by name, email or phone..."
+           class="w-full max-w-sm rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+</form>
+
+{% if students %}
+<div class="bg-white border border-slate-100 rounded-2xl divide-y divide-slate-100 overflow-hidden">
+    {% for student in students %}
+    <a href="{{ url_for('admin.customer_detail', student_id=student.id) }}"
+       class="flex items-center justify-between px-6 py-4 hover:bg-slate-50 transition">
+        <div>
+            <p class="font-semibold text-slate-900">{{ student.name }}</p>
+            <p class="text-sm text-slate-500">{{ student.email }}</p>
+        </div>
+        <div class="flex items-center gap-4">
+            <span class="text-xs text-slate-400">Joined {{ student.created_at.strftime('%b %d, %Y') }}</span>
+            <span class="text-sm text-slate-500">{{ enrollment_counts.get(student.id, 0) }} course(s)</span>
+            {% if not student.is_active %}
+            <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-red-50 text-red-600">Inactive</span>
+            {% endif %}
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="rounded-2xl border-2 border-dashed border-slate-200 p-16 text-center">
+    <p class="text-slate-500">No students found{% if query %} for "{{ query }}"{% endif %}.</p>
+</div>
+{% endif %}
+{% endblock %}

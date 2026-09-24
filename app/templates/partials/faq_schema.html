@@ -1,0 +1,17 @@
+{# FAQPage JSON-LD generated directly from the same (question_key, answer_key)
+   pairs the visible FAQ accordion on the page already renders via t() — never
+   used to add or alter content, same question/answer text either way.
+   Usage: {% set faq_pairs = [('key_q1','key_a1'), ...] %}{% include "partials/faq_schema.html" %} #}
+{% if faq_pairs %}
+{% set entries = [] %}
+{% for q_key, a_key in faq_pairs %}
+{% set _ = entries.append({"@type": "Question", "name": t(q_key), "acceptedAnswer": {"@type": "Answer", "text": t(a_key)}}) %}
+{% endfor %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": {{ entries|tojson }}
+}
+</script>
+{% endif %}

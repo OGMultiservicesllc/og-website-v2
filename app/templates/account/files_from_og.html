@@ -1,0 +1,79 @@
+{% extends "account/base_account.html" %}
+{% from "partials/ui.html" import empty_state %}
+{% from "partials/icons.html" import icon %}
+{% set en = lang == 'en' %}
+{% block title %}{{ 'Files from OG' if en else 'Archivos de OG' }}{% endblock %}
+
+{% macro file_card(row) %}
+<li class="rounded-card bg-white border border-slate-100 shadow-card p-3.5">
+    <div class="flex flex-wrap items-start gap-3">
+        <span class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">{{ icon('documents', 'w-5 h-5') }}</span>
+        <div class="min-w-0 flex-1 basis-52">
+            <p class="font-semibold text-sm text-brand-800 break-words">{{ row.title }}{% if row.is_new %}<span class="ml-1.5 align-middle inline-flex items-center rounded-full bg-accent-100 text-accent-700 text-[10px] font-bold px-1.5 py-0.5">{{ 'NEW' if en else 'NUEVO' }}</span>{% endif %}</p>
+            <p class="text-[12px] text-slate-500 mt-0.5">
+                {{ row.category_label }}
+                {%- if row.related_service %} · {{ 'Related Service' if en else 'Servicio relacionado' }}: {{ row.related_service }}{% endif %}
+                {%- if row.tax_year %} · {{ 'Tax Year' if en else 'Año fiscal' }} {{ row.tax_year }}{% endif %}
+            </p>
+            {% if row.person %}<p class="text-[12px] text-slate-500 mt-0.5">{{ row.person.full_name }}</p>{% endif %}
+            <p class="text-[12px] text-slate-400 mt-0.5">{{ row.released_at.strftime('%b %d, %Y') if row.released_at else '' }}</p>
+            {% if row.description %}<p class="text-[12px] text-slate-500 mt-1 break-words">{{ row.description }}</p>{% endif %}
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+            {% if row.can_preview %}<a href="{{ row.view_url }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 min-h-[38px] px-3.5 rounded-xl border border-slate-200 text-[13px] font-semibold text-brand-800 hover:border-accent-300 transition">{{ icon('eye', 'w-4 h-4') }}{{ 'View' if en else 'Ver' }}</a>{% endif %}
+            <a href="{{ row.download_url }}" class="inline-flex items-center gap-1.5 min-h-[38px] px-3.5 rounded-xl bg-accent-600 text-white text-[13px] font-semibold hover:bg-accent-700 transition">{{ icon('download', 'w-4 h-4') }}{{ 'Download' if en else 'Descargar' }}</a>
+        </div>
+    </div>
+</li>
+{% endmacro %}
+
+{% block account_body %}
+<h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-brand-800">{{ 'Files from OG' if en else 'Archivos de OG' }}</h1>
+<p class="mt-1 text-slate-500 text-[14px] sm:text-[15px]">{{ 'Your documents from OG, all in one place.' if en else 'Tus documentos de OG, todos en un solo lugar.' }}</p>
+<p class="mt-1 text-slate-500 text-[13px]">{{ 'Find tax returns, translations, immigration documents, and other files OG has shared with you.' if en else 'Encuentra tus declaraciones de impuestos, traducciones, documentos de inmigración y otros archivos que OG ha compartido contigo.' }}</p>
+
+{% if total %}
+<form method="get" action="{{ url_for('account.files_from_og', lang=lang) }}" class="mt-5 flex items-center gap-2 max-w-md">
+    <input type="hidden" name="category" value="{{ category }}">
+    <div class="relative flex-1">
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">{{ icon('search', 'w-4 h-4') }}</span>
+        <input type="search" name="q" value="{{ q }}" placeholder="{{ 'Search your files...' if en else 'Buscar en tus archivos...' }}" class="w-full rounded-xl border border-slate-200 pl-9 pr-3 py-2.5 text-[14px] focus:outline-none focus:ring-2 focus:ring-accent-500">
+    </div>
+    <button class="shrink-0 min-h-[42px] px-4 rounded-xl border border-slate-200 text-[13px] font-semibold text-brand-800 hover:border-accent-300 transition">{{ 'Search' if en else 'Buscar' }}</button>
+</form>
+
+<div class="og-scroll-x mt-4 flex items-center gap-1.5 border-b border-slate-100 -mx-1 px-1 pb-px" role="tablist" aria-label="{{ 'File categories' if en else 'Categorías de archivos' }}">
+    <a href="{{ url_for('account.files_from_og', lang=lang, q=q) }}" aria-current="{{ 'true' if category == 'all' else 'false' }}"
+       class="whitespace-nowrap px-3.5 py-2 rounded-t-lg text-[13px] font-bold border-b-2 -mb-px transition {{ 'border-accent-600 text-accent-700' if category == 'all' else 'border-transparent text-slate-500 hover:text-slate-800' }}">
+        {{ 'All Files' if en else 'Todos' }} <span class="text-slate-400 font-normal">({{ total }})</span>
+    </a>
+    {% for key, (title_en, title_es) in categories %}
+    {% if counts.get(key) %}
+    <a href="{{ url_for('account.files_from_og', lang=lang, category=key, q=q) }}" aria-current="{{ 'true' if category == key else 'false' }}"
+       class="whitespace-nowrap px-3.5 py-2 rounded-t-lg text-[13px] font-bold border-b-2 -mb-px transition {{ 'border-accent-600 text-accent-700' if category == key else 'border-transparent text-slate-500 hover:text-slate-800' }}">
+        {{ title_es if lang == 'es' else title_en }} <span class="text-slate-400 font-normal">({{ counts[key] }})</span>
+    </a>
+    {% endif %}
+    {% endfor %}
+</div>
+
+<div class="mt-5">
+    {% if not rows %}
+    {{ empty_state(('No files match your search.' if en else 'Ningún archivo coincide con tu búsqueda.'), ('Try a different word, or view all files.' if en else 'Prueba con otra palabra, o mira todos los archivos.'), 'search') }}
+    {% elif category == 'taxes' %}
+    <div class="space-y-6">
+        {% for year in tax_years %}
+        <div>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">{{ year if year else ('Undated' if en else 'Sin fecha') }}</h2>
+            <ul class="space-y-2.5">{% for row in tax_by_year[year] %}{{ file_card(row) }}{% endfor %}</ul>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <ul class="space-y-2.5">{% for row in rows %}{{ file_card(row) }}{% endfor %}</ul>
+    {% endif %}
+</div>
+{% else %}
+{{ empty_state(('No files from OG yet.' if en else 'Todavía no hay archivos de OG.'), ('When OG prepares a file for you — like a certified translation or a copy of your tax return — it will appear here.' if en else 'Cuando OG prepare un archivo para ti — como una traducción certificada o una copia de tu declaración de impuestos — aparecerá aquí.'), 'folder') }}
+{% endif %}
+{% endblock %}

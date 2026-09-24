@@ -1,0 +1,27 @@
+{% extends "account/base_account.html" %}
+{% from "partials/ui.html" import empty_state %}
+{% set en = lang == 'en' %}
+{% block title %}{{ 'Messages' if en else 'Mensajes' }}{% endblock %}
+
+{% block account_body %}
+<section class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10 sm:pb-16">
+    <h1 class="text-2xl font-extrabold tracking-tight text-brand-800 mb-1">{{ 'Messages' if en else 'Mensajes' }}</h1>
+    <p class="text-sm text-slate-500 mb-5">{{ 'Notes OG has sent you about your services.' if en else 'Notas que OG te ha enviado sobre tus servicios.' }}</p>
+    {% if messages %}
+    <ul class="space-y-3">
+        {% for m in messages %}
+        <li class="rounded-card bg-white border border-slate-100 shadow-card p-4">
+            <p class="text-[12px] font-bold uppercase tracking-wide text-accent-700">{{ m.title }}</p>
+            <p class="mt-1 text-[15px] text-slate-700 whitespace-pre-line leading-relaxed">{{ m.text }}</p>
+            <div class="mt-2 flex items-center justify-between gap-3">
+                {% if m.at %}<p class="text-xs text-slate-400">{{ m.at.strftime('%b %d, %Y') }}</p>{% else %}<span></span>{% endif %}
+                <a href="{{ m.href }}" class="text-sm font-semibold text-accent-700 hover:underline">{{ 'View' if en else 'Ver' }} &rarr;</a>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    {{ empty_state('No messages yet.' if en else 'Todavía no hay mensajes.', 'Messages OG sends you about your services will appear here.' if en else 'Los mensajes que OG te envíe sobre tus servicios aparecerán aquí.', 'chat') }}
+    {% endif %}
+</section>
+{% endblock %}

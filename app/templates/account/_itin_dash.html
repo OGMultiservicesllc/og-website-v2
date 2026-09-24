@@ -1,0 +1,68 @@
+{# ITIN / W-7 case dashboard (My Account). Shows OG's own workflow status; never an IRS decision. #}
+{% set en = lang == 'en' %}
+<div class="mt-6 flex flex-wrap items-center gap-2">
+    <span class="inline-flex items-center rounded-full bg-mist-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-accent-700">{{ 'Tax & ITIN Services' if en else 'Servicios de impuestos e ITIN' }}</span>
+    {% if itin_dash.tax_year %}<span class="text-[13px] font-semibold text-slate-600">{{ 'Tax year' if en else 'Año fiscal' }} {{ itin_dash.tax_year }}</span>{% endif %}
+</div>
+<h2 class="mt-3 mb-3 text-lg font-bold text-brand-800">{{ 'Where things stand' if en else 'Cómo va todo' }}</h2>
+<p class="rounded-xl border border-slate-100 bg-white px-4 py-3 text-[15px] font-semibold text-brand-800">{{ itin_dash.stage_label }}</p>
+<p class="mt-2 text-[12px] text-slate-500">{{ 'This shows where your ITIN paperwork stands at OG. It is not a decision by the IRS: OG Multiservices does not approve or deny ITIN applications.' if en else 'Esto muestra cómo va tu papeleo de ITIN en OG. No es una decisión del IRS: OG Multiservices no aprueba ni niega solicitudes de ITIN.' }}</p>
+
+<h2 class="mt-7 mb-3 text-lg font-bold text-brand-800">{{ 'Applicants — one W-7 each' if en else 'Solicitantes — un W-7 para cada uno' }}</h2>
+<ul class="space-y-3">
+    {% for x in itin_dash.applicants %}
+    <li class="rounded-card bg-white border border-slate-100 shadow-card p-4">
+        <div class="flex flex-wrap items-start gap-3">
+            <div class="min-w-0 flex-1 basis-48">
+                <p class="font-semibold text-brand-800 leading-snug break-words">{{ x.person.full_name if x.person else '?' }}</p>
+                <p class="text-xs text-slate-500 mt-0.5">{{ x.kind_label }} &middot; <span class="font-mono">{{ x.submission.code }}</span></p>
+            </div>
+            <span class="text-sm font-bold text-brand-800 tabular-nums">{{ x.percent }}%</span>
+        </div>
+        <div class="mt-2 h-2 rounded-full bg-slate-100 overflow-hidden" role="progressbar" aria-valuenow="{{ x.percent }}" aria-valuemin="0" aria-valuemax="100"><div class="h-2 rounded-full bg-accent-600" style="width: {{ x.percent }}%"></div></div>
+        <p class="mt-2 text-[12px] text-slate-500">{{ 'Documents' if en else 'Documentos' }}: {{ x.docs_got }}/{{ x.docs_total }}</p>
+        {% if x.passport.applies %}
+        <div class="mt-3 flex flex-wrap items-center gap-2 rounded-xl border {{ 'border-emerald-200 bg-emerald-50' if x.passport.confirmed else 'border-amber-200 bg-amber-50' }} px-3.5 py-2.5">
+            {% if x.passport.confirmed %}
+            <span class="text-[13px] font-semibold text-emerald-800"><span aria-hidden="true">&#10003;</span> {{ 'Passport confirmed' if en else 'Pasaporte confirmado' }}</span>
+            {% elif x.passport.uploaded %}
+            <span class="min-w-0 flex-1 basis-40 text-[13px] font-semibold text-amber-900">{{ 'Passport uploaded — confirm the information we found' if en else 'Pasaporte subido — confirma la información que encontramos' }}</span>
+            <a href="{{ x.passport_url }}" class="inline-flex items-center min-h-[40px] px-3.5 rounded-lg bg-accent-600 text-white text-[13px] font-semibold hover:bg-accent-700 transition">{{ 'Confirm passport information' if en else 'Confirmar información del pasaporte' }}</a>
+            {% else %}
+            <span class="min-w-0 flex-1 basis-40 text-[13px] font-semibold text-amber-900">{{ 'Passport Needed' if en else 'Se necesita el pasaporte' }}</span>
+            <a href="{{ x.passport_url }}" class="inline-flex items-center min-h-[40px] px-3.5 rounded-lg bg-accent-600 text-white text-[13px] font-semibold hover:bg-accent-700 transition">{{ 'Upload Passport' if en else 'Subir pasaporte' }}</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </li>
+    {% endfor %}
+</ul>
+
+{% if itin_dash.originals %}
+<div class="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+    <p class="text-[14px] font-bold text-amber-900">{{ 'Original documents still to give OG' if en else 'Documentos originales que aún debes entregar a OG' }}: {{ itin_dash.originals }}</p>
+    <div class="mt-2 text-slate-700">{{ itin_dash.delivery_html|safe }}</div>
+</div>
+{% endif %}
+
+{% if itin_dash.package %}
+<div class="mt-6 rounded-card bg-white border border-slate-100 shadow-card p-4">
+    <p class="text-[15px] font-bold text-brand-800">{{ 'Package sent to the IRS' if en else 'Paquete enviado al IRS' }}</p>
+    {% if itin_dash.package.mailed %}<p class="mt-1 text-[13px] text-slate-600">{{ 'Mailed by OG on' if en else 'Enviado por OG el' }} {{ itin_dash.package.mailed.strftime('%b %d, %Y') }}</p>{% endif %}
+    {% if itin_dash.package.tracking %}
+    <p class="mt-2 text-[13px] text-slate-600">{{ 'Tracking Number' if en else 'Número de rastreo' }}: <span class="font-mono font-semibold text-brand-800 break-all">{{ itin_dash.package.tracking }}</span></p>
+    {% if itin_dash.package.track_url %}<a href="{{ itin_dash.package.track_url }}" target="_blank" rel="noopener noreferrer" class="mt-2 inline-flex items-center min-h-[44px] px-4 rounded-xl border border-slate-200 text-sm font-semibold text-accent-700 hover:border-accent-300 transition">{{ 'Track Package' if en else 'Rastrear paquete' }} &rarr;</a>{% endif %}
+    {% endif %}
+    <p class="mt-2 text-[12px] text-slate-500">{{ 'The tracking shows where the package is. Delivery to the IRS is not an approval; the IRS makes the final decision.' if en else 'El rastreo muestra dónde está el paquete. Que se entregue al IRS no es una aprobación; el IRS toma la decisión final.' }}</p>
+</div>
+{% endif %}
+{% if itin_dash.outcome %}
+<div class="mt-4 rounded-xl border border-slate-100 bg-white px-4 py-3">
+    <p class="text-[14px] font-semibold text-brand-800">{{ 'OG recorded the IRS response' if en else 'OG registró la respuesta del IRS' }}: {{ itin_dash.outcome_label }}</p>
+    {% if itin_dash.outcome_note %}<p class="mt-1 text-[13px] text-slate-600 whitespace-pre-line break-words">{{ itin_dash.outcome_note }}</p>{% endif %}
+</div>
+{% endif %}
+<div class="mt-6 rounded-xl border border-mist-200 bg-mist-50 px-4 py-3 text-[13px] leading-relaxed text-slate-700">
+    {{ itin_dash.processing_html|safe }}
+    <p class="mt-2 text-[12px] font-semibold text-slate-600">{{ itin_dash.disclaimer }}</p>
+</div>

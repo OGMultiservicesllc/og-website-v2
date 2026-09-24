@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% from "partials/ui.html" import btn, page_hero, section_header %}
+{% from "partials/icons.html" import icon %}
+{% block title %}{{ t('contact_title') }} — OG Multiservices LLC{% endblock %}
+{% set page_description = t('contact_meta_description') %}
+
+{% block content %}
+{{ page_hero(
+    t('contact_title'),
+    t('contact_subtitle'),
+    icon_name='mail',
+    primary={'label': t('mobilebar_call') ~ ' ' ~ biz.PHONE_DISPLAY, 'href': 'tel:' ~ biz.PHONE_TEL, 'icon': 'phone'},
+    secondary={'label': t('mobilebar_whatsapp'), 'href': biz.WHATSAPP_LINK, 'icon': 'whatsapp', 'variant': 'whatsapp', 'external': True},
+    breadcrumbs=[{'label': t('breadcrumb_home'), 'href': url_for('public.home', lang=lang)}, {'label': t('contact_title')}]
+) }}
+
+<section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-10 pb-10 sm:pb-16">
+    <div class="grid grid-cols-1 lg:grid-cols-[.85fr_1.15fr] gap-6 lg:gap-10">
+        <div class="space-y-2.5">
+            <a href="tel:{{ biz.PHONE_TEL }}" class="flex items-center gap-3.5 rounded-card bg-white border border-slate-100 shadow-card p-4 hover:border-accent-300 transition">
+                <span class="w-11 h-11 rounded-xl bg-mist-100 text-accent-600 flex items-center justify-center shrink-0">{{ icon('phone', 'w-5 h-5') }}</span>
+                <span><span class="block text-xs font-semibold uppercase tracking-wide text-slate-400">{{ t('contact_phone') }}</span><span class="block font-semibold text-brand-800">{{ biz.PHONE_DISPLAY }}</span></span>
+            </a>
+            <a href="{{ biz.WHATSAPP_LINK }}" target="_blank" rel="noopener" class="flex items-center gap-3.5 rounded-card bg-white border border-slate-100 shadow-card p-4 hover:border-emerald-300 transition">
+                <span class="w-11 h-11 rounded-xl bg-emerald-50 text-wa-700 flex items-center justify-center shrink-0">{{ icon('whatsapp', 'w-5 h-5') }}</span>
+                <span><span class="block text-xs font-semibold uppercase tracking-wide text-slate-400">{{ t('contact_whatsapp') }}</span><span class="block font-semibold text-brand-800">{{ biz.WHATSAPP_DISPLAY }}</span></span>
+            </a>
+            <a href="mailto:{{ biz.EMAIL }}" class="flex items-center gap-3.5 rounded-card bg-white border border-slate-100 shadow-card p-4 hover:border-accent-300 transition">
+                <span class="w-11 h-11 rounded-xl bg-mist-100 text-accent-600 flex items-center justify-center shrink-0">{{ icon('mail', 'w-5 h-5') }}</span>
+                <span class="min-w-0"><span class="block text-xs font-semibold uppercase tracking-wide text-slate-400">{{ t('contact_email') }}</span><span class="block font-semibold text-brand-800 break-all">{{ biz.EMAIL }}</span></span>
+            </a>
+            <div class="flex items-start gap-3.5 rounded-card bg-white border border-slate-100 shadow-card p-4">
+                <span class="w-11 h-11 rounded-xl bg-mist-100 text-accent-600 flex items-center justify-center shrink-0">{{ icon('pin', 'w-5 h-5') }}</span>
+                <span><span class="block text-xs font-semibold uppercase tracking-wide text-slate-400">{{ t('contact_address') }}</span>
+                    <span class="block font-semibold text-brand-800">{{ biz.ADDRESS_LINE1 }}</span><span class="block text-sm text-slate-500">{{ biz.ADDRESS_LINE2 }}</span></span>
+            </div>
+            <div class="flex items-start gap-3.5 rounded-card bg-mist-50 border border-mist-200 p-4">
+                <span class="w-11 h-11 rounded-xl bg-white text-accent-600 flex items-center justify-center shrink-0">{{ icon('clock', 'w-5 h-5') }}</span>
+                <span><span class="block text-xs font-semibold uppercase tracking-wide text-slate-500">{{ t('contact_hours') }}</span>
+                    <span class="block font-semibold text-brand-800">{{ t('footer_hours_value') }}</span><span class="block text-sm text-slate-500">{{ t('footer_hours_closed') }}</span></span>
+            </div>
+        </div>
+
+        <div class="rounded-panel bg-white border border-slate-100 shadow-card p-5 sm:p-8 h-fit">
+            <h2 class="text-xl font-extrabold tracking-tight text-brand-800 mb-4">{{ t('contact_send') }}</h2>
+            <form method="POST" class="space-y-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div><label for="ct-name" class="sr-only">{{ t('contact_name') }}</label>
+                        <input id="ct-name" type="text" name="name" required autocomplete="name" placeholder="{{ t('contact_name') }}" class="w-full min-h-[48px] rounded-xl border border-slate-200 px-3.5 text-base focus:outline-none focus:ring-2 focus:ring-accent-500"></div>
+                    <div><label for="ct-email" class="sr-only">{{ t('contact_email') }}</label>
+                        <input id="ct-email" type="email" name="email" required autocomplete="email" placeholder="{{ t('contact_email') }}" class="w-full min-h-[48px] rounded-xl border border-slate-200 px-3.5 text-base focus:outline-none focus:ring-2 focus:ring-accent-500"></div>
+                </div>
+                <div><label for="ct-phone" class="sr-only">{{ t('contact_phone') }}</label>
+                    <input id="ct-phone" type="tel" name="phone" autocomplete="tel" placeholder="{{ t('contact_phone') }}" class="w-full min-h-[48px] rounded-xl border border-slate-200 px-3.5 text-base focus:outline-none focus:ring-2 focus:ring-accent-500"></div>
+                <div><label for="ct-message" class="sr-only">{{ t('contact_message') }}</label>
+                    <textarea id="ct-message" name="message" rows="4" placeholder="{{ t('contact_message') }}" class="w-full rounded-xl border border-slate-200 px-3.5 py-3 text-base focus:outline-none focus:ring-2 focus:ring-accent-500"></textarea></div>
+                <button type="submit" class="w-full sm:w-auto min-h-[52px] rounded-xl bg-accent-600 text-white font-semibold px-8 hover:bg-accent-700 transition shadow-sm shadow-accent-600/25">{{ t('contact_send') }}</button>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}

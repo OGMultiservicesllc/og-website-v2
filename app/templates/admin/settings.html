@@ -1,0 +1,161 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold text-brand-800 mb-2">Settings</h1>
+<p class="text-sm text-slate-500 mb-6">Social media links, site branding, System &amp; SEO settings, and admin user accounts.</p>
+
+<form method="POST" enctype="multipart/form-data" class="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 space-y-6 max-w-2xl">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+    <div>
+        <h2 class="font-semibold text-slate-900 mb-3">Social Media</h2>
+        <p class="text-xs text-slate-500 mb-3">Leave a field blank to hide that icon from the site footer.</p>
+        <div class="space-y-3">
+            <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Facebook URL</label>
+                <input type="url" name="facebook_url" value="{{ settings.facebook_url or '' }}" placeholder="https://facebook.com/..."
+                       class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Instagram URL</label>
+                <input type="url" name="instagram_url" value="{{ settings.instagram_url or '' }}" placeholder="https://instagram.com/..."
+                       class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">TikTok URL</label>
+                <input type="url" name="tiktok_url" value="{{ settings.tiktok_url or '' }}" placeholder="https://tiktok.com/@..."
+                       class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">YouTube URL</label>
+                <input type="url" name="youtube_url" value="{{ settings.youtube_url or '' }}" placeholder="https://youtube.com/@..."
+                       class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">LinkedIn URL</label>
+                <input type="url" name="linkedin_url" value="{{ settings.linkedin_url or '' }}" placeholder="https://linkedin.com/company/..."
+                       class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            </div>
+        </div>
+    </div>
+
+    <div class="pt-4 border-t border-slate-100">
+        <h2 class="font-semibold text-slate-900 mb-3">Branding — Logo</h2>
+        <p class="text-xs text-slate-500 mb-3">Replaces the logo shown in the header, footer, and mobile menu across the whole site.</p>
+        <div class="flex flex-wrap items-center gap-4">
+            <img src="{{ logo_url() }}" alt="Current logo" class="h-12 w-auto bg-slate-50 rounded-lg border border-slate-100 p-1.5">
+            <input type="file" name="logo" accept="image/*"
+                   class="min-w-0 max-w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 file:px-3 file:py-2 file:font-medium">
+        </div>
+        {% if settings.logo_filename %}
+        <button type="submit" form="logo-remove-form" class="mt-2 text-sm font-medium text-red-500 hover:text-red-700">Remove custom logo (use default)</button>
+        {% endif %}
+    </div>
+
+    <div class="pt-4 border-t border-slate-100">
+        <h2 class="font-semibold text-slate-900 mb-3">System &amp; SEO</h2>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Google Analytics (GA4) Measurement ID</label>
+                <input type="text" name="ga_measurement_id" value="{{ settings.ga_measurement_id or '' }}" placeholder="G-XXXXXXXXXX"
+                       class="w-full max-w-xs rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+                <p class="text-xs text-slate-400 mt-1">Leave blank to disable analytics tracking.</p>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Google Search Console verification code</label>
+                <input type="text" name="search_console_verification" value="{{ settings.search_console_verification or '' }}" placeholder="Just the content value, from the meta tag Google gives you"
+                       class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            </div>
+            <label class="flex items-start gap-2.5 text-sm text-slate-700">
+                <input type="checkbox" name="block_search_indexing" {{ 'checked' if settings.block_search_indexing else '' }} class="mt-0.5">
+                <span>
+                    <span class="font-medium">Discourage search engines from indexing this site</span>
+                    <span class="block text-xs text-slate-400">Turn this on while the site isn't ready for the public yet — off before launch.</span>
+                </span>
+            </label>
+            <div class="flex gap-4 text-sm pt-1">
+                <a href="{{ url_for('sitemap_xml') }}" target="_blank" class="text-accent-600 hover:underline">View sitemap.xml</a>
+                <a href="{{ url_for('robots_txt') }}" target="_blank" class="text-accent-600 hover:underline">View robots.txt</a>
+            </div>
+            <p class="text-xs text-slate-400">
+                Every page already gets a search-friendly title, meta description, Open Graph tags (for link
+                previews on WhatsApp/Facebook), and structured business data for Google automatically. Custom
+                pages under "Pages" have their own SEO Title/Description fields; flagship pages pull theirs
+                from "Flagship Page Text."
+            </p>
+        </div>
+    </div>
+
+    <button type="submit" class="rounded-lg bg-accent-600 text-white font-semibold px-6 py-2.5 text-sm hover:bg-accent-700 transition">
+        Save Settings
+    </button>
+</form>
+
+{% if settings.logo_filename %}
+<form id="logo-remove-form" method="POST" action="{{ url_for('admin.settings_logo_remove') }}" data-confirm="Remove the custom logo and go back to the default?" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+</form>
+{% endif %}
+
+<div class="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 max-w-2xl mt-6">
+    <div class="flex items-center justify-between mb-1">
+        <h2 class="font-semibold text-slate-900">Admin Users</h2>
+    </div>
+    <p class="text-xs text-slate-500 mb-4">Everyone here has full access to this admin panel — there are no restricted roles.</p>
+
+    <div class="divide-y divide-slate-100 mb-5">
+        {% for u in admin_users %}
+        <div class="py-3 flex items-center justify-between gap-3">
+            <div class="min-w-0">
+                <p class="text-sm font-medium text-slate-800 truncate">{{ u.name }} {% if u.id == session.get('admin_user_id') %}<span class="text-xs text-accent-600 font-normal">(you)</span>{% endif %}</p>
+                <p class="text-xs text-slate-500 truncate">{{ u.email }}</p>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+                <span class="text-xs font-semibold px-2 py-0.5 rounded-full {{ 'bg-emerald-50 text-emerald-700' if u.is_active else 'bg-slate-100 text-slate-500' }}">
+                    {{ 'Active' if u.is_active else 'Inactive' }}
+                </span>
+                <button type="button" class="text-xs font-medium text-accent-600 hover:underline reset-pw-toggle" data-id="{{ u.id }}">Reset password</button>
+                <form method="POST" action="{{ url_for('admin.admin_user_toggle_active', user_id=u.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="text-xs font-medium text-slate-500 hover:underline">{{ 'Deactivate' if u.is_active else 'Activate' }}</button>
+                </form>
+                <form method="POST" action="{{ url_for('admin.admin_user_delete', user_id=u.id) }}" data-confirm="Delete the admin account for {{ u.name }}? This can't be undone.">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="text-xs font-medium text-red-500 hover:underline">Delete</button>
+                </form>
+            </div>
+        </div>
+        <form method="POST" action="{{ url_for('admin.admin_user_reset_password', user_id=u.id) }}" id="reset-pw-form-{{ u.id }}" class="hidden pb-3 flex gap-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="password" name="password" placeholder="New password (min. 8 characters)" minlength="8" required
+                   class="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            <button type="submit" class="rounded-lg bg-slate-800 text-white text-xs font-semibold px-3 hover:bg-slate-900 transition">Set Password</button>
+        </form>
+        {% endfor %}
+    </div>
+
+    <details class="group">
+        <summary class="cursor-pointer text-sm font-semibold text-accent-600 flex items-center gap-1">+ Add Admin Account</summary>
+        <form method="POST" action="{{ url_for('admin.admin_user_new') }}" class="mt-3 space-y-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="text" name="name" placeholder="Name" required
+                   class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            <input type="email" name="email" placeholder="Email" required
+                   class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            <input type="password" name="password" placeholder="Password (min. 8 characters)" minlength="8" required
+                   class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            <button type="submit" class="rounded-lg bg-accent-600 text-white font-semibold px-4 py-2 text-sm hover:bg-accent-700 transition">Create Account</button>
+        </form>
+    </details>
+</div>
+
+<script>
+    document.querySelectorAll('.reset-pw-toggle').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var form = document.getElementById('reset-pw-form-' + btn.dataset.id);
+            form.classList.toggle('hidden');
+        });
+    });
+</script>
+{% endblock %}

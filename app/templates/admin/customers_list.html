@@ -1,0 +1,59 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Customers{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+    <div>
+        <h1 class="text-2xl font-bold text-slate-900">Customers</h1>
+        <p class="text-sm text-slate-500 mt-1 max-w-2xl">Everyone with an OG account. One person, one profile: their service applications, documents and OG Academy courses all live under the same account. Staff logins are under Settings.</p>
+    </div>
+    <p class="text-sm text-slate-500">{{ rows|length }} of {{ total }}</p>
+</div>
+
+<form method="GET" class="flex flex-wrap gap-2 mb-3">
+    <input type="hidden" name="filter" value="{{ flt }}">
+    <input type="search" name="q" value="{{ q }}" aria-label="Search customers" placeholder="Search by name, email or phone…" class="flex-1 min-w-[14rem] max-w-md rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+    <button class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium hover:bg-slate-50">Search</button>
+</form>
+<div class="flex flex-wrap gap-2 mb-5" role="group" aria-label="Filter customers">
+    {% for key, label in filters %}
+    <a href="{{ url_for('admin.customers_list', filter=key, q=q or None) }}"
+       class="rounded-full px-3.5 py-1.5 text-xs font-semibold border transition {{ 'bg-accent-600 border-accent-600 text-white' if flt == key else 'bg-white border-slate-200 text-slate-600 hover:border-accent-300' }}"
+       {% if flt == key %}aria-current="true"{% endif %}>{{ label }}</a>
+    {% endfor %}
+</div>
+
+<div class="rounded-2xl bg-white border border-slate-100 overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+            <tr>
+                <th class="px-4 py-3 font-semibold">Customer</th>
+                <th class="px-4 py-3 font-semibold">Phone</th>
+                <th class="px-4 py-3 font-semibold">Joined</th>
+                <th class="px-4 py-3 font-semibold text-center">Applications</th>
+                <th class="px-4 py-3 font-semibold text-center">Documents</th>
+                <th class="px-4 py-3 font-semibold text-center">Courses</th>
+                <th class="px-4 py-3 font-semibold">Last activity</th>
+                <th class="px-4 py-3 font-semibold">Status</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            {% for r in rows %}
+            {% set c = r.p %}
+            <tr class="hover:bg-slate-50/60">
+                <td class="px-4 py-3"><a href="{{ url_for('admin.customer_detail', student_id=c.id) }}" class="font-semibold text-slate-800 hover:text-accent-700">{{ c.name }}</a><span class="block text-xs text-slate-400 break-all">{{ c.email }}</span></td>
+                <td class="px-4 py-3 text-slate-600 whitespace-nowrap">{{ c.phone or '—' }}</td>
+                <td class="px-4 py-3 text-slate-500 whitespace-nowrap">{{ c.created_at.strftime('%b %d, %Y') if c.created_at else '—' }}</td>
+                <td class="px-4 py-3 text-center text-slate-700">{{ r.apps or '—' }}{% if r.open %} <span class="ml-1 rounded-full bg-amber-50 text-amber-800 text-[11px] font-semibold px-2 py-0.5" title="Waiting for client or reopened">{{ r.open }} open</span>{% endif %}</td>
+                <td class="px-4 py-3 text-center text-slate-700">{{ r.docs or '—' }}</td>
+                <td class="px-4 py-3 text-center text-slate-700">{{ r.courses or '—' }}</td>
+                <td class="px-4 py-3 text-slate-500 whitespace-nowrap">{{ r.last_activity.strftime('%b %d, %Y') if r.last_activity else '—' }}</td>
+                <td class="px-4 py-3"><span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ 'bg-emerald-50 text-emerald-700' if c.is_active else 'bg-red-50 text-red-600' }}">{{ 'Active' if c.is_active else 'Inactive' }}</span></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="8" class="px-4 py-10 text-center text-slate-500">No customers match.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

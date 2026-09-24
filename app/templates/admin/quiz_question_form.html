@@ -1,0 +1,342 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}{{ 'Edit Question' if question else 'New Question' }} — {{ lesson.title_en }}{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('admin.lesson_edit', lesson_id=lesson.id) }}" class="text-sm text-slate-500 hover:text-accent-600">&larr; {{ lesson.title_en }}</a>
+<h1 class="text-2xl font-bold text-brand-800 mt-2 mb-6">{{ 'Edit Question' if question else 'New Question' }}</h1>
+
+<form method="POST" enctype="multipart/form-data" class="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 space-y-6 max-w-3xl">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+    <div>
+        <label class="block text-sm font-medium text-slate-700 mb-2">Question Type</label>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {% set current_type = question.question_type if question else 'single_choice' %}
+            {% for type_value in question_types %}
+            <label class="type-option cursor-pointer rounded-lg border-2 px-3 py-3 text-center text-sm font-medium {{ 'border-accent-500 bg-accent-50 text-accent-700' if current_type == type_value else 'border-slate-200 text-slate-600' }}">
+                <input type="radio" name="question_type" value="{{ type_value }}" class="hidden" {{ 'checked' if current_type == type_value else '' }}>
+                {{ type_labels[type_value] }}
+            </label>
+            {% endfor %}
+        </div>
+        {% if question %}
+        <p class="text-xs text-amber-600 mt-2">Changing the type clears existing options/accepted answers below.</p>
+        {% endif %}
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Question (English)</label>
+            <textarea name="question_en" rows="3" required
+                      class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ question.question_en if question else '' }}</textarea>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Pregunta (Español)</label>
+            <textarea name="question_es" rows="3" required
+                      class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ question.question_es if question else '' }}</textarea>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-[8rem_1fr] gap-4 items-start">
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Points</label>
+            <input type="number" name="points" min="1" value="{{ question.points if question else 1 }}"
+                   class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+        <label class="flex items-center gap-2.5 text-sm font-medium text-slate-700 mt-7">
+            <input type="checkbox" name="required" {{ 'checked' if not question or question.required else '' }}
+                   class="w-4 h-4 rounded border-slate-300 text-accent-600 focus:ring-accent-500">
+            Required
+        </label>
+    </div>
+
+    <!-- single_choice / multi_select -->
+    <div id="fields-options" class="type-fields space-y-3">
+        <div class="flex items-center justify-between">
+            <label class="block text-sm font-medium text-slate-700">Options</label>
+            <button type="button" id="add-option-row" class="text-sm font-semibold text-accent-600 hover:underline">+ Add option</button>
+        </div>
+        <p class="text-xs text-slate-400" id="options-help">Single Choice: check exactly one correct option. Multiple Select: check every correct option.</p>
+        <div id="option-rows" class="space-y-2">
+            {% set options = question.options if question and question.question_type in ('single_choice', 'multi_select') else [] %}
+            {% for o in options %}
+            <div class="option-row grid grid-cols-1 sm:grid-cols-[1fr_1fr_5rem_auto] gap-2 items-center">
+                <input type="text" name="option_en" value="{{ o.text_en }}" placeholder="Option (EN)" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                <input type="text" name="option_es" value="{{ o.text_es }}" placeholder="Opción (ES)" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+                    <input type="checkbox" name="option_correct" value="{{ loop.index0 }}" {{ 'checked' if o.is_correct else '' }}> Correct
+                </label>
+                <button type="button" class="remove-option-row text-sm text-red-500 hover:text-red-700 shrink-0">Remove</button>
+            </div>
+            {% endfor %}
+            {% if not options %}
+            {% for i in range(2) %}
+            <div class="option-row grid grid-cols-1 sm:grid-cols-[1fr_1fr_5rem_auto] gap-2 items-center">
+                <input type="text" name="option_en" placeholder="Option (EN)" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                <input type="text" name="option_es" placeholder="Opción (ES)" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+                    <input type="checkbox" name="option_correct" value="{{ i }}"> Correct
+                </label>
+                <button type="button" class="remove-option-row text-sm text-red-500 hover:text-red-700 shrink-0">Remove</button>
+            </div>
+            {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- true_false -->
+    <div id="fields-true-false" class="type-fields space-y-2">
+        <label class="block text-sm font-medium text-slate-700 mb-1">Correct Answer</label>
+        {% set false_option = (question.options|selectattr('text_en', 'equalto', 'False')|first) if question and question.question_type == 'true_false' and question.options else None %}
+        {% set tf_correct = 'false' if false_option and false_option.is_correct else 'true' %}
+        <div class="flex gap-4">
+            <label class="flex items-center gap-2 text-sm">
+                <input type="radio" name="true_false_correct" value="true" {{ 'checked' if tf_correct == 'true' else '' }}> True / Verdadero
+            </label>
+            <label class="flex items-center gap-2 text-sm">
+                <input type="radio" name="true_false_correct" value="false" {{ 'checked' if tf_correct == 'false' else '' }}> False / Falso
+            </label>
+        </div>
+        <p class="text-xs text-slate-400">The True/Verdadero and False/Falso options are created automatically.</p>
+    </div>
+
+    <!-- short_answer -->
+    <div id="fields-short-answer" class="type-fields space-y-3">
+        <div class="flex items-center justify-between">
+            <label class="block text-sm font-medium text-slate-700">Accepted Answers</label>
+            <button type="button" id="add-answer-row" class="text-sm font-semibold text-accent-600 hover:underline">+ Add accepted answer</button>
+        </div>
+        <p class="text-xs text-slate-400">Compared after lowercasing and stripping spaces/punctuation — no AI involved.</p>
+        <div id="answer-rows" class="space-y-2">
+            {% set answers = question.accepted_answers if question and question.question_type == 'short_answer' else [] %}
+            {% for a in answers %}
+            <div class="answer-row grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-center">
+                <input type="text" name="answer_en" value="{{ a.answer_en }}" placeholder="Accepted answer (EN)" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                <input type="text" name="answer_es" value="{{ a.answer_es or '' }}" placeholder="Respuesta aceptada (ES)" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                <button type="button" class="remove-answer-row text-sm text-red-500 hover:text-red-700 shrink-0">Remove</button>
+            </div>
+            {% endfor %}
+            {% if not answers %}
+            <div class="answer-row grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-center">
+                <input type="text" name="answer_en" placeholder="Accepted answer (EN)" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                <input type="text" name="answer_es" placeholder="Respuesta aceptada (ES)" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                <button type="button" class="remove-answer-row text-sm text-red-500 hover:text-red-700 shrink-0">Remove</button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- number -->
+    <div id="fields-number" class="type-fields space-y-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Correct Answer</label>
+                <input type="number" step="any" name="correct_number" value="{{ question.correct_number if question and question.correct_number is not none else '' }}"
+                       class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Tolerance (optional)</label>
+                <input type="number" step="any" min="0" name="number_tolerance" value="{{ question.number_tolerance if question and question.number_tolerance else '' }}" placeholder="0"
+                       class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            </div>
+        </div>
+    </div>
+
+    <!-- long_answer -->
+    <div id="fields-long-answer" class="type-fields">
+        <div class="rounded-lg bg-amber-50 border border-amber-100 px-4 py-3.5 text-sm text-amber-800">
+            No automatic grading — the student's response is marked "Pending Review" until an admin reviews it, assigns points, and (optionally) leaves feedback.
+        </div>
+    </div>
+
+    <!-- image_choice -->
+    <div id="fields-image-choice" class="type-fields space-y-3">
+        <div class="flex items-center justify-between">
+            <label class="block text-sm font-medium text-slate-700">Image Options</label>
+            <button type="button" id="add-image-option-row" class="text-sm font-semibold text-accent-600 hover:underline">+ Add image option</button>
+        </div>
+        <p class="text-xs text-slate-400">Mark exactly one image as correct. Leave the file blank on an existing option to keep its current image.</p>
+        <div id="image-option-rows" class="space-y-3">
+            {% set image_options = question.options if question and question.question_type == 'image_choice' else [] %}
+            {% for o in image_options %}
+            <div class="image-option-row border border-slate-100 rounded-lg p-3 space-y-2">
+                <div class="flex items-center gap-3">
+                    {% if o.image_filename %}
+                    <img src="{{ url_for('admin.media', stored_path=o.image_filename) }}" alt="" class="w-14 h-14 rounded-lg object-cover border border-slate-100 shrink-0">
+                    {% endif %}
+                    <input type="hidden" name="image_option_existing" value="{{ o.image_filename or '' }}">
+                    <input type="file" name="image_option_file" accept="image/*" class="flex-1 text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 file:px-3 file:py-2 file:font-medium">
+                    <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-600 shrink-0">
+                        <input type="radio" name="image_option_correct" value="{{ loop.index0 }}" {{ 'checked' if o.is_correct else '' }}> Correct
+                    </label>
+                    <button type="button" class="remove-image-option-row text-sm text-red-500 hover:text-red-700 shrink-0">Remove</button>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <input type="text" name="image_option_label_en" value="{{ o.text_en or '' }}" placeholder="Label (EN, optional)" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                    <input type="text" name="image_option_label_es" value="{{ o.text_es or '' }}" placeholder="Etiqueta (ES, opcional)" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                </div>
+            </div>
+            {% endfor %}
+            {% if not image_options %}
+            {% for i in range(2) %}
+            <div class="image-option-row border border-slate-100 rounded-lg p-3 space-y-2">
+                <div class="flex items-center gap-3">
+                    <input type="hidden" name="image_option_existing" value="">
+                    <input type="file" name="image_option_file" accept="image/*" class="flex-1 text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 file:px-3 file:py-2 file:font-medium">
+                    <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-600 shrink-0">
+                        <input type="radio" name="image_option_correct" value="{{ i }}"> Correct
+                    </label>
+                    <button type="button" class="remove-image-option-row text-sm text-red-500 hover:text-red-700 shrink-0">Remove</button>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <input type="text" name="image_option_label_en" placeholder="Label (EN, optional)" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                    <input type="text" name="image_option_label_es" placeholder="Etiqueta (ES, opcional)" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                </div>
+            </div>
+            {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- file_upload -->
+    <div id="fields-file-upload" class="type-fields">
+        <div class="rounded-lg bg-amber-50 border border-amber-100 px-4 py-3.5 text-sm text-amber-800">
+            The student uploads a file (PDF, JPG, PNG, or DOCX) as their answer. No automatic grading — marked "Pending Review" until an admin reviews it, assigns points, and (optionally) leaves feedback.
+        </div>
+    </div>
+
+    <div id="fields-feedback" class="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-slate-100 pt-5">
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Feedback if correct (English, optional)</label>
+            <textarea name="feedback_correct_en" rows="2"
+                      class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ question.feedback_correct_en if question else '' }}</textarea>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Retroalimentación si es correcta (Español, opcional)</label>
+            <textarea name="feedback_correct_es" rows="2"
+                      class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ question.feedback_correct_es if question else '' }}</textarea>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Feedback if incorrect (English, optional)</label>
+            <textarea name="feedback_incorrect_en" rows="2"
+                      class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ question.feedback_incorrect_en if question else '' }}</textarea>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Retroalimentación si es incorrecta (Español, opcional)</label>
+            <textarea name="feedback_incorrect_es" rows="2"
+                      class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ question.feedback_incorrect_es if question else '' }}</textarea>
+        </div>
+    </div>
+
+    <div class="flex items-center gap-3 pt-2">
+        <button type="submit" class="rounded-lg bg-accent-600 text-white font-semibold px-6 py-2.5 text-sm hover:bg-accent-700 transition">
+            {{ 'Save Changes' if question else 'Add Question' }}
+        </button>
+    </div>
+</form>
+
+<script>
+    (function () {
+        const typeInputs = document.querySelectorAll('input[name="question_type"]');
+        const typeLabels = document.querySelectorAll('.type-option');
+        const fieldGroups = [
+            { id: 'fields-options', types: ['single_choice', 'multi_select'] },
+            { id: 'fields-true-false', types: ['true_false'] },
+            { id: 'fields-short-answer', types: ['short_answer'] },
+            { id: 'fields-number', types: ['number'] },
+            { id: 'fields-long-answer', types: ['long_answer'] },
+            { id: 'fields-image-choice', types: ['image_choice'] },
+            { id: 'fields-file-upload', types: ['file_upload'] },
+        ];
+        const feedbackTypes = ['single_choice', 'multi_select', 'true_false', 'short_answer', 'number', 'image_choice'];
+
+        function updateVisibility() {
+            const selected = document.querySelector('input[name="question_type"]:checked');
+            const value = selected ? selected.value : 'single_choice';
+            fieldGroups.forEach(({ id, types }) => {
+                document.getElementById(id).classList.toggle('hidden', !types.includes(value));
+            });
+            document.getElementById('fields-feedback').classList.toggle('hidden', !feedbackTypes.includes(value));
+            typeLabels.forEach((label) => {
+                const input = label.querySelector('input');
+                const active = input.checked;
+                label.classList.toggle('border-accent-500', active);
+                label.classList.toggle('bg-accent-50', active);
+                label.classList.toggle('text-accent-700', active);
+                label.classList.toggle('border-slate-200', !active);
+                label.classList.toggle('text-slate-600', !active);
+            });
+        }
+        typeInputs.forEach((input) => input.addEventListener('change', updateVisibility));
+        updateVisibility();
+
+        function reindexRows(selector, inputSelector) {
+            document.querySelectorAll(selector).forEach((row, i) => {
+                const input = row.querySelector(inputSelector);
+                if (input) input.value = i;
+            });
+        }
+
+        document.getElementById('add-option-row').addEventListener('click', function () {
+            const rows = document.getElementById('option-rows');
+            const index = rows.querySelectorAll('.option-row').length;
+            const row = document.createElement('div');
+            row.className = 'option-row grid grid-cols-1 sm:grid-cols-[1fr_1fr_5rem_auto] gap-2 items-center';
+            row.innerHTML =
+                '<input type="text" name="option_en" placeholder="Option (EN)" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">' +
+                '<input type="text" name="option_es" placeholder="Opción (ES)" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">' +
+                '<label class="flex items-center gap-1.5 text-xs font-semibold text-slate-600"><input type="checkbox" name="option_correct" value="' + index + '"> Correct</label>' +
+                '<button type="button" class="remove-option-row text-sm text-red-500 hover:text-red-700 shrink-0">Remove</button>';
+            rows.appendChild(row);
+        });
+        document.getElementById('option-rows').addEventListener('click', function (e) {
+            if (e.target.classList.contains('remove-option-row')) {
+                const rows = document.querySelectorAll('.option-row');
+                if (rows.length > 1) { e.target.closest('.option-row').remove(); reindexRows('.option-row', 'input[name="option_correct"]'); }
+            }
+        });
+
+        document.getElementById('add-answer-row').addEventListener('click', function () {
+            const rows = document.getElementById('answer-rows');
+            const row = document.createElement('div');
+            row.className = 'answer-row grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-center';
+            row.innerHTML =
+                '<input type="text" name="answer_en" placeholder="Accepted answer (EN)" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">' +
+                '<input type="text" name="answer_es" placeholder="Respuesta aceptada (ES)" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">' +
+                '<button type="button" class="remove-answer-row text-sm text-red-500 hover:text-red-700 shrink-0">Remove</button>';
+            rows.appendChild(row);
+        });
+        document.getElementById('answer-rows').addEventListener('click', function (e) {
+            if (e.target.classList.contains('remove-answer-row')) {
+                const rows = document.querySelectorAll('.answer-row');
+                if (rows.length > 1) e.target.closest('.answer-row').remove();
+            }
+        });
+
+        document.getElementById('add-image-option-row').addEventListener('click', function () {
+            const rows = document.getElementById('image-option-rows');
+            const index = rows.querySelectorAll('.image-option-row').length;
+            const row = document.createElement('div');
+            row.className = 'image-option-row border border-slate-100 rounded-lg p-3 space-y-2';
+            row.innerHTML =
+                '<div class="flex items-center gap-3">' +
+                '<input type="hidden" name="image_option_existing" value="">' +
+                '<input type="file" name="image_option_file" accept="image/*" class="flex-1 text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 file:px-3 file:py-2 file:font-medium">' +
+                '<label class="flex items-center gap-1.5 text-xs font-semibold text-slate-600 shrink-0"><input type="radio" name="image_option_correct" value="' + index + '"> Correct</label>' +
+                '<button type="button" class="remove-image-option-row text-sm text-red-500 hover:text-red-700 shrink-0">Remove</button>' +
+                '</div>' +
+                '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">' +
+                '<input type="text" name="image_option_label_en" placeholder="Label (EN, optional)" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">' +
+                '<input type="text" name="image_option_label_es" placeholder="Etiqueta (ES, opcional)" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">' +
+                '</div>';
+            rows.appendChild(row);
+        });
+        document.getElementById('image-option-rows').addEventListener('click', function (e) {
+            if (e.target.classList.contains('remove-image-option-row')) {
+                const rows = document.querySelectorAll('.image-option-row');
+                if (rows.length > 1) { e.target.closest('.image-option-row').remove(); reindexRows('.image-option-row', 'input[name="image_option_correct"]'); }
+            }
+        });
+    })();
+</script>
+{% endblock %}

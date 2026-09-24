@@ -1,0 +1,632 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}{{ student.name }}{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('admin.customers_list') }}" class="text-sm text-slate-500 hover:text-accent-600">&larr; All customers</a>
+
+<div class="flex flex-wrap items-center justify-between gap-3 mt-2 mb-8">
+    <div>
+        <h1 class="text-2xl font-bold text-brand-800">{{ student.name }}</h1>
+        <p class="text-sm text-slate-500">{{ student.email }}{% if student.phone %} · {{ student.phone }}{% endif %} · Joined {{ student.created_at.strftime('%B %d, %Y') }}</p>
+    </div>
+    <div class="flex items-center gap-2">
+        <button type="button" id="reset-pw-toggle"
+                class="rounded-lg border border-slate-200 text-slate-600 px-4 py-2 text-sm font-medium hover:bg-slate-50 transition">
+            Reset Password
+        </button>
+        <form method="POST" action="{{ url_for('admin.student_toggle_active', student_id=student.id) }}"
+              data-confirm="{{ 'Deactivate' if student.is_active else 'Reactivate' }} this student?">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit"
+                    class="rounded-lg border px-4 py-2 text-sm font-medium transition {{ 'border-red-200 text-red-600 hover:bg-red-50' if student.is_active else 'border-emerald-200 text-emerald-600 hover:bg-emerald-50' }}">
+                {{ 'Deactivate Account' if student.is_active else 'Reactivate Account' }}
+            </button>
+        </form>
+    </div>
+</div>
+
+<form method="POST" action="{{ url_for('admin.student_reset_password', student_id=student.id) }}" id="reset-pw-form" class="hidden bg-white border border-slate-100 rounded-2xl p-5 mb-8 flex flex-col sm:flex-row gap-2 max-w-lg">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="password" name="password" placeholder="New password (min. 8 characters)" minlength="8" required
+           class="flex-1 rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+    <button type="submit" class="rounded-lg bg-accent-600 text-white font-semibold px-5 py-2.5 text-sm hover:bg-accent-700 transition whitespace-nowrap">
+        Set Password
+    </button>
+</form>
+<script>
+    document.getElementById('reset-pw-toggle').addEventListener('click', function () {
+        document.getElementById('reset-pw-form').classList.toggle('hidden');
+    });
+</script>
+
+{% macro pill(key, label) %}
+{% set tone = {'draft': 'bg-slate-100 text-slate-600', 'new': 'bg-accent-50 text-accent-700', 'in_review': 'bg-amber-50 text-amber-800', 'waiting_client': 'bg-orange-50 text-orange-800', 'completed': 'bg-emerald-50 text-emerald-700', 'archived': 'bg-slate-100 text-slate-500'}.get(key, 'bg-slate-100 text-slate-600') %}
+<span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold {{ tone }}">{{ label }}</span>
+{% endmacro %}
+
+<nav class="flex gap-1 overflow-x-auto border-b border-slate-200 mb-6" aria-label="Customer sections">
+    {% for key, label in tabs %}
+    <a href="{{ url_for('admin.customer_detail', student_id=student.id, tab=key) }}"
+       class="shrink-0 px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition {{ 'border-accent-600 text-accent-700' if tab == key else 'border-transparent text-slate-500 hover:text-slate-800' }}"
+       {% if tab == key %}aria-current="page"{% endif %}>{{ label }}{% if key == 'applications' and applications %} <span class="ml-1 text-xs text-slate-400">{{ applications|length }}</span>{% elif key == 'cases' and cases %} <span class="ml-1 text-xs text-slate-400">{{ cases|length }}</span>{% elif key == 'documents' and files %} <span class="ml-1 text-xs text-slate-400">{{ files|length }}</span>{% elif key == 'notes' and notes %} <span class="ml-1 text-xs text-slate-400">{{ notes|length }}</span>{% elif key == 'emails' and tab == 'emails' and email_logs %} <span class="ml-1 text-xs text-slate-400">{{ email_logs|length }}</span>{% endif %}</a>
+    {% endfor %}
+</nav>
+
+{% if tab == 'overview' %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 space-y-6">
+        <div class="bg-white border border-slate-100 rounded-2xl p-5">
+            <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-3">Profile</h2>
+            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                <div><dt class="text-xs text-slate-400">Name</dt><dd class="text-slate-800">{{ student.name }}</dd></div>
+                <div><dt class="text-xs text-slate-400">Email</dt><dd class="text-slate-800 break-all">{{ student.email }}</dd></div>
+                <div><dt class="text-xs text-slate-400">Phone</dt><dd class="text-slate-800">{{ student.phone or '—' }}</dd></div>
+                <div><dt class="text-xs text-slate-400">Preferred language</dt><dd class="text-slate-800">{{ {'en': 'English', 'es': 'Spanish'}.get(student.preferred_language, '—') }}</dd></div>
+                <div><dt class="text-xs text-slate-400">Account created</dt><dd class="text-slate-800">{{ student.created_at.strftime('%b %d, %Y') }}</dd></div>
+                <div><dt class="text-xs text-slate-400">Last activity</dt><dd class="text-slate-800">{{ last_activity.strftime('%b %d, %Y %H:%M') if last_activity else '—' }}</dd></div>
+                <div><dt class="text-xs text-slate-400">Last login</dt><dd class="text-slate-800">{{ student.last_login_at.strftime('%b %d, %Y %H:%M') if student.last_login_at else '—' }}</dd></div>
+                <div><dt class="text-xs text-slate-400">Account status</dt><dd class="text-slate-800">{{ 'Active' if student.is_active else 'Deactivated' }}</dd></div>
+            </dl>
+        </div>
+        <div class="bg-white border border-slate-100 rounded-2xl p-5">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400">Applications</h2>
+                <a href="{{ url_for('admin.customer_detail', student_id=student.id, tab='applications') }}" class="text-xs font-semibold text-accent-700 hover:underline">View all</a>
+            </div>
+            {% for a in applications[:3] %}
+            <a href="{{ url_for('admin.form_submission_detail', submission_id=a.sub.id) }}" class="flex items-center justify-between gap-3 py-2.5 border-t border-slate-100 first:border-t-0 hover:bg-slate-50 -mx-2 px-2 rounded-lg">
+                <span class="min-w-0"><span class="block text-sm font-semibold text-slate-800 truncate">{{ a.title }}</span><span class="block text-xs text-slate-400">{{ a.sub.updated_at.strftime('%b %d, %Y') if a.sub.updated_at else '' }}{% if a.percent is not none and not a.sub.is_complete %} · {{ a.percent }}%{% endif %}</span></span>
+                {{ pill(a.key, a.label) }}
+            </a>
+            {% else %}<p class="text-sm text-slate-500">No applications yet.</p>{% endfor %}
+        </div>
+    </div>
+    <div class="space-y-6">
+        <div class="grid grid-cols-2 gap-3">
+            {% for label, n, tab_key, warn in [('Applications', applications|length, 'applications', false), ('Documents', files|length, 'documents', false), ('Courses', enrollments|length, 'courses', false), ('Open requests', open_requests, 'applications', open_requests > 0), ('Balance Due', (charge_rows|selectattr('status', 'in', ['payment_pending', 'partially_paid'])|list)|length, 'payments', (charge_rows|selectattr('status', 'in', ['payment_pending', 'partially_paid'])|list)|length > 0)] %}
+            <a href="{{ url_for('admin.customer_detail', student_id=student.id, tab=tab_key) }}" class="rounded-2xl border p-4 transition hover:border-accent-300 {{ 'bg-amber-50 border-amber-200' if warn else 'bg-white border-slate-100' }}">
+                <span class="block text-2xl font-extrabold {{ 'text-amber-800' if warn else 'text-brand-800' }}">{{ n }}</span>
+                <span class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mt-0.5">{{ label }}</span>
+            </a>
+            {% endfor %}
+        </div>
+        <div class="bg-white border border-slate-100 rounded-2xl p-5">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400">Recent activity</h2>
+                <a href="{{ url_for('admin.customer_detail', student_id=student.id, tab='activity') }}" class="text-xs font-semibold text-accent-700 hover:underline">View all</a>
+            </div>
+            <ol class="space-y-2.5">
+                {% for e, text in events %}
+                <li class="text-xs text-slate-700">{{ text }}<span class="block text-[10px] text-slate-400">{{ e.created_at.strftime('%b %d, %Y %H:%M') }}</span></li>
+                {% else %}<li class="text-xs text-slate-400">Nothing yet.</li>{% endfor %}
+            </ol>
+        </div>
+    </div>
+</div>
+
+{% elif tab == 'applications' %}
+<div class="bg-white border border-slate-100 rounded-2xl overflow-hidden">
+    <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr>
+            <th class="text-left px-4 py-3 font-semibold">Application</th><th class="text-left px-4 py-3 font-semibold">Status</th>
+            <th class="text-left px-4 py-3 font-semibold">Progress</th><th class="text-left px-4 py-3 font-semibold">Updated</th><th></th>
+        </tr></thead>
+        <tbody class="divide-y divide-slate-100">
+            {% for a in applications %}
+            <tr>
+                <td class="px-4 py-3"><span class="font-semibold text-slate-800">{{ a.title }}</span><span class="block text-xs text-slate-400">#{{ a.sub.code }}{% if a.sub.form.source_form_name %} · Form {{ a.sub.form.source_form_name }} {{ a.sub.source_edition_snapshot or '' }}{% endif %} · v{{ a.sub.form_version }}</span></td>
+                <td class="px-4 py-3">{{ pill(a.key, a.label) }}</td>
+                <td class="px-4 py-3 text-slate-600">{{ (a.percent ~ '%') if a.percent is not none else '—' }}</td>
+                <td class="px-4 py-3 text-slate-500">{{ a.sub.updated_at.strftime('%b %d, %Y %H:%M') if a.sub.updated_at else '—' }}</td>
+                <td class="px-4 py-3 text-right"><a href="{{ url_for('admin.form_submission_detail', submission_id=a.sub.id) }}" class="text-xs font-semibold text-accent-700 hover:underline">Open</a></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="px-4 py-8 text-center text-slate-500">No applications yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+
+{% elif tab == 'cases' %}
+<div class="space-y-3">
+    {% for x in cases %}
+    <a href="{{ url_for('admin.ocase_detail', case_id=x.c.id) }}" class="block bg-white border border-slate-100 rounded-2xl p-4 hover:border-accent-300 transition">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="font-semibold text-slate-900">{{ x.c.title }}</span>
+            <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold bg-accent-50 text-accent-700">{{ x.c.status_label }}</span>
+        </div>
+        <p class="text-xs text-slate-500 mt-1"><span class="font-mono">{{ x.c.case_number }}</span> · {{ x.type }} · {{ x.apps }} application(s){% if x.open_docs %} · <span class="text-amber-700 font-semibold">{{ x.open_docs }} document request(s) waiting on the customer</span>{% endif %}</p>
+    </a>
+    {% else %}<p class="text-sm text-slate-400">No cases yet. A case is created automatically when the customer starts an application, or create one from Cases.</p>{% endfor %}
+    <a href="{{ url_for('admin.ocase_list') }}" class="inline-block text-sm font-semibold text-accent-700 hover:underline">All cases &rarr;</a>
+</div>
+
+{% elif tab == 'documents' %}
+<div class="bg-white border border-slate-100 rounded-2xl overflow-hidden">
+    <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr>
+            <th class="text-left px-4 py-3 font-semibold">Document</th><th class="text-left px-4 py-3 font-semibold">Category · application</th>
+            <th class="text-left px-4 py-3 font-semibold">Uploaded</th><th></th>
+        </tr></thead>
+        <tbody class="divide-y divide-slate-100">
+            {% for f in files %}
+            <tr>
+                <td class="px-4 py-3"><span class="font-medium text-slate-800 break-all">{{ f.original_filename }}</span><span class="block text-xs text-slate-400">{{ ((f.size_bytes or 0) / 1024)|round|int }} KB</span></td>
+                <td class="px-4 py-3"><span class="block font-medium text-slate-700">{{ f.field.label('en') if f.field else 'Document' }}</span><a href="{{ url_for('admin.form_submission_detail', submission_id=f.submission_id) }}" class="text-xs text-accent-700 hover:underline">{{ f.submission.service.title_en if f.submission.service else f.submission.form.name_admin }} · {{ f.submission.code }}</a></td>
+                <td class="px-4 py-3 text-slate-500">{{ f.uploaded_at.strftime('%b %d, %Y') if f.uploaded_at else '—' }}</td>
+                <td class="px-4 py-3 text-right"><a href="{{ url_for('admin.submission_file', file_id=f.id) }}" class="text-xs font-semibold text-accent-700 hover:underline">Download</a></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="px-4 py-8 text-center text-slate-500">No documents uploaded.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+
+{% elif tab == 'files' %}
+<div class="bg-white border border-slate-100 rounded-2xl p-5 mb-5">
+    <h3 class="text-sm font-bold text-brand-800 mb-3">Send a file to this customer</h3>
+    <form method="post" id="og-file-form" action="{{ url_for('admin.customer_file_upload', student_id=student.id) }}" enctype="multipart/form-data" class="grid sm:grid-cols-2 gap-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label class="text-sm sm:col-span-2"><span class="block text-[12px] font-semibold text-slate-600 mb-1">File</span>
+            <input type="file" name="file" required class="w-full text-sm"></label>
+        <label class="text-sm"><span class="block text-[12px] font-semibold text-slate-600 mb-1">Customer display name</span>
+            <input name="title" placeholder="e.g. Certified Translation — Driver License" class="w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        <label class="text-sm"><span class="block text-[12px] font-semibold text-slate-600 mb-1">Category</span>
+            <select name="category" id="og-file-category" class="w-full rounded-lg border border-slate-200 px-3 py-2 bg-white">
+                {% for key, (title_en, _es) in file_categories %}<option value="{{ key }}" {% if key == 'other' %}selected{% endif %}>{{ title_en }}</option>{% endfor %}
+            </select></label>
+        <label class="text-sm"><span class="block text-[12px] font-semibold text-slate-600 mb-1">Related case/application (optional)</span>
+            <select name="case_id" id="og-file-case" class="w-full rounded-lg border border-slate-200 px-3 py-2 bg-white"><option value="">—</option>
+                {% for x in cases %}<option value="{{ x.c.id }}">{{ x.type }} · {{ x.c.case_number }}</option>{% endfor %}</select></label>
+        <label class="text-sm"><span class="block text-[12px] font-semibold text-slate-600 mb-1">Related service (optional)</span>
+            <input name="related_service" id="og-file-service" placeholder="e.g. NJ Driver License" class="w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        {% if persons and persons|length > 1 %}
+        <label class="text-sm"><span class="block text-[12px] font-semibold text-slate-600 mb-1">Person (optional — only when it matters)</span>
+            <select name="person_id" class="w-full rounded-lg border border-slate-200 px-3 py-2 bg-white"><option value="">—</option>
+                {% for p in persons %}<option value="{{ p.id }}">{{ p.full_name }}{% if p.is_self %} ({{ student.name }}){% endif %}</option>{% endfor %}</select></label>
+        {% endif %}
+        <label class="text-sm"><span class="block text-[12px] font-semibold text-slate-600 mb-1">Tax year (only for Taxes)</span>
+            <input type="number" name="tax_year" id="og-file-tax-year" min="2000" max="2100" placeholder="e.g. 2025" class="w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        <label class="text-sm sm:col-span-2"><span class="block text-[12px] font-semibold text-slate-600 mb-1">Description (optional)</span>
+            <textarea name="description" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2"></textarea></label>
+        <div class="sm:col-span-2 flex flex-wrap gap-2">
+            <button name="publish" value="1" class="rounded-lg bg-accent-600 text-white font-semibold px-4 py-2.5 text-sm hover:bg-accent-700">Make Available to Customer</button>
+            <button name="publish" value="0" class="rounded-lg border border-slate-200 font-semibold px-4 py-2.5 text-sm hover:border-accent-300">Save as Draft (Internal Only)</button>
+        </div>
+        <p class="text-[12px] text-slate-400 sm:col-span-2">A draft is never visible to the customer until you make it available.</p>
+    </form>
+</div>
+<div class="bg-white border border-slate-100 rounded-2xl overflow-hidden">
+    <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr>
+            <th class="text-left px-4 py-3 font-semibold">File</th><th class="text-left px-4 py-3 font-semibold">Category</th><th class="text-left px-4 py-3 font-semibold">Case</th>
+            <th class="text-left px-4 py-3 font-semibold">Status</th><th class="text-left px-4 py-3 font-semibold">Uploaded</th><th></th>
+        </tr></thead>
+        <tbody class="divide-y divide-slate-100">
+            {% for f in og_files %}
+            <tr>
+                <td class="px-4 py-3"><span class="font-medium text-slate-800 break-all">{{ f.title }}</span><span class="block text-xs text-slate-400 break-all">{{ f.original_filename }}</span></td>
+                <td class="px-4 py-3 text-slate-500">{{ file_category_label(f.category) }}{% if f.tax_year %} · {{ f.tax_year }}{% endif %}{% if f.person %}<span class="block text-xs text-slate-400">{{ f.person.full_name }}</span>{% endif %}</td>
+                <td class="px-4 py-3 text-slate-500">{{ f.case.case_number if f.case else '—' }}</td>
+                <td class="px-4 py-3">{% if f.is_published %}<span class="text-emerald-700 font-semibold">Available to customer</span>{% if f.downloaded_at %}<span class="block text-xs text-slate-400">Viewed {{ f.downloaded_at.strftime('%b %d, %Y') }}</span>{% endif %}{% else %}<span class="text-slate-400 font-semibold">Internal Only</span>{% endif %}</td>
+                <td class="px-4 py-3 text-slate-500">{{ f.created_at.strftime('%b %d, %Y') }}</td>
+                <td class="px-4 py-3 text-right whitespace-nowrap">
+                    <a href="{{ url_for('admin.customer_file_download', student_id=student.id, file_id=f.id) }}" class="text-xs font-semibold text-accent-700 hover:underline mr-2">Download</a>
+                    <form method="post" action="{{ url_for('admin.customer_file_publish', student_id=student.id, file_id=f.id) }}" class="inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        {% if f.is_published %}<input type="hidden" name="action" value="unpublish"><button class="text-xs font-semibold text-slate-500 hover:underline">Unpublish</button>
+                        {% else %}<button class="text-xs font-semibold text-accent-700 hover:underline">Publish</button>{% endif %}
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="px-4 py-8 text-center text-slate-500">No files sent to this customer yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+<script>
+    (function () {
+        var p = new URLSearchParams(window.location.search);
+        var map = {prefill_category: 'og-file-category', prefill_case_id: 'og-file-case', prefill_related_service: 'og-file-service', prefill_tax_year: 'og-file-tax-year'};
+        Object.keys(map).forEach(function (key) {
+            var v = p.get(key), el = document.getElementById(map[key]);
+            if (v && el) { el.value = v; }
+        });
+    })();
+</script>
+
+{% elif tab == 'payments' %}
+<div id="payments" class="bg-white border border-slate-100 rounded-2xl p-5 mb-5">
+    <h3 class="text-sm font-bold text-brand-800 mb-3">New Charge</h3>
+    <p class="text-xs text-slate-400 mb-3">For a service without its own price flow yet (e.g. a translation, notary, or other request) — link it to a Case if one already exists.</p>
+    <form method="post" action="{{ url_for('admin.charge_new', student_id=student.id) }}" class="grid sm:grid-cols-2 gap-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label class="text-sm"><span class="block text-[12px] font-semibold text-slate-600 mb-1">Description (customer-facing)</span>
+            <input name="description" placeholder="e.g. Certified Translation — Birth Certificate" required class="w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        <label class="text-sm"><span class="block text-[12px] font-semibold text-slate-600 mb-1">Related case (optional)</span>
+            <select name="case_id" class="w-full rounded-lg border border-slate-200 px-3 py-2 bg-white"><option value="">—</option>
+                {% for x in cases %}<option value="{{ x.c.id }}">{{ x.type }} · {{ x.c.case_number }}</option>{% endfor %}</select></label>
+        <label class="text-sm"><span class="block text-[12px] font-semibold text-slate-600 mb-1">Amount (optional — can set later)</span>
+            <input name="total" placeholder="e.g. 35.00" class="w-full rounded-lg border border-slate-200 px-3 py-2"></label>
+        <label class="text-sm"><span class="block text-[12px] font-semibold text-slate-600 mb-1">If an amount is given</span>
+            <select name="mode" class="w-full rounded-lg border border-slate-200 px-3 py-2 bg-white">
+                <option value="final">Final price (can Request Payment now)</option>
+                <option value="estimate">Estimate only (confirm later)</option>
+            </select></label>
+        <div class="sm:col-span-2"><button class="rounded-lg bg-accent-600 text-white font-semibold px-4 py-2.5 text-sm hover:bg-accent-700">+ Create Charge</button></div>
+    </form>
+</div>
+
+{% if charge_rows %}
+<div class="space-y-4">
+    {% for row in charge_rows %}
+    {% set c = row.c %}
+    <div class="bg-white border border-slate-100 rounded-2xl p-5">
+        <div class="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+                <p class="font-bold text-slate-900">{{ c.description }}</p>
+                {% if c.case %}<p class="text-xs text-slate-400">{{ c.case.case_number }}</p>{% elif c.course %}<p class="text-xs text-slate-400">{{ c.course.title_en }}</p>{% endif %}
+            </div>
+            <span class="text-[11px] font-bold uppercase tracking-wide px-2 py-1 rounded-full {{ {'paid': 'bg-emerald-50 text-emerald-700', 'partially_paid': 'bg-amber-50 text-amber-800', 'payment_pending': 'bg-amber-50 text-amber-800', 'estimate': 'bg-slate-100 text-slate-500', 'no_payment_required': 'bg-slate-100 text-slate-500', 'refunded': 'bg-slate-100 text-slate-500', 'partially_refunded': 'bg-slate-100 text-slate-500', 'canceled': 'bg-slate-100 text-slate-400'}.get(row.status, 'bg-slate-100 text-slate-500') }}">{{ row.status.replace('_', ' ') }}</span>
+        </div>
+        {% if c.total_cents %}
+        <dl class="mt-3 grid grid-cols-3 gap-2 max-w-xs text-center">
+            <div><dt class="text-[10px] text-slate-400 font-semibold uppercase">Total</dt><dd class="font-bold text-slate-800">{{ row.total }}</dd></div>
+            <div><dt class="text-[10px] text-slate-400 font-semibold uppercase">Paid</dt><dd class="font-bold text-emerald-700">{{ row.paid }}</dd></div>
+            <div><dt class="text-[10px] text-slate-400 font-semibold uppercase">Balance</dt><dd class="font-bold text-slate-800">{{ row.balance }}</dd></div>
+        </dl>
+        {% endif %}
+        {% if row.open_req %}
+        <p class="mt-2 text-xs text-amber-700 font-semibold">Open request: {{ '$%.2f' % (row.open_req.requested_cents / 100) }}{% if row.open_req.due_date %} · due {{ row.open_req.due_date.strftime('%b %d, %Y') }}{% endif %}
+            <form method="post" action="{{ url_for('admin.payment_request_cancel', request_id=row.open_req.id) }}" class="inline ml-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="text-slate-400 hover:text-red-600 font-normal underline">cancel</button>
+            </form>
+        </p>
+        {% endif %}
+
+        <div class="mt-4 grid sm:grid-cols-3 gap-3 pt-3 border-t border-slate-100">
+            <details class="text-xs">
+                <summary class="cursor-pointer font-semibold text-accent-700">Set / Confirm Price</summary>
+                <form method="post" action="{{ url_for('admin.charge_price', charge_id=c.id) }}" class="mt-2 space-y-1.5">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input name="total" placeholder="Amount, e.g. 115.00" required class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5">
+                    <select name="mode" class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5"><option value="final">Final price</option><option value="estimate">Estimate only</option></select>
+                    <input name="reason" placeholder="Reason for change (optional)" class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5">
+                    <button class="rounded-lg bg-accent-600 text-white font-semibold px-3 py-1.5 w-full">Save Price</button>
+                </form>
+            </details>
+            <details class="text-xs" {% if not row.open_req and c.total_cents %}{% endif %}>
+                <summary class="cursor-pointer font-semibold text-accent-700">Request Payment</summary>
+                <form method="post" action="{{ url_for('admin.charge_request', charge_id=c.id) }}" class="mt-2 space-y-1.5">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input name="amount" placeholder="Amount now, e.g. 175.00{% if row.balance_cents %} (balance {{ row.balance }}){% endif %}" required class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5">
+                    <input name="message" placeholder="Message to customer (optional)" class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5">
+                    <input type="date" name="due_date" class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5">
+                    <button class="rounded-lg bg-accent-600 text-white font-semibold px-3 py-1.5 w-full">Request Payment</button>
+                </form>
+            </details>
+            <details class="text-xs">
+                <summary class="cursor-pointer font-semibold text-accent-700">Record Manual Payment</summary>
+                <form method="post" action="{{ url_for('admin.charge_manual_payment', charge_id=c.id) }}" class="mt-2 space-y-1.5">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input name="amount" placeholder="Amount, e.g. 200.00" required class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5">
+                    <select name="method" required class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5">
+                        <option value="">Method…</option>
+                        {% for key in manual_methods %}<option value="{{ key }}">{{ dict(payment_methods)[key][0] }}</option>{% endfor %}
+                    </select>
+                    <input type="date" name="payment_date" class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5">
+                    <input name="reference" placeholder="Reference (optional)" class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5">
+                    <input name="note" placeholder="Internal note (optional)" class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5">
+                    <button class="rounded-lg bg-accent-600 text-white font-semibold px-3 py-1.5 w-full">Record Payment</button>
+                </form>
+            </details>
+        </div>
+
+        {% if c.payments %}
+        <table class="mt-4 w-full text-xs">
+            <thead class="text-slate-400 uppercase text-[10px]"><tr><th class="text-left py-1">Date</th><th class="text-left py-1">Method</th><th class="text-left py-1">Amount</th><th class="text-left py-1">Status</th><th></th></tr></thead>
+            <tbody class="divide-y divide-slate-100">
+                {% for p in c.payments|sort(attribute='created_at', reverse=True) %}
+                <tr>
+                    <td class="py-1.5">{{ (p.completed_at or p.payment_date or p.created_at).strftime('%b %d, %Y') if (p.completed_at or p.payment_date or p.created_at) else '' }}</td>
+                    <td class="py-1.5">{% if p.method == 'square' and p.card_last4 %}{{ (p.card_brand or 'Card').title() }} •••• {{ p.card_last4 }}{% else %}{{ dict(payment_methods)[p.method][0] if p.method in dict(payment_methods) else p.method }}{% endif %}</td>
+                    <td class="py-1.5 font-semibold">${{ '%.2f' % (p.amount_cents / 100) }}{% if p.refunded_cents %} <span class="text-amber-600">(refunded ${{ '%.2f' % (p.refunded_cents / 100) }})</span>{% endif %}</td>
+                    <td class="py-1.5">{{ p.status }}</td>
+                    <td class="py-1.5 text-right whitespace-nowrap">
+                        {% if p.status == 'pending' and p.method == 'square' %}
+                        <form method="post" action="{{ url_for('admin.payment_reconcile', payment_id=p.id) }}" class="inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <button class="text-slate-500 hover:underline">Check Square</button>
+                        </form>
+                        {% elif p.status == 'pending' %}
+                        <form method="post" action="{{ url_for('admin.payment_confirm', payment_id=p.id) }}" class="inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <button class="text-emerald-700 font-semibold hover:underline">Confirm Payment</button>
+                        </form>
+                        <form method="post" action="{{ url_for('admin.payment_manual_cancel', payment_id=p.id) }}" class="inline ml-2" data-confirm="Cancel this payment request? The customer will not be charged and access will not be granted.">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <button class="text-slate-400 hover:text-red-600">Cancel / Reject</button>
+                        </form>
+                        {% endif %}
+                        {% if p.status == 'completed' and p.net_cents > 0 %}
+                        <details class="inline-block relative">
+                            <summary class="cursor-pointer text-red-500 hover:underline list-none">Refund</summary>
+                            <form method="post" action="{{ url_for('admin.payment_refund', payment_id=p.id) }}" class="absolute right-0 z-10 mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg p-2 space-y-1.5">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                <input name="amount" placeholder="Amount, e.g. {{ '%.2f' % (p.net_cents / 100) }}" required class="w-full rounded border border-slate-200 px-2 py-1">
+                                <input name="reason" placeholder="Reason" class="w-full rounded border border-slate-200 px-2 py-1">
+                                <button class="w-full rounded bg-red-600 text-white font-semibold px-2 py-1">Refund</button>
+                            </form>
+                        </details>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+        <form method="post" action="{{ url_for('admin.charge_cancel', charge_id=c.id) }}" data-confirm="Cancel this charge? Payments already made are kept.">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="mt-3 text-[11px] text-slate-400 hover:text-red-600">Cancel this charge</button>
+        </form>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<p class="text-sm text-slate-500">No charges yet for this customer.</p>
+{% endif %}
+
+{% elif tab == 'emails' %}
+<div class="max-w-3xl">
+    <p class="text-sm text-slate-500 mb-4">Transactional emails sent to this customer. Verification codes and password-reset links are never shown here — only what was sent, when, and whether it succeeded.</p>
+    {% if email_logs %}
+    <div class="space-y-2">
+        {% for e in email_logs %}
+        {% set tone = {'sent': 'bg-emerald-50 text-emerald-700', 'failed': 'bg-red-50 text-red-700', 'pending': 'bg-slate-100 text-slate-600', 'sending': 'bg-amber-50 text-amber-800'}.get(e.status, 'bg-slate-100 text-slate-600') %}
+        <div class="bg-white border border-slate-100 rounded-2xl p-4">
+            <div class="flex items-center justify-between gap-3 flex-wrap">
+                <div class="min-w-0">
+                    <p class="text-sm font-semibold text-slate-800 truncate">{{ e.subject }}</p>
+                    <p class="text-xs text-slate-400 mt-0.5">{{ e.template_key }} &middot; {{ e.language|upper }} &middot; to {{ e.recipient_email }} &middot; {{ e.created_at.strftime('%b %d, %Y %H:%M') }}</p>
+                    {% if e.status == 'failed' and e.failure_reason %}<p class="text-xs text-red-600 mt-1">{{ e.failure_reason }}</p>{% endif %}
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold {{ tone }}">{{ e.status|capitalize }}</span>
+                    {% if e.status == 'failed' %}
+                    <form method="POST" action="{{ url_for('admin.email_retry', email_log_id=e.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <button type="submit" class="text-xs font-semibold text-accent-700 hover:underline">Retry</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}<p class="text-sm text-slate-500">No emails sent to this customer yet.</p>{% endif %}
+</div>
+
+{% elif tab == 'activity' %}
+<div class="flex flex-wrap gap-2 mb-4" role="group" aria-label="Filter activity">
+    {% for key, label in groups %}
+    <a href="{{ url_for('admin.customer_detail', student_id=student.id, tab='activity', group=key) }}"
+       class="rounded-full px-3.5 py-1.5 text-xs font-semibold border transition {{ 'bg-accent-600 border-accent-600 text-white' if group == key else 'bg-white border-slate-200 text-slate-600 hover:border-accent-300' }}"
+       {% if group == key %}aria-current="true"{% endif %}>{{ label }}</a>
+    {% endfor %}
+</div>
+<div class="bg-white border border-slate-100 rounded-2xl p-5">
+    <ol class="space-y-3">
+        {% for e, text in events %}
+        <li class="flex items-start gap-3">
+            <span class="mt-1.5 w-2 h-2 rounded-full shrink-0 {{ 'bg-accent-500' if e.actor_type == 'admin' else 'bg-slate-300' }}" aria-hidden="true"></span>
+            <div class="min-w-0"><p class="text-sm text-slate-800">{{ text }}</p>
+                <p class="text-xs text-slate-400">{{ e.created_at.strftime('%b %d, %Y %H:%M') }} · {{ 'OG team' if e.actor_type == 'admin' else ('System' if e.actor_type == 'system' else 'Customer') }}</p></div>
+        </li>
+        {% else %}<li class="text-sm text-slate-500">No activity recorded for this filter.</li>{% endfor %}
+    </ol>
+</div>
+
+{% elif tab == 'notes' %}
+<div class="max-w-2xl">
+    <p class="text-sm text-slate-500 mb-4">Internal notes about this customer. <span class="font-semibold text-slate-700">The customer can never see these.</span></p>
+    <form method="POST" action="{{ url_for('admin.student_note_add', student_id=student.id) }}" class="mb-6">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <textarea name="body" rows="3" required aria-label="New internal note" placeholder="Add an internal note…" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm mb-2"></textarea>
+        <button type="submit" class="rounded-lg bg-accent-600 text-white font-semibold px-5 py-2 text-sm hover:bg-accent-700 transition">Add note</button>
+    </form>
+    <div class="space-y-3">
+        {% for n in notes %}
+        <div class="bg-white border border-slate-100 rounded-2xl p-4">
+            <p class="text-sm text-slate-800 whitespace-pre-wrap">{{ n.body }}</p>
+            <div class="flex items-center justify-between mt-2">
+                <p class="text-xs text-slate-400">{{ n.author_name or 'OG team' }} · {{ n.created_at.strftime('%b %d, %Y %H:%M') }}</p>
+                <form method="POST" action="{{ url_for('admin.student_note_delete', student_id=student.id, note_id=n.id) }}" data-confirm="Delete this note?">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="text-xs font-medium text-red-500 hover:text-red-700">Delete</button>
+                </form>
+            </div>
+        </div>
+        {% else %}<p class="text-sm text-slate-500">No notes yet.</p>{% endfor %}
+    </div>
+</div>
+
+{% elif tab == 'courses' %}
+<h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500 mb-3">Enrolled Courses</h2>
+{% if enrollments %}
+<div class="space-y-3 mb-8">
+    {% for enrollment in enrollments %}
+    {% set progress = progress_by_course[enrollment.course_id] %}
+    {% set cert = certificates_by_course.get(enrollment.course_id) %}
+    <div class="bg-white border border-slate-100 rounded-2xl p-5 {{ 'opacity-70' if enrollment.is_revoked }}">
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <p class="font-semibold text-slate-900">{{ enrollment.course.title_en }}</p>
+                    <span class="text-[10px] font-semibold uppercase tracking-wide text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{{ access_source_label(enrollment.access_source) }}</span>
+                    {% if progress.is_complete %}<span class="text-[10px] font-semibold uppercase tracking-wide text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">Completed</span>{% endif %}
+                    {% if enrollment.is_revoked %}
+                    <span class="text-[10px] font-semibold uppercase tracking-wide text-red-600 bg-red-50 px-1.5 py-0.5 rounded">Access Revoked</span>
+                    {% elif enrollment.is_expired %}
+                    <span class="text-[10px] font-semibold uppercase tracking-wide text-red-600 bg-red-50 px-1.5 py-0.5 rounded">Access Expired</span>
+                    {% elif enrollment.expires_at %}
+                    <span class="text-[10px] font-semibold uppercase tracking-wide text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">Access until {{ enrollment.expires_at.strftime('%b %d, %Y') }}</span>
+                    {% else %}
+                    <span class="text-[10px] font-semibold uppercase tracking-wide text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">No expiration</span>
+                    {% endif %}
+                </div>
+                <p class="text-xs text-slate-400 mt-1">Granted {{ enrollment.granted_at.strftime('%b %d, %Y') if enrollment.granted_at else enrollment.enrolled_at.strftime('%b %d, %Y') }}{% if enrollment.granted_by %} by {{ enrollment.granted_by.name }}{% endif %}{% if enrollment.migration_reference %} &middot; ref: {{ enrollment.migration_reference }}{% endif %}{% if enrollment.internal_note %} &middot; note: {{ enrollment.internal_note }}{% endif %}</p>
+                <div class="mt-2 flex items-center gap-3">
+                    <div class="h-1.5 w-40 rounded-full bg-slate-100 overflow-hidden">
+                        <div class="h-full rounded-full {{ 'bg-emerald-500' if progress.is_complete else 'bg-accent-500' }}" style="width: {{ progress.percent }}%"></div>
+                    </div>
+                    <span class="text-xs text-slate-500">{{ progress.completed }}/{{ progress.total }} · {{ progress.percent }}%</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-3 shrink-0">
+                {% if enrollment.is_revoked %}
+                <form method="POST" action="{{ url_for('admin.enrollment_restore', student_id=student.id, enrollment_id=enrollment.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="text-sm font-medium text-accent-600 hover:text-accent-700">Restore Access</button>
+                </form>
+                {% else %}
+                <form method="POST" action="{{ url_for('admin.student_unenroll', student_id=student.id, course_id=enrollment.course_id) }}" data-confirm="Revoke this student's access to {{ enrollment.course.title_en }}? Their progress and certificate history are kept, and access can be restored later.">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="text-sm font-medium text-red-500 hover:text-red-700">Revoke</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% if not enrollment.is_revoked %}
+        <details class="mt-3">
+            <summary class="cursor-pointer text-xs font-semibold text-accent-700 hover:underline">Extend Access / Change Expiration</summary>
+            <form method="POST" action="{{ url_for('admin.enrollment_extend', student_id=student.id, enrollment_id=enrollment.id) }}" class="mt-2 flex flex-wrap items-end gap-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <label class="text-xs"><span class="block text-[11px] font-semibold text-slate-500 mb-1">New access period</span>
+                    <select name="duration_mode" class="rounded-lg border border-slate-200 px-2.5 py-2 text-xs bg-white">
+                        <option value="default">Course default ({{ enrollment.course.access_duration_days or 'unlimited' }} days)</option>
+                        <option value="30">30 days from today</option>
+                        <option value="60">60 days from today</option>
+                        <option value="90">90 days from today</option>
+                        <option value="custom">Custom date&hellip;</option>
+                        <option value="no_expiration">No expiration</option>
+                    </select></label>
+                <label class="text-xs"><span class="block text-[11px] font-semibold text-slate-500 mb-1">Custom date (if selected)</span>
+                    <input type="date" name="custom_expires_at" class="rounded-lg border border-slate-200 px-2.5 py-2 text-xs"></label>
+                <label class="text-xs flex-1 min-w-[10rem]"><span class="block text-[11px] font-semibold text-slate-500 mb-1">Reason (optional)</span>
+                    <input name="reason" class="w-full rounded-lg border border-slate-200 px-2.5 py-2 text-xs"></label>
+                <button type="submit" class="rounded-lg bg-accent-600 text-white font-semibold px-3.5 py-2 text-xs hover:bg-accent-700">Update Access</button>
+            </form>
+        </details>
+        {% endif %}
+
+        {% if enrollment.course.certificate_enabled %}
+        <div class="mt-4 pt-4 border-t border-slate-100">
+            <div class="flex items-center justify-between gap-4 flex-wrap">
+                <div class="flex items-center gap-2 text-sm flex-wrap">
+                    <span class="text-slate-500">Certificate:</span>
+                    {% if cert %}
+                        {% if cert.is_revoked %}
+                        <span class="text-[10px] font-semibold uppercase tracking-wide text-red-600 bg-red-50 px-1.5 py-0.5 rounded">Revoked</span>
+                        {% else %}
+                        <span class="text-[10px] font-semibold uppercase tracking-wide text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">Valid</span>
+                        {% endif %}
+                        <span class="font-mono text-xs text-slate-500">{{ cert.code }}</span>
+                        <a href="{{ url_for('account.certificate', lang='en', slug=enrollment.course.slug) }}" target="_blank" class="font-medium text-accent-600 hover:underline">View &rarr;</a>
+                        {% if cert.file_filename %}
+                        <a href="{{ url_for('account.certificate_file', lang='en', slug=enrollment.course.slug) }}" target="_blank" class="text-xs text-slate-500 hover:underline">(manual file)</a>
+                        <form method="POST" action="{{ url_for('admin.certificate_delete', student_id=student.id, course_id=enrollment.course_id) }}" data-confirm="Remove the uploaded certificate file? The student will still see the auto-generated certificate.">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <button type="submit" class="text-xs font-medium text-red-500 hover:text-red-700">Remove file</button>
+                        </form>
+                        {% endif %}
+                    {% else %}
+                    <span class="text-slate-400">Not yet issued</span>
+                    {% endif %}
+                </div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <form method="POST" action="{{ url_for('admin.certificate_regenerate', student_id=student.id, course_id=enrollment.course_id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <button type="submit" class="rounded-lg border border-slate-200 text-slate-600 font-medium px-3 py-1.5 text-xs hover:border-accent-300 transition whitespace-nowrap">
+                            {{ 'Regenerate' if cert else 'Generate Now' }}
+                        </button>
+                    </form>
+                    {% if cert and cert.is_revoked %}
+                    <form method="POST" action="{{ url_for('admin.certificate_reissue', student_id=student.id, course_id=enrollment.course_id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <button type="submit" class="rounded-lg border border-emerald-200 text-emerald-600 font-medium px-3 py-1.5 text-xs hover:bg-emerald-50 transition whitespace-nowrap">Reissue</button>
+                    </form>
+                    {% elif cert %}
+                    <form method="POST" action="{{ url_for('admin.certificate_revoke', student_id=student.id, course_id=enrollment.course_id) }}" data-confirm="Revoke this certificate? It will show as revoked on the verification page.">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <button type="submit" class="rounded-lg border border-red-200 text-red-500 font-medium px-3 py-1.5 text-xs hover:bg-red-50 transition whitespace-nowrap">Revoke</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% if cert %}
+            <form method="POST" action="{{ url_for('admin.certificate_upload', student_id=student.id, course_id=enrollment.course_id) }}" enctype="multipart/form-data" class="flex items-center gap-2 mt-2.5">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="file" name="file" accept=".pdf,.jpg,.jpeg,.png" required
+                       class="text-xs text-slate-600 file:mr-2 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 file:px-3 file:py-1.5 file:font-medium">
+                <button type="submit" class="rounded-lg border border-slate-200 text-slate-600 font-medium px-3 py-1.5 text-xs hover:border-accent-300 transition whitespace-nowrap">
+                    {{ 'Replace with manual file' if cert.file_filename else 'Replace manually' }}
+                </button>
+            </form>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<p class="text-sm text-slate-500 mb-8">Not enrolled in any courses yet.</p>
+{% endif %}
+
+{% if available_courses %}
+<h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500 mb-3">Grant Course Access</h2>
+<p class="text-xs text-slate-500 mb-3 max-w-lg">For a student migrating from the old Wix site who already paid there, use access source "Migrated from Wix" — never "Admin Complimentary", which implies a free grant. This never triggers a payment or checkout.</p>
+<form method="POST" action="{{ url_for('admin.student_enroll', student_id=student.id) }}" class="bg-white border border-slate-100 rounded-2xl p-4 grid sm:grid-cols-2 gap-3 max-w-2xl">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label class="text-sm"><span class="block text-[12px] font-semibold text-slate-600 mb-1">Course</span>
+        <select name="course_id" required class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-accent-500">
+            {% for course in available_courses %}
+            <option value="{{ course.id }}">{{ course.title_en }}{% if not course.is_published %} (draft){% endif %}</option>
+            {% endfor %}
+        </select></label>
+    <label class="text-sm"><span class="block text-[12px] font-semibold text-slate-600 mb-1">Access Source</span>
+        <select name="access_source" class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white">
+            {% for key, (title_en, _es) in access_sources %}<option value="{{ key }}" {% if key == 'paid_new_site' %}selected{% endif %}>{{ title_en }}</option>{% endfor %}
+        </select></label>
+    <label class="text-sm"><span class="block text-[12px] font-semibold text-slate-600 mb-1">Access Start Date / Duration</span>
+        <select name="duration_mode" class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white">
+            <option value="default" selected>Course default duration</option>
+            <option value="30">30 days from today</option>
+            <option value="60">60 days from today</option>
+            <option value="90">90 days from today</option>
+            <option value="custom">Custom expiration date&hellip;</option>
+            <option value="no_expiration">No expiration</option>
+        </select></label>
+    <label class="text-sm"><span class="block text-[12px] font-semibold text-slate-600 mb-1">Custom expiration date (if selected above)</span>
+        <input type="date" name="custom_expires_at" class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"></label>
+    <label class="text-sm"><span class="block text-[12px] font-semibold text-slate-600 mb-1">Migration reference (optional)</span>
+        <input name="migration_reference" placeholder="e.g. a Wix order id" class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"></label>
+    <label class="text-sm sm:col-span-2"><span class="block text-[12px] font-semibold text-slate-600 mb-1">Internal note (optional, never shown to the customer)</span>
+        <textarea name="internal_note" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"></textarea></label>
+    <div class="sm:col-span-2">
+        <button type="submit" class="rounded-lg bg-accent-600 text-white font-semibold px-5 py-2.5 text-sm hover:bg-accent-700 transition whitespace-nowrap">
+            Grant Access
+        </button>
+    </div>
+</form>
+{% endif %}
+{% endif %}
+{% endblock %}

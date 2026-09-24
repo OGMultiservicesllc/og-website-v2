@@ -1,0 +1,37 @@
+{# NJ Driver License intake: reuses the SAME generic question renderer the Tax Smart Intake built (it has no tax-specific logic) and adds
+   its own document-card renderer pointing at the Driver License upload routes. #}
+{% from "tax/_macros.html" import field %}
+
+{% macro doc_cards(cards, lang, dl) %}
+{% set en = lang == 'en' %}
+<ul class="mt-2 space-y-3">
+    {% for card in cards %}
+    {% set r = card.req %}
+    <li class="rounded-xl border border-slate-200 bg-white p-3.5" data-doc="{{ r.id }}" data-upload-url="{{ url_for('public.dl_doc_upload', lang=lang, req_id=r.id) }}"
+        data-choice-url="{{ url_for('public.dl_doc_choice', lang=lang, req_id=r.id) }}" data-remove-url="{{ url_for('public.dl_doc_remove', lang=lang, req_id=r.id) }}">
+        <div class="flex flex-wrap items-start justify-between gap-2">
+            <p class="min-w-0 flex-1 basis-40 text-[15px] font-semibold text-brand-800 break-words">📄 {{ card.title }}{% if card.optional %} <span class="text-[12px] font-normal text-slate-400">({{ 'optional' if en else 'opcional' }})</span>{% endif %}</p>
+            <span class="inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold {{ {'needed': 'bg-slate-100 text-slate-600', 'requested': 'bg-slate-100 text-slate-600', 'uploaded': 'bg-amber-50 text-amber-800', 'under_review': 'bg-amber-50 text-amber-800', 'accepted': 'bg-emerald-50 text-emerald-700', 'needs_replacement': 'bg-red-50 text-red-700'}[card.status] }}">{{ card.status_text }}</span>
+        </div>
+        {% if card.message %}<p class="mt-1 text-[13px] text-slate-600 break-words">{{ card.message }}</p>{% endif %}
+        {% if card.review_message %}<p class="mt-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-[13px] text-red-800 break-words">{{ card.review_message }}</p>{% endif %}
+        {% if card.reused %}<p class="mt-1 text-[13px] font-semibold text-emerald-700">✓ {{ 'Already on file' if en else 'Ya lo tenemos' }}</p>{% endif %}
+        {% if card.doc %}<p class="mt-2 text-[13px] text-slate-700 break-all">✓ {{ card.doc.original_filename }}</p>{% endif %}
+        <div class="mt-2 flex flex-wrap items-center gap-2">
+            {% if card.can_upload %}
+            <label class="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl {{ 'border border-slate-200 bg-white text-accent-700' if card.doc else 'bg-accent-600 text-white' }} text-[14px] font-semibold cursor-pointer">
+                {{ ('Replace file' if en else 'Cambiar archivo') if card.doc else ('Upload / Take Photo' if en else 'Subir / Tomar Foto') }}
+                <input type="file" class="sr-only" accept=".pdf,.jpg,.jpeg,.png,.webp" capture="environment" data-file></label>
+            {% endif %}
+            {% if card.can_remove %}<button type="button" data-remove class="inline-flex items-center min-h-[44px] px-4 rounded-xl border border-red-200 bg-white text-[14px] font-semibold text-red-700">{{ 'Remove file' if en else 'Eliminar archivo' }}</button>{% endif %}
+            {% if not card.doc %}{% for k, text in card.choices %}
+            <button type="button" data-choice="{{ k }}" class="inline-flex items-center min-h-[44px] px-3.5 rounded-xl border-2 text-[14px] font-semibold {{ 'border-accent-600 bg-accent-50 text-brand-800' if card.choice == k else 'border-slate-200 bg-white text-slate-600' }}">{{ text }}</button>
+            {% endfor %}{% endif %}
+        </div>
+        <p class="mt-1 text-[12px] text-red-700" data-doc-error role="alert"></p>
+    </li>
+    {% else %}
+    <li class="text-[14px] text-slate-500">{{ 'Nothing to upload here yet.' if en else 'Aquí todavía no hay nada que subir.' }}</li>
+    {% endfor %}
+</ul>
+{% endmacro %}

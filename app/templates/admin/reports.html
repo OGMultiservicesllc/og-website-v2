@@ -1,0 +1,52 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Reports{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold text-brand-800 mb-6">Course Reports</h1>
+
+{% if rows %}
+<div class="bg-white border border-slate-100 rounded-2xl overflow-hidden overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <th class="px-6 py-3">Course</th>
+                <th class="px-6 py-3">Status</th>
+                <th class="px-6 py-3">Enrolled</th>
+                <th class="px-6 py-3">Completed</th>
+                <th class="px-6 py-3">Completion Rate</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            {% for row in rows %}
+            <tr>
+                <td class="px-6 py-4">
+                    <a href="{{ url_for('admin.course_builder', course_id=row.course.id) }}" class="font-medium text-slate-900 hover:text-accent-600">
+                        {{ row.course.title_en }}
+                    </a>
+                </td>
+                <td class="px-6 py-4">
+                    <span class="text-xs font-semibold px-2.5 py-1 rounded-full {{ 'bg-emerald-50 text-emerald-700' if row.course.is_published else 'bg-slate-100 text-slate-500' }}">
+                        {{ 'Published' if row.course.is_published else 'Draft' }}
+                    </span>
+                </td>
+                <td class="px-6 py-4 text-slate-600">{{ row.enrolled_count }}</td>
+                <td class="px-6 py-4 text-slate-600">{{ row.completed_count }}</td>
+                <td class="px-6 py-4">
+                    <div class="flex items-center gap-2 w-32">
+                        <div class="h-1.5 flex-1 rounded-full bg-slate-100 overflow-hidden">
+                            <div class="h-full rounded-full bg-academy-500" style="width: {{ row.completion_rate }}%"></div>
+                        </div>
+                        <span class="text-xs text-slate-500 w-9 text-right">{{ row.completion_rate }}%</span>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="rounded-2xl border-2 border-dashed border-slate-200 p-16 text-center">
+    <p class="text-slate-500">No courses yet.</p>
+</div>
+{% endif %}
+{% endblock %}

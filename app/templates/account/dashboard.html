@@ -1,0 +1,184 @@
+{% extends "account/base_account.html" %}
+{% from "partials/icons.html" import icon %}
+{% set en = lang == 'en' %}
+{% block title %}{{ t('acct_dashboard_title') }}{% endblock %}
+
+{% macro entry_card(e, en) %}
+<div class="rounded-card bg-white border border-slate-100 shadow-card p-4">
+    <div class="flex flex-wrap items-start justify-between gap-2">
+        <p class="font-semibold text-brand-800 leading-snug min-w-0">{{ e.title }}{% if e.extra_count %} <span class="text-xs font-normal text-slate-400">{{ ('+ %d more' % e.extra_count) if en else ('+ %d más' % e.extra_count) }}</span>{% endif %}</p>
+    </div>
+    <p class="mt-1.5 inline-flex items-center gap-1.5 text-[13px] font-semibold {{ {'action': 'text-amber-800', 'problem': 'text-red-700', 'processing': 'text-accent-700', 'done': 'text-emerald-700', 'neutral': 'text-slate-500'}[e.tone] }}">
+        <span class="w-2 h-2 rounded-full shrink-0 {{ {'action': 'bg-amber-500', 'problem': 'bg-red-500', 'processing': 'bg-accent-500', 'done': 'bg-emerald-500', 'neutral': 'bg-slate-300'}[e.tone] }}" aria-hidden="true"></span>
+        {{ e.label }}
+    </p>
+    {% if e.percent is not none %}
+    <div class="mt-2.5 h-1.5 rounded-full bg-fog-200 overflow-hidden" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ e.percent }}" aria-label="{{ e.title }}"><div class="h-full rounded-full bg-accent-600" style="width: {{ e.percent }}%"></div></div>
+    {% endif %}
+    {% if e.docs_total %}<p class="mt-2 text-[13px] text-slate-500">{% if e.docs_missing %}{{ ('%d document(s) needed' % e.docs_missing) if en else ('%d documento(s) necesarios' % e.docs_missing) }}{% else %}{{ ('All documents received' if en else 'Todos los documentos recibidos') }}{% endif %}</p>{% endif %}
+    {% if e.get('price') and e.price.get('final') %}<p class="mt-1 text-[13px] font-semibold text-brand-800">{{ e.price.final }}</p>{% endif %}
+    <div class="mt-3 flex flex-wrap gap-2">
+        {% if e.continue_url %}<a href="{{ e.continue_url }}" class="inline-flex items-center justify-center min-h-[42px] rounded-xl bg-accent-600 text-white text-sm font-semibold px-4 hover:bg-accent-700 transition">{{ 'Continue' if en else 'Continuar' }} &rarr;</a>{% endif %}
+        <a href="{{ e.view_url }}" class="inline-flex items-center justify-center min-h-[42px] rounded-xl border border-slate-200 text-sm font-semibold text-brand-800 px-4 hover:border-accent-300 transition">{{ 'View' if en else 'Ver' }}</a>
+    </div>
+</div>
+{% endmacro %}
+
+{% block account_body %}
+    <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-brand-800">{{ 'Hi' if en else 'Hola' }}, {{ student.name.split(' ')[0] }}! 👋</h1>
+    <p class="mt-1 text-slate-500 text-[14px] sm:text-[15px]">{{ "Here's what's happening with your services." if en else 'Esto es lo que está pasando con tus servicios.' }}</p>
+
+    {% if actions %}
+    <div class="mt-5">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-amber-800 mb-2">{{ ('Action Required — %d thing%s' % (actions|length, '' if actions|length == 1 else 's')) if en else ('Requiere Acción — %d cosa%s' % (actions|length, '' if actions|length == 1 else 's')) }}</h2>
+        <ul class="space-y-2">
+            {% for a in actions[:4] %}
+            <li>
+                <a href="{{ a.href }}" class="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3.5 hover:border-amber-300 hover:bg-amber-100/70 transition group">
+                    <span class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0" aria-hidden="true">{{ icon('alert', 'w-[18px] h-[18px]') }}</span>
+                    <span class="min-w-0 flex-1 text-[14px] font-semibold text-amber-900 leading-snug">{{ a.text }}</span>
+                    <span class="shrink-0 inline-flex items-center gap-1 text-[13px] font-bold text-amber-900 group-hover:underline">{{ a.get('verb') or ('Continue' if en else 'Continuar') }} {{ icon('arrow-right', 'w-3.5 h-3.5') }}</span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% if actions|length > 4 %}
+        <a href="{{ url_for('account.services', lang=lang) }}" class="mt-2.5 inline-flex items-center text-sm font-bold text-amber-900 hover:underline">{{ 'View All Tasks' if en else 'Ver Todas las Tareas' }} &rarr;</a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="mt-7 grid sm:grid-cols-2 gap-4">
+        <div class="rounded-card bg-white border border-slate-100 shadow-card p-4 sm:p-5">
+            <div class="flex items-center gap-2.5 mb-1">
+                <span class="w-9 h-9 rounded-xl bg-mist-100 text-accent-600 flex items-center justify-center shrink-0">{{ icon('immigration', 'w-4.5 h-4.5') }}</span>
+                <h2 class="font-bold text-brand-800">{{ 'Immigration' if en else 'Inmigración' }}</h2>
+            </div>
+            {% if not immigration_entries %}
+            <p class="text-[13px] text-slate-500 mb-3">{{ 'Family petitions, green cards, work permits, naturalization and more.' if en else 'Peticiones familiares, tarjetas verdes, permisos de trabajo, naturalización y más.' }}</p>
+            <a href="{{ url_for('public.immigration', lang=lang) }}" class="inline-flex items-center justify-center min-h-[44px] rounded-xl bg-accent-600 text-white text-sm font-semibold px-5 hover:bg-accent-700 transition">{{ 'Get Started' if en else 'Comenzar' }} &rarr;</a>
+            {% else %}
+            <div class="space-y-3 mt-2">{% for e in immigration_entries %}{{ entry_card(e, en) }}{% endfor %}</div>
+            {% endif %}
+        </div>
+        <div class="rounded-card bg-white border border-slate-100 shadow-card p-4 sm:p-5">
+            <div class="flex items-center gap-2.5 mb-1">
+                <span class="w-9 h-9 rounded-xl bg-mist-100 text-accent-600 flex items-center justify-center shrink-0">{{ icon('taxes', 'w-4.5 h-4.5') }}</span>
+                <h2 class="font-bold text-brand-800">{{ 'Taxes & ITIN' if en else 'Impuestos e ITIN' }}</h2>
+            </div>
+            {% if not tax_entries %}
+            <p class="text-[13px] text-slate-500 mb-3">{{ 'Tax preparation, ITIN applications and related services.' if en else 'Preparación de impuestos, solicitudes de ITIN y servicios relacionados.' }}</p>
+            <a href="{{ url_for('public.taxes_itin', lang=lang) }}" class="inline-flex items-center justify-center min-h-[44px] rounded-xl bg-accent-600 text-white text-sm font-semibold px-5 hover:bg-accent-700 transition">{{ 'Get Started' if en else 'Comenzar' }} &rarr;</a>
+            {% else %}
+            <div class="space-y-3 mt-2">{% for e in tax_entries %}{{ entry_card(e, en) }}{% endfor %}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if dl_entries %}
+    <div class="mt-6">
+        <div class="flex items-center gap-2.5 mb-2">
+            <span class="w-7 h-7 rounded-lg bg-mist-100 text-accent-600 flex items-center justify-center shrink-0">{{ icon('license', 'w-4 h-4') }}</span>
+            <h2 class="font-bold text-brand-800">{{ 'NJ Driver License' if en else 'Licencia de Conducir de NJ' }}</h2>
+        </div>
+        <div class="grid sm:grid-cols-2 gap-4">{% for e in dl_entries %}{{ entry_card(e, en) }}{% endfor %}</div>
+    </div>
+    {% endif %}
+
+    {% if active_course %}
+    <div class="mt-6">
+        <div class="flex items-center gap-2.5 mb-2">
+            <span class="w-7 h-7 rounded-lg bg-academy-50 text-academy-600 flex items-center justify-center shrink-0">{{ icon('academy', 'w-4 h-4') }}</span>
+            <h2 class="font-bold text-brand-800">{{ 'OG Academy' if en else 'OG Academy' }}</h2>
+        </div>
+        <div class="rounded-card bg-white border border-slate-100 shadow-card p-4 sm:max-w-sm">
+            <p class="font-semibold text-brand-800 leading-snug min-w-0 flex-1">{{ active_course.course.title(lang) }}</p>
+            <div class="mt-2.5 h-1.5 rounded-full bg-fog-200 overflow-hidden" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ active_course.progress.percent }}"><div class="h-full rounded-full bg-academy-500" style="width: {{ active_course.progress.percent }}%"></div></div>
+            <a href="{{ active_course.continue_url }}" class="mt-3 inline-flex items-center justify-center min-h-[42px] rounded-xl bg-academy-500 text-white text-sm font-semibold px-4 hover:bg-academy-600 transition">{{ t('acct_continue_course') }} &rarr;</a>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if other_entries %}
+    <div class="mt-6">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">{{ 'Other Services' if en else 'Otros Servicios' }}</h2>
+        <div class="grid sm:grid-cols-2 gap-4">{% for e in other_entries %}{{ entry_card(e, en) }}{% endfor %}</div>
+    </div>
+    {% endif %}
+
+    {% if more_services %}<a href="{{ url_for('account.services', lang=lang) }}" class="mt-4 inline-flex items-center text-sm font-semibold text-accent-700 hover:underline">{{ 'View all services' if en else 'Ver todos los servicios' }} &rarr;</a>{% endif %}
+
+    <div class="mt-8 grid sm:grid-cols-2 gap-4 items-start">
+        <div class="rounded-card bg-white border border-slate-100 shadow-card p-4 sm:p-5">
+            <div class="flex items-center gap-2.5 mb-1">
+                <span class="w-9 h-9 rounded-xl bg-mist-100 text-accent-600 flex items-center justify-center shrink-0">{{ icon('folder', 'w-4.5 h-4.5') }}</span>
+                <h2 class="font-bold text-brand-800">{{ 'Files from OG' if en else 'Archivos de OG' }}</h2>
+            </div>
+            {% if files_from_og.count %}
+            <p class="text-[13px] text-slate-500 mt-1">{{ ('%d file%s available' % (files_from_og.count, '' if files_from_og.count == 1 else 's')) if en else ('%d archivo%s disponible%s' % (files_from_og.count, 's' if files_from_og.count != 1 else '', 's' if files_from_og.count != 1 else '')) }}{% if files_from_og.new_count %} &middot; <span class="font-semibold text-accent-700">{{ ('%d new' % files_from_og.new_count) if en else ('%d nuevo(s)' % files_from_og.new_count) }}</span>{% endif %}</p>
+            {% if files_from_og.latest %}<p class="text-[13px] text-slate-500 mt-1">{{ 'Latest' if en else 'Más reciente' }}: <span class="font-semibold text-brand-800">{{ files_from_og.latest.title }}</span></p>{% endif %}
+            <a href="{{ url_for('account.files_from_og', lang=lang) }}" class="mt-3 inline-flex items-center justify-center min-h-[42px] rounded-xl bg-accent-600 text-white text-sm font-semibold px-5 hover:bg-accent-700 transition">{{ 'View Files' if en else 'Ver Archivos' }} &rarr;</a>
+            {% else %}
+            <p class="text-[13px] text-slate-500 mt-1">{{ 'When OG prepares a file for you, it will appear here.' if en else 'Cuando OG prepare un archivo para ti, aparecerá aquí.' }}</p>
+            {% endif %}
+        </div>
+        <div class="rounded-card bg-white border border-slate-100 shadow-card p-4 sm:p-5">
+        <div class="flex items-center justify-between mb-2">
+            <h2 class="font-bold text-brand-800">{{ t('acct_documents') }}</h2>
+            <a href="{{ url_for('account.documents', lang=lang) }}" class="text-sm font-semibold text-accent-700 hover:underline">{{ 'View' if en else 'Ver' }} &rarr;</a>
+        </div>
+        {% if docs_total %}
+        <p class="text-[13px] text-slate-500 mb-3">{{ ('%d document(s) requested' % docs_total) if en else ('%d documento(s) solicitados' % docs_total) }}</p>
+        {% endif %}
+        {% if docs_preview %}
+        <ul class="grid sm:grid-cols-2 gap-2.5">
+            {% for r in docs_preview %}
+            <li class="flex items-center gap-3 rounded-xl bg-white border border-slate-100 shadow-card px-3.5 py-3">
+                <span class="w-9 h-9 rounded-lg bg-mist-100 text-accent-600 flex items-center justify-center shrink-0">{{ icon('documents', 'w-4 h-4') }}</span>
+                <div class="min-w-0 flex-1">
+                    <p class="text-[14px] font-semibold text-brand-800 truncate">{{ r.title }}</p>
+                    <p class="text-[12px] {{ {'action': 'text-amber-700', 'problem': 'text-red-700', 'processing': 'text-accent-700', 'done': 'text-emerald-700', 'neutral': 'text-slate-500'}[r.tone] }} font-semibold">{{ '✓ ' if r.tone == 'done' else ('⚠ ' if r.tone in ('action', 'problem') else '') }}{{ r.label }}</p>
+                </div>
+                {% if r.can_upload %}<a href="{{ url_for('account.my_case_detail', lang=lang, case_id=r.case.id, _anchor='req-' ~ r.req.id) }}" class="text-[13px] font-semibold text-accent-700 shrink-0 hover:underline">{{ 'Upload' if en else 'Subir' }}</a>{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-[14px] text-slate-500 rounded-card border border-dashed border-slate-200 bg-fog-50 p-5 text-center">{{ 'No documents yet.' if en else 'Todavía no hay documentos.' }}</p>
+        {% endif %}
+        </div>
+    </div>
+
+    {% if not has_services and not actions %}
+    <div class="mt-10 text-center rounded-card border border-dashed border-slate-200 bg-fog-50 p-10">
+        <p class="font-semibold text-brand-800">{{ 'Welcome to OG Multiservices.' if en else 'Bienvenido(a) a OG Multiservices.' }}</p>
+        <p class="mt-1 text-sm text-slate-500">{{ "You don't have any active services right now." if en else 'No tienes ningún servicio activo en este momento.' }}</p>
+        <a href="{{ url_for('public.services', lang=lang) }}" class="mt-4 inline-flex items-center justify-center min-h-[44px] rounded-xl bg-accent-600 text-white text-sm font-semibold px-6 hover:bg-accent-700 transition">{{ 'Explore Services' if en else 'Explorar Servicios' }}</a>
+    </div>
+    {% endif %}
+{% endblock %}
+
+{% block account_aside %}
+<aside class="hidden xl:block w-72 shrink-0 mt-1">
+    <div class="rounded-2xl border border-slate-100 bg-white shadow-card p-5 sticky top-[4.75rem]">
+        <div class="flex items-center gap-3">
+            {% if student.photo_filename %}
+            <img src="{{ url_for('account.photo', lang=lang, v=student.photo_filename[-8:]) }}" alt="" class="w-14 h-14 rounded-full object-cover border border-slate-200 shrink-0">
+            {% else %}
+            <span class="w-14 h-14 rounded-full bg-brand-800 text-white flex items-center justify-center text-lg font-bold shrink-0" aria-hidden="true">{{ student.initials }}</span>
+            {% endif %}
+            <div class="min-w-0">
+                <p class="font-bold text-brand-800 truncate">{{ student.name }}</p>
+                <p class="text-[12px] text-slate-500 truncate">{{ student.email }}</p>
+            </div>
+        </div>
+        <dl class="mt-4 space-y-2 text-[13px]">
+            {% if student.phone %}
+            <div class="flex items-center gap-2 text-slate-600"><span class="text-slate-400 shrink-0">{{ icon('phone', 'w-4 h-4') }}</span><dd>{{ student.phone }}</dd></div>
+            {% endif %}
+            <div class="flex items-center gap-2 text-slate-600"><span class="text-slate-400 shrink-0">{{ icon('globe', 'w-4 h-4') }}</span><dd>{{ 'English' if (student.preferred_language or lang) == 'en' else 'Español' }}</dd></div>
+        </dl>
+        <a href="{{ url_for('account.profile', lang=lang) }}" class="mt-4 inline-flex items-center justify-center w-full min-h-[40px] rounded-xl border border-slate-200 text-[13px] font-semibold text-brand-800 hover:border-accent-300 transition">{{ 'Edit Profile' if en else 'Editar Perfil' }}</a>
+    </div>
+</aside>
+{% endblock %}

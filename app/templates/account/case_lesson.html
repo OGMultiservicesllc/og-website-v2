@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}{{ case.title(lang) }} — {{ course.title(lang) }}{% endblock %}
+
+{% block content %}
+<section class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <a href="{{ url_for('public.lesson_view', lang=lang, slug=course.slug, lesson_id=lesson.id) }}" class="text-sm text-slate-500 hover:text-accent-600">&larr; {{ course.title(lang) }}</a>
+
+    <h1 class="text-2xl sm:text-3xl font-extrabold text-brand-800 mt-4">{{ case.title(lang) }}</h1>
+    {% if case.description(lang) %}
+    <p class="mt-3 text-slate-600">{{ case.description(lang) }}</p>
+    {% endif %}
+
+    {% if case.client_profile(lang) %}
+    <div class="mt-6 rounded-2xl border border-slate-100 p-5 sm:p-6">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500 mb-2">{{ t('case_client_profile_title') }}</h2>
+        <p class="text-slate-700 whitespace-pre-line">{{ case.client_profile(lang) }}</p>
+    </div>
+    {% endif %}
+
+    {% if case.instructions(lang) %}
+    <div class="mt-4 rounded-2xl bg-accent-50 border border-accent-100 p-5 sm:p-6">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-accent-700 mb-2">{{ t('case_instructions_title') }}</h2>
+        <p class="text-slate-700 whitespace-pre-line">{{ case.instructions(lang) }}</p>
+    </div>
+    {% endif %}
+
+    <div class="mt-6 flex items-center justify-between flex-wrap gap-3">
+        <p class="text-sm text-slate-500">
+            {% if case.max_attempts %}
+            {{ t('case_attempts_used_prefix') }} {{ attempts_used }} {{ t('case_attempts_used_mid') }} {{ case.max_attempts }} {{ t('case_attempts_used_suffix') }}
+            {% else %}
+            {{ t('case_unlimited_attempts') }}
+            {% endif %}
+            {% if case.passing_score %} · {{ case.passing_score }}%{% endif %}
+        </p>
+        {% if in_progress %}
+        <a href="{{ url_for('account.case_attempt', lang=lang, attempt_id=in_progress.id) }}"
+           class="inline-flex items-center rounded-lg bg-accent-600 text-white font-semibold px-6 py-3 text-sm hover:bg-accent-700 transition">
+            {{ t('case_resume_cta') }}
+        </a>
+        {% elif can_start %}
+        <form method="POST" action="{{ url_for('account.case_start', lang=lang, lesson_id=lesson.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="inline-flex items-center rounded-lg bg-accent-600 text-white font-semibold px-6 py-3 text-sm hover:bg-accent-700 transition">
+                {{ t('case_start_cta') }}
+            </button>
+        </form>
+        {% else %}
+        <p class="text-sm font-semibold text-amber-700 bg-amber-50 rounded-lg px-4 py-2.5">{{ t('case_no_attempts_left') }}</p>
+        {% endif %}
+    </div>
+
+    {% if attempts %}
+    <div class="mt-10">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500 mb-3">{{ t('case_prior_attempts_title') }}</h2>
+        <div class="space-y-2">
+            {% for a in attempts %}
+            <a href="{{ url_for('account.case_result', lang=lang, attempt_id=a.id) }}"
+               class="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-4 py-3 hover:border-accent-300 transition">
+                <span class="text-sm text-slate-700">{{ t('case_attempt_label') }} — {{ a.submitted_at.strftime('%b %d, %Y %H:%M') if a.submitted_at else '' }}</span>
+                <span class="flex items-center gap-3">
+                    <span class="text-sm font-semibold text-slate-800">{{ a.score }} / {{ a.max_score }}</span>
+                    <span class="text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded-full
+                        {% if a.status == 'needs_review' %}bg-amber-50 text-amber-700
+                        {% elif a.passed %}bg-emerald-50 text-emerald-700
+                        {% elif a.passed is sameas false %}bg-red-50 text-red-600
+                        {% else %}bg-slate-100 text-slate-600{% endif %}">
+                        {% if a.status == 'needs_review' %}{{ t('case_needs_review') }}
+                        {% elif a.passed %}{{ t('case_passed') }}
+                        {% elif a.passed is sameas false %}{{ t('case_not_passed') }}
+                        {% else %}{{ t('case_completed_label') }}{% endif %}
+                    </span>
+                </span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

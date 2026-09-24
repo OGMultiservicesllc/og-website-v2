@@ -1,0 +1,46 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Applications{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-slate-900">Applications</h1>
+    <p class="text-sm text-slate-500 mt-1 max-w-2xl">Every Smart Intake application across all services (I-90, N-400, …). Open one to review answers, request information, reopen it for editing or add internal notes.</p>
+</div>
+
+<form method="GET" class="flex flex-wrap gap-2 mb-5">
+    <input type="search" name="q" value="{{ q }}" aria-label="Search applications" placeholder="Customer, email or application ID…" class="flex-1 min-w-[14rem] max-w-md rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+    <select name="form" aria-label="Form" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
+        <option value="">All forms</option>
+        {% for f in forms %}<option value="{{ f.id }}" {{ 'selected' if form_id == f.id else '' }}>{{ f.source_form_name or f.name_admin }}</option>{% endfor %}
+    </select>
+    <select name="status" aria-label="Status" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
+        <option value="">All statuses</option>
+        {% for k, l in status_options %}<option value="{{ k }}" {{ 'selected' if status == k else '' }}>{{ l }}</option>{% endfor %}
+    </select>
+    <button class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium hover:bg-slate-50">Filter</button>
+</form>
+
+<div class="rounded-2xl bg-white border border-slate-100 overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+            <tr><th class="px-4 py-3 font-semibold">Application</th><th class="px-4 py-3 font-semibold">Customer</th><th class="px-4 py-3 font-semibold">Form</th><th class="px-4 py-3 font-semibold">Status</th><th class="px-4 py-3 font-semibold">Submitted</th><th class="px-4 py-3 font-semibold">Updated</th></tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            {% for r in rows %}
+            {% set s = r.s %}
+            {% set tone = {'draft': 'bg-slate-100 text-slate-600', 'new': 'bg-accent-50 text-accent-700', 'in_review': 'bg-amber-50 text-amber-800', 'waiting_client': 'bg-orange-50 text-orange-800', 'reopened': 'bg-amber-50 text-amber-800', 'completed': 'bg-emerald-50 text-emerald-700', 'archived': 'bg-slate-100 text-slate-500'}.get(r.key, 'bg-slate-100 text-slate-600') %}
+            <tr class="hover:bg-slate-50/60">
+                <td class="px-4 py-3"><a href="{{ url_for('admin.form_submission_detail', submission_id=s.id) }}" class="font-semibold text-slate-800 hover:text-accent-700">{{ s.service.title_en if s.service else s.form.name_admin }}</a><span class="block text-xs font-mono text-slate-400">{{ s.code }}</span></td>
+                <td class="px-4 py-3"><a href="{{ url_for('admin.customer_detail', student_id=s.student_id) }}" class="text-slate-700 hover:text-accent-700">{{ s.student.name }}</a><span class="block text-xs text-slate-400 break-all">{{ s.student.email }}</span></td>
+                <td class="px-4 py-3 text-slate-600 whitespace-nowrap">{{ s.form.source_form_name or '—' }}{% if r.sup and r.sup.state != 'in_progress' and r.sup.state == 'complete' %} + {{ r.sup.form }}{% endif %}{% if r.sup and r.sup.state == 'needed' %}<span class="block mt-1 rounded-full bg-amber-50 text-amber-800 px-2 py-0.5 text-[11px] font-semibold w-max" title="Submitted before the spouse supplement existed">{{ r.sup.form }} info needed</span>{% endif %}{% if s.source_edition_snapshot %}<span class="block text-xs text-slate-400">ed. {{ s.source_edition_snapshot }} · v{{ s.form_version }}</span>{% endif %}</td>
+                <td class="px-4 py-3"><span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ tone }}">{{ r.label }}</span></td>
+                <td class="px-4 py-3 text-slate-500 whitespace-nowrap">{{ s.submitted_at.strftime('%b %d, %Y') if s.submitted_at and (s.is_complete or s.status == 'reopened') else '—' }}</td>
+                <td class="px-4 py-3 text-slate-500 whitespace-nowrap">{{ s.updated_at.strftime('%b %d, %Y') if s.updated_at else '—' }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="px-4 py-10 text-center text-slate-500">No applications match.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

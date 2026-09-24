@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ form.name_admin }} — OG Forms Builder</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo.png') }}">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { theme: { extend: { colors: {
+            brand: { 800: '#0f1829', 700: '#141f38' },
+            accent: { 50: '#e6fbff', 500: '#12c0ee', 600: '#0aa3cf', 700: '#0a83a8' },
+        } } } }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+    <style>
+        body { font-family: -apple-system, 'Segoe UI', sans-serif; }
+        .panel-scroll { scrollbar-width: thin; }
+        [data-preview-device="mobile"] #canvas-frame { max-width: 380px; }
+        [data-preview-device="tablet"] #canvas-frame { max-width: 620px; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex flex-col">
+
+<!-- TOP BAR -->
+<header class="h-14 shrink-0 bg-brand-800 text-white flex items-center justify-between px-4 gap-4">
+    <div class="flex items-center gap-4 min-w-0">
+        <a href="{{ url_for('admin.forms_list') }}" class="text-sm text-slate-300 hover:text-white shrink-0">&larr; Forms</a>
+        <span class="text-sm font-semibold truncate">{{ form.name_admin }}</span>
+        <span class="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded shrink-0
+            {{ 'bg-emerald-500/20 text-emerald-300' if form.status == 'published' else ('bg-slate-500/20 text-slate-300' if form.status == 'archived' else 'bg-amber-500/20 text-amber-300') }}">
+            {{ form.status }}
+        </span>
+    </div>
+    <div class="flex items-center gap-2 shrink-0">
+        <div class="flex items-center bg-white/10 rounded-lg p-0.5 text-xs font-semibold">
+            <a href="{{ url_for('admin.form_builder', form_id=form.id, page=page.id, lang='en', device=device) }}" class="px-2.5 py-1 rounded-md {{ 'bg-white text-brand-800' if lang == 'en' else 'text-slate-300' }}">EN</a>
+            <a href="{{ url_for('admin.form_builder', form_id=form.id, page=page.id, lang='es', device=device) }}" class="px-2.5 py-1 rounded-md {{ 'bg-white text-brand-800' if lang == 'es' else 'text-slate-300' }}">ES</a>
+        </div>
+        <div class="flex items-center bg-white/10 rounded-lg p-0.5 text-xs font-semibold">
+            {% for d in ['desktop', 'tablet', 'mobile'] %}
+            <a href="{{ url_for('admin.form_builder', form_id=form.id, page=page.id, lang=lang, device=d) }}" class="px-2.5 py-1 rounded-md {{ 'bg-white text-brand-800' if device == d else 'text-slate-300' }}">{{ d|capitalize }}</a>
+            {% endfor %}
+        </div>
+        {% if form.status == 'published' %}
+        <a href="{{ url_for('public.og_form_view', lang=lang, slug=form.slug) }}" target="_blank" class="text-xs font-semibold text-slate-200 hover:text-white px-2">Preview &nearr;</a>
+        {% endif %}
+        <button type="button" id="open-settings" class="text-xs font-semibold text-slate-200 hover:text-white px-2">Settings</button>
+        <a href="{{ url_for('admin.form_submissions', form_id=form.id) }}" class="text-xs font-semibold text-slate-200 hover:text-white px-2">Submissions</a>
+        <form method="POST" action="{{ url_for('admin.form_status', form_id=form.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="next" value="{{ request.url }}">
+            {% if form.status == 'published' %}
+            <input type="hidden" name="status" value="draft">
+            <button type="submit" class="text-xs font-semibold bg-white/10 hover:bg-white/20 rounded-lg px-3 py-1.5">Unpublish</button>
+            {% else %}
+            <input type="hidden" name="status" value="published">
+            <button type="submit" class="text-xs font-semibold bg-accent-600 hover:bg-accent-700 rounded-lg px-3 py-1.5">Publish</button>
+            {% endif %}
+        </form>
+    </div>
+</header>
+
+<div class="flex-1 flex min-h-0" data-preview-device="{{ device }}">
+
+    <!-- LEFT SIDEBAR -->
+    <aside class="w-72 shrink-0 bg-white border-r border-slate-100 flex flex-col min-h-0">
+        <div class="p-3 border-b border-slate-100">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-[11px] font-bold uppercase tracking-wide text-slate-400">Pages</p>
+                <form method="POST" action="{{ url_for('admin.form_page_new', form_id=form.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="text-xs font-semibold text-accent-600 hover:text-accent-700">+ Add Page</button>
+                </form>
+            </div>
+            <div id="pages-list" class="space-y-1 max-h-40 overflow-y-auto panel-scroll" data-reorder-url="{{ url_for('admin.form_pages_reorder', form_id=form.id) }}">
+                {% for p in form.pages %}
+                <div class="flex items-center gap-1 group" data-id="{{ p.id }}">
+                    <span class="drag-handle cursor-grab text-slate-300 text-xs px-0.5">⠿</span>
+                    <a href="{{ url_for('admin.form_builder', form_id=form.id, page=p.id, lang=lang, device=device) }}"
+                       class="flex-1 min-w-0 text-xs rounded-lg px-2 py-1.5 truncate {{ 'bg-accent-50 text-accent-700 font-semibold' if p.id == page.id else 'text-slate-600 hover:bg-slate-50' }}">
+                        {{ p.title('en') or ('Page ' ~ loop.index) }} <span class="text-slate-400">· {{ p.fields|length }}</span>
+                    </a>
+                    <div class="hidden group-hover:flex items-center gap-0.5 shrink-0">
+                        <form method="POST" action="{{ url_for('admin.form_page_duplicate', page_id=p.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button title="Duplicate" class="w-5 h-5 text-slate-300 hover:text-slate-600 text-xs">⧉</button></form>
+                        <form method="POST" action="{{ url_for('admin.form_page_delete', page_id=p.id) }}" data-confirm="Delete this page and its fields?"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button title="Delete" class="w-5 h-5 text-slate-300 hover:text-red-500 text-xs">✕</button></form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="p-3 overflow-y-auto panel-scroll flex-1">
+            <p class="text-[11px] font-bold uppercase tracking-wide text-slate-400 mb-2">Add a Field</p>
+            {% for cat_key, cat_label, types in field_categories %}
+            <details class="mb-2" {{ 'open' if loop.first else '' }}>
+                <summary class="text-xs font-semibold text-slate-600 cursor-pointer py-1">{{ cat_label }}</summary>
+                <div class="grid grid-cols-2 gap-1.5 mt-1">
+                    {% for ft in types %}
+                    <form method="POST" action="{{ url_for('admin.form_field_new', page_id=page.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <input type="hidden" name="field_type" value="{{ ft }}">
+                        <button type="submit" class="w-full flex items-center gap-1.5 text-[11px] text-left rounded-lg border border-slate-100 hover:border-accent-300 hover:bg-accent-50 px-2 py-1.5 transition">
+                            <span>{{ field_meta[ft].icon }}</span><span class="truncate">{{ field_meta[ft].label }}</span>
+                        </button>
+                    </form>
+                    {% endfor %}
+                </div>
+            </details>
+            {% endfor %}
+        </div>
+    </aside>
+
+    <!-- CENTER CANVAS -->
+    <main class="flex-1 overflow-y-auto panel-scroll bg-slate-100 px-6 py-8">
+        <div id="canvas-frame" class="max-w-2xl mx-auto bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 transition-all">
+            {% if page.title(lang) %}<h2 class="text-lg font-semibold text-slate-900 mb-1">{{ page.title(lang) }}</h2>{% endif %}
+            {% if page.description(lang) %}<p class="text-sm text-slate-500 mb-4">{{ page.description(lang) }}</p>{% endif %}
+
+            {% if not page.fields %}
+            <div class="rounded-xl border-2 border-dashed border-slate-200 py-14 text-center text-sm text-slate-400">
+                Click a field on the left to add it to this page.
+            </div>
+            {% endif %}
+
+            <div id="canvas-fields" class="space-y-2" data-reorder-url="{{ url_for('admin.form_fields_reorder', page_id=page.id) }}">
+                {% for f in page.fields %}
+                <div class="canvas-field group border rounded-xl px-3 py-2.5 cursor-pointer transition {{ 'border-accent-400 bg-accent-50/40' if selected_field and selected_field.id == f.id else 'border-slate-100 hover:border-slate-300' }}"
+                     data-id="{{ f.id }}" onclick="window.location = {{ url_for('admin.form_builder', form_id=form.id, page=page.id, field=f.id, lang=lang, device=device)|tojson }}">
+                    <div class="flex items-center gap-2">
+                        <span class="drag-handle cursor-grab text-slate-300 text-xs" onclick="event.stopPropagation()">⠿</span>
+                        <span class="text-xs text-slate-400 w-5 shrink-0">{{ field_meta[f.field_type].icon }}</span>
+                        <div class="flex-1 min-w-0">
+                            {% if f.is_content_only %}
+                            <p class="text-sm font-medium text-slate-700 truncate">{{ field_meta[f.field_type].label }} — <span class="text-slate-400 font-normal">{{ f.content(lang) or '(empty)' }}</span></p>
+                            {% else %}
+                            <p class="text-sm font-medium text-slate-800 truncate">{{ f.label(lang) or '(untitled field)' }}{% if f.required %} <span class="text-red-500">*</span>{% endif %}</p>
+                            <p class="text-[11px] text-slate-400">{{ field_meta[f.field_type].label }}{% if f.width != 'full' %} · {{ f.width }} width{% endif %}</p>
+                            {% endif %}
+                        </div>
+                        <div class="hidden group-hover:flex items-center gap-1 shrink-0" onclick="event.stopPropagation()">
+                            <form method="POST" action="{{ url_for('admin.form_field_duplicate', field_id=f.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button title="Duplicate" class="w-6 h-6 text-slate-300 hover:text-slate-600 text-xs">⧉</button></form>
+                            <form method="POST" action="{{ url_for('admin.form_field_delete', field_id=f.id) }}" data-confirm="Remove this field?"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button title="Delete" class="w-6 h-6 text-slate-300 hover:text-red-500 text-xs">✕</button></form>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="flex items-center justify-between mt-6 pt-4 border-t border-slate-100 text-xs text-slate-400">
+                <span>{{ '← ' ~ ('Previous' if lang == 'en' else 'Anterior') if page.sort_order != form.pages[0].sort_order else '' }}</span>
+                <span class="rounded-lg text-white px-4 py-2 font-semibold" style="background-color: {{ form.accent_color or '#0aa3cf' }}">{{ form.submit_label(lang) if page.sort_order == form.pages[-1].sort_order else ('Continue' if lang == 'en' else 'Continuar') }}</span>
+            </div>
+        </div>
+    </main>
+
+    <!-- RIGHT SIDEBAR -->
+    <aside class="w-96 shrink-0 bg-white border-l border-slate-100 overflow-y-auto panel-scroll">
+        {% if selected_field %}
+        {% include "admin/forms/_field_settings.html" %}
+        {% else %}
+        {% include "admin/forms/_page_settings.html" %}
+        {% endif %}
+    </aside>
+</div>
+
+<!-- FORM SETTINGS MODAL -->
+<div id="settings-modal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 sm:p-8">
+        {% include "admin/forms/_form_settings.html" %}
+    </div>
+</div>
+
+<script>
+    document.getElementById('open-settings').addEventListener('click', function () {
+        document.getElementById('settings-modal').classList.remove('hidden');
+    });
+    document.addEventListener('click', function (e) {
+        if (e.target.id === 'settings-modal') e.target.classList.add('hidden');
+    });
+
+    function wireReorder(containerId) {
+        var el = document.getElementById(containerId);
+        if (!el || typeof Sortable === 'undefined') return;
+        var url = el.dataset.reorderUrl;
+        Sortable.create(el, {
+            handle: '.drag-handle', animation: 150,
+            onEnd: function () {
+                var order = Array.prototype.map.call(el.children, function (child) { return parseInt(child.dataset.id, 10); });
+                fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': {{ csrf_token|tojson }} },
+                    body: JSON.stringify({ order: order }),
+                });
+            },
+        });
+    }
+    wireReorder('pages-list');
+    wireReorder('canvas-fields');
+</script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+<div class="bg-white border border-slate-100 rounded-2xl p-5" id="w7-panel">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400">ITIN application (Form W-7) summary</h2>
+        <div class="flex flex-wrap gap-2">
+            {% if w7.case %}<a href="{{ url_for('admin.itin_case', case_id=w7.case.id) }}" class="rounded-lg border border-slate-200 text-slate-700 font-semibold px-3.5 py-2 text-sm hover:border-accent-300">ITIN case view</a>{% endif %}
+            <a href="{{ url_for('admin.w7_prep', submission_id=submission.id) }}" class="rounded-lg bg-accent-600 text-white font-semibold px-3.5 py-2 text-sm hover:bg-accent-700 transition">Open W-7 Preparation View</a>
+        </div>
+    </div>
+    <div class="grid sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+        <div>
+            <h3 class="text-[11px] font-bold uppercase tracking-wide text-slate-400">Applicant</h3>
+            <p class="font-semibold text-slate-800">{% if w7.person %}<a href="{{ url_for('admin.person_detail', person_id=w7.person.person_id) }}" class="text-accent-700 hover:underline">{{ w7.person.full_name }}</a>{% else %}&mdash;{% endif %} <span class="ml-1 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold uppercase px-2 py-0.5">{{ w7.kind }}</span></p>
+            {% if w7.siblings %}<p class="text-slate-600">Also in this case: {% for x in w7.siblings %}<a href="{{ url_for('admin.form_submission_detail', submission_id=x.submission.id) }}" class="text-accent-700 hover:underline">{{ x.person.full_name if x.person else x.submission.code }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+        </div>
+        <div>
+            <h3 class="text-[11px] font-bold uppercase tracking-wide text-slate-400">Passport</h3>
+            <p class="text-slate-700">{% if w7.pp_status == 'none' %}No passport (evidence matrix){% elif w7.passport.confirmed %}Confirmed by the customer{% elif w7.passport.uploaded %}Uploaded — waiting for the customer's confirmation{% else %}<span class="font-semibold text-amber-800">PASSPORT — NEEDED</span>{% endif %}</p>
+        </div>
+        <div>
+            <h3 class="text-[11px] font-bold uppercase tracking-wide text-slate-400">W-7 reason</h3>
+            <p class="text-slate-700">{% if w7.w and w7.w.reason_confirmed %}Confirmed <span class="font-semibold">{{ w7.w.reason_confirmed }}</span> by {{ w7.w.reason_confirmed_by }}{% else %}Not confirmed &middot; candidate: {{ w7.candidate }}{% endif %}</p>
+        </div>
+        <div>
+            <h3 class="text-[11px] font-bold uppercase tracking-wide text-slate-400">Documents</h3>
+            <p class="text-slate-700">{{ w7.docs_got }} of {{ w7.docs_total }} uploaded (copies for pre-review; originals are tracked in the ITIN case view)</p>
+        </div>
+    </div>
+    {% if w7.flags %}<h3 class="mt-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Review flags</h3>
+    <ul class="mt-1 flex flex-wrap gap-1.5">{% for f in w7.flags %}<li class="inline-flex rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide">{{ f.en }}</li>{% endfor %}</ul>{% endif %}
+</div>

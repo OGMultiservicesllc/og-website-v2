@@ -1,0 +1,34 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Tax cases{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+        <h1 class="text-2xl font-bold text-brand-800">Tax cases</h1>
+        <p class="text-sm text-slate-500 mt-1">Individual &amp; family tax preparation. "Sent to OG" is not filing: OG prepares, the customer reviews and signs, then OG files.</p>
+    </div>
+    <a href="{{ url_for('admin.tax_pricing') }}" class="rounded-lg border border-slate-200 text-sm font-semibold text-accent-700 px-4 py-2 hover:border-accent-300">Tax pricing</a>
+</div>
+<form method="get" class="mt-4 mb-4 flex flex-wrap gap-2 text-sm">
+    <select name="year" aria-label="Tax year" class="rounded-lg border border-slate-200 px-2 py-2 bg-white"><option value="">All years</option>{% for y in years %}<option value="{{ y }}" {{ 'selected' if year == y else '' }}>{{ y }}</option>{% endfor %}</select>
+    <select name="status" aria-label="Status" class="rounded-lg border border-slate-200 px-2 py-2 bg-white"><option value="">All statuses</option>{% for k, l in statuses %}<option value="{{ k }}" {{ 'selected' if status == k else '' }}>{{ l }}</option>{% endfor %}</select>
+    <button class="rounded-lg border border-slate-200 font-semibold px-4 py-2 hover:border-accent-300">Filter</button>
+</form>
+<div class="bg-white border border-slate-100 rounded-2xl overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead class="text-left text-[11px] uppercase tracking-wide text-slate-400"><tr><th class="px-4 py-3">Case</th><th class="px-4 py-3">Customer</th><th class="px-4 py-3">Year</th><th class="px-4 py-3">Client</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Documents</th><th class="px-4 py-3">Price</th></tr></thead>
+        <tbody>
+        {% for r in rows %}
+        <tr class="border-t border-slate-100">
+            <td class="px-4 py-3"><a href="{{ url_for('admin.tax_case', case_id=r.case.id) }}" class="font-mono font-semibold text-accent-700 hover:underline">{{ r.case.case_number }}</a></td>
+            <td class="px-4 py-3">{{ r.case.customer.name }}</td>
+            <td class="px-4 py-3">{{ r.tax.tax_year }}</td>
+            <td class="px-4 py-3">{{ 'Returning' if r.tax.is_returning else 'New' }}</td>
+            <td class="px-4 py-3">{{ r.tax.status|replace('_', ' ')|title }}</td>
+            <td class="px-4 py-3">{{ r.docs }}{% if r.missing %} <span class="text-amber-700 text-xs font-semibold">({{ r.missing }} missing)</span>{% endif %}</td>
+            <td class="px-4 py-3">{% if r.price %}{{ r.price }} <span class="text-xs text-emerald-700 font-semibold">confirmed</span>{% elif r.quote %}{% if r.quote.mode == 'manual' %}<span class="text-amber-700 font-semibold">Manual</span> ({{ fmt(r.quote.system_estimate_cents) }} est.){% else %}{{ fmt(r.quote.estimated_final_cents) }} est.{% endif %}{% else %}—{% endif %}</td>
+        </tr>
+        {% else %}<tr><td colspan="7" class="px-4 py-8 text-center text-slate-400">No tax cases yet.</td></tr>{% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

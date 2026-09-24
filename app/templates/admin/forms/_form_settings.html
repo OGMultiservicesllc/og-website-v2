@@ -1,0 +1,137 @@
+{# Modal content — whole-form settings. #}
+<div class="flex items-center justify-between mb-5">
+    <h2 class="text-lg font-bold text-brand-800">Form Settings</h2>
+    <button type="button" onclick="document.getElementById('settings-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">✕</button>
+</div>
+
+<form method="POST" action="{{ url_for('admin.form_settings_update', form_id=form.id) }}" enctype="multipart/form-data" class="space-y-5">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+    <div>
+        <h3 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Form Information</h3>
+        <div class="space-y-3">
+            <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Form type</label>
+                <select name="form_type" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                    <option value="inquiry" {{ 'selected' if form.form_type == 'inquiry' else '' }}>Public inquiry — no account needed</option>
+                    <option value="service_intake" {{ 'selected' if form.form_type == 'service_intake' else '' }}>Service intake — account required, autosave, resume later</option>
+                </select>
+                <p class="text-[11px] text-slate-400 mt-1">Service intakes are attached to a service under Admin → Services → Intake.</p>
+            </div>
+            {% if form.form_type == 'service_intake' %}
+            <div class="rounded-lg bg-slate-50 border border-slate-100 p-3 space-y-3">
+                <p class="text-xs font-semibold text-slate-600">Source &amp; version</p>
+                <div class="grid grid-cols-2 gap-3">
+                    <div><label class="block text-xs font-medium text-slate-600 mb-1">Source form</label><input type="text" name="source_form_name" value="{{ form.source_form_name or '' }}" maxlength="40" placeholder="e.g. I-90" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"></div>
+                    <div><label class="block text-xs font-medium text-slate-600 mb-1">Source edition</label><input type="text" name="source_edition" value="{{ form.source_edition or '' }}" maxlength="40" placeholder="e.g. 01/20/25" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"></div>
+                </div>
+                <p class="text-[11px] text-slate-500">Form version <span class="font-semibold">v{{ form.version }}</span>{% if form.published_at %} · published {{ form.published_at.strftime('%b %d, %Y') }}{% endif %}. Each application records the version and edition it was completed under.</p>
+            </div>
+            {% endif %}
+            <div><label class="block text-xs font-medium text-slate-600 mb-1">Internal Form Name</label><input type="text" name="name_admin" value="{{ form.name_admin }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"></div>
+            <div class="grid grid-cols-2 gap-3">
+                <div><label class="block text-xs font-medium text-slate-600 mb-1">Public Title (EN)</label><input type="text" name="title_en" value="{{ form.title_en }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"></div>
+                <div><label class="block text-xs font-medium text-slate-600 mb-1">Título Público (ES)</label><input type="text" name="title_es" value="{{ form.title_es }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"></div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div><label class="block text-xs font-medium text-slate-600 mb-1">Description (EN)</label><textarea name="description_en" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">{{ form.description_en or '' }}</textarea></div>
+                <div><label class="block text-xs font-medium text-slate-600 mb-1">Descripción (ES)</label><textarea name="description_es" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">{{ form.description_es or '' }}</textarea></div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div><label class="block text-xs font-medium text-slate-600 mb-1">Submit Button (EN)</label><input type="text" name="submit_label_en" value="{{ form.submit_label_en }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"></div>
+                <div><label class="block text-xs font-medium text-slate-600 mb-1">Botón de Envío (ES)</label><input type="text" name="submit_label_es" value="{{ form.submit_label_es }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="pt-4 border-t border-slate-100">
+        <h3 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">After Submission</h3>
+        <select name="success_action" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm mb-3">
+            <option value="message" {{ 'selected' if form.success_action == 'message' else '' }}>Show success message</option>
+            <option value="redirect" {{ 'selected' if form.success_action == 'redirect' else '' }}>Redirect to URL</option>
+        </select>
+        <div class="grid grid-cols-2 gap-3 mb-3">
+            <div><label class="block text-xs font-medium text-slate-600 mb-1">Success Message (EN)</label><textarea name="success_message_en" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">{{ form.success_message_en or '' }}</textarea></div>
+            <div><label class="block text-xs font-medium text-slate-600 mb-1">Mensaje de Éxito (ES)</label><textarea name="success_message_es" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">{{ form.success_message_es or '' }}</textarea></div>
+        </div>
+        <div><label class="block text-xs font-medium text-slate-600 mb-1">Redirect URL</label><input type="url" name="redirect_url" value="{{ form.redirect_url or '' }}" placeholder="https://..." class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"></div>
+    </div>
+
+    <div class="pt-4 border-t border-slate-100">
+        <h3 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Email Notifications</h3>
+        <p class="text-[11px] text-amber-600 bg-amber-50 rounded-lg px-3 py-2 mb-3">No email provider is connected yet, so these are saved but not yet sent — ask us to wire up a provider when you're ready.</p>
+        <label class="flex items-center gap-2 text-sm text-slate-700 mb-2"><input type="checkbox" name="notify_admin_enabled" {{ 'checked' if form.notify_admin_enabled else '' }} class="rounded border-slate-300 text-accent-600"> Notify admin on new submission</label>
+        <input type="text" name="notify_admin_emails" value="{{ form.notify_admin_emails or '' }}" placeholder="admin@ogmultiservicesllc.com, other@example.com" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm mb-3">
+        <label class="flex items-center gap-2 text-sm text-slate-700 mb-2"><input type="checkbox" name="notify_client_enabled" {{ 'checked' if form.notify_client_enabled else '' }} class="rounded border-slate-300 text-accent-600"> Send confirmation to submitter</label>
+        <div class="grid grid-cols-2 gap-3 mb-2">
+            <div><label class="block text-xs font-medium text-slate-600 mb-1">Subject (EN)</label><input type="text" name="confirmation_subject_en" value="{{ form.confirmation_subject_en or '' }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"></div>
+            <div><label class="block text-xs font-medium text-slate-600 mb-1">Asunto (ES)</label><input type="text" name="confirmation_subject_es" value="{{ form.confirmation_subject_es or '' }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+            <div><label class="block text-xs font-medium text-slate-600 mb-1">Body (EN)</label><textarea name="confirmation_body_en" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">{{ form.confirmation_body_en or '' }}</textarea></div>
+            <div><label class="block text-xs font-medium text-slate-600 mb-1">Cuerpo (ES)</label><textarea name="confirmation_body_es" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">{{ form.confirmation_body_es or '' }}</textarea></div>
+        </div>
+    </div>
+
+    <div class="pt-4 border-t border-slate-100">
+        <h3 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Styling</h3>
+        <div class="grid grid-cols-2 gap-3 mb-3">
+            <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Accent Color</label>
+                <div class="flex items-center gap-2">
+                    <input type="color" id="form-accent-picker" value="{{ form.accent_color or '#0aa3cf' }}" class="w-10 h-9 rounded-lg border border-slate-200 p-0.5">
+                    <input type="text" name="accent_color" id="form-accent-hex" value="{{ form.accent_color or '' }}" placeholder="#0aa3cf" class="w-full rounded-lg border border-slate-200 px-2 py-2 text-sm font-mono">
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Button Style</label>
+                <select name="button_style" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                    <option value="solid" {{ 'selected' if form.button_style == 'solid' else '' }}>Solid</option>
+                    <option value="outline" {{ 'selected' if form.button_style == 'outline' else '' }}>Outline</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Border Radius</label>
+                <select name="border_radius" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                    <option value="sharp" {{ 'selected' if form.border_radius == 'sharp' else '' }}>Sharp</option>
+                    <option value="rounded" {{ 'selected' if form.border_radius == 'rounded' else '' }}>Rounded</option>
+                    <option value="pill" {{ 'selected' if form.border_radius == 'pill' else '' }}>Pill</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Field Spacing</label>
+                <select name="spacing" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                    <option value="comfortable" {{ 'selected' if form.spacing == 'comfortable' else '' }}>Comfortable</option>
+                    <option value="compact" {{ 'selected' if form.spacing == 'compact' else '' }}>Compact</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Background</label>
+                <select name="background_style" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                    <option value="card" {{ 'selected' if form.background_style == 'card' else '' }}>Card</option>
+                    <option value="transparent" {{ 'selected' if form.background_style == 'transparent' else '' }}>Transparent</option>
+                </select>
+            </div>
+        </div>
+        <label class="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" name="show_progress" {{ 'checked' if form.show_progress else '' }} class="rounded border-slate-300 text-accent-600"> Show progress indicator on multi-page forms</label>
+    </div>
+
+    <button type="submit" class="w-full rounded-lg bg-accent-600 text-white font-semibold px-4 py-2.5 text-sm hover:bg-accent-700 transition">Save Settings</button>
+</form>
+
+{% if form.form_type == 'service_intake' %}
+<form method="POST" action="{{ url_for('admin.form_new_version', form_id=form.id) }}" class="mt-4 pt-4 border-t border-slate-100" data-confirm="Create version {{ (form.version or 1) + 1 }} as a draft copy of this form?">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <p class="text-xs text-slate-500 mb-2">Need to change questions for a new form edition? Make the next version as a draft. Applications already completed keep the version they used; publishing the new one points the service at it.</p>
+    <button type="submit" class="w-full rounded-lg border border-slate-200 text-slate-700 font-semibold px-4 py-2 text-sm hover:border-accent-300 transition">Create version {{ (form.version or 1) + 1 }}</button>
+</form>
+{% endif %}
+
+<script>
+    (function () {
+        var picker = document.getElementById('form-accent-picker');
+        var hex = document.getElementById('form-accent-hex');
+        picker.addEventListener('input', function () { hex.value = picker.value; });
+        hex.addEventListener('input', function () { if (/^#[0-9a-fA-F]{6}$/.test(hex.value)) picker.value = hex.value; });
+    })();
+</script>

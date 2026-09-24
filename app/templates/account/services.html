@@ -1,0 +1,67 @@
+{% extends "account/base_account.html" %}
+{% from "partials/ui.html" import empty_state %}
+{% from "partials/icons.html" import icon %}
+{% set en = lang == 'en' %}
+{% block title %}{{ 'Services' if en else 'Servicios' }}{% endblock %}
+
+{% macro row(e, en) %}
+<li class="rounded-card bg-white border border-slate-100 shadow-card p-4">
+    <div class="flex flex-wrap items-start justify-between gap-2">
+        <div class="min-w-0">
+            <p class="font-semibold text-brand-800 leading-snug">{{ e.title }}{% if e.extra_count %} <span class="text-xs font-normal text-slate-400">{{ ('+ %d more' % e.extra_count) if en else ('+ %d más' % e.extra_count) }}</span>{% endif %}</p>
+            {% if e.get('type_title') and e.type_title != e.title %}<p class="text-xs text-slate-500 mt-0.5">{{ e.type_title }}</p>{% endif %}
+        </div>
+        <span class="inline-flex items-center gap-1.5 rounded-full text-[11px] font-bold px-2.5 py-1 {{ {'action': 'bg-amber-50 text-amber-800', 'problem': 'bg-red-50 text-red-700', 'processing': 'bg-accent-50 text-accent-700', 'done': 'bg-emerald-50 text-emerald-700', 'neutral': 'bg-fog-100 text-slate-600'}[e.tone] }}">{{ e.label }}</span>
+    </div>
+    {% if e.percent is not none %}
+    <div class="mt-2.5 h-1.5 rounded-full bg-fog-200 overflow-hidden" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ e.percent }}" aria-label="{{ e.title }}"><div class="h-full rounded-full bg-accent-600" style="width: {{ e.percent }}%"></div></div>
+    {% endif %}
+    {% if e.docs_total %}<p class="mt-2 text-[13px] text-slate-500">{% if e.docs_missing %}{{ ('%d document(s) needed' % e.docs_missing) if en else ('%d documento(s) necesarios' % e.docs_missing) }}{% else %}{{ ('All documents received' if en else 'Todos los documentos recibidos') }}{% endif %}</p>{% endif %}
+    <div class="mt-3 flex flex-wrap gap-2">
+        {% if e.continue_url %}<a href="{{ e.continue_url }}" class="inline-flex items-center justify-center min-h-[42px] rounded-xl bg-accent-600 text-white text-sm font-semibold px-4 hover:bg-accent-700 transition">{{ 'Continue' if en else 'Continuar' }} &rarr;</a>{% endif %}
+        <a href="{{ e.view_url }}" class="inline-flex items-center justify-center min-h-[42px] rounded-xl border border-slate-200 text-sm font-semibold text-brand-800 px-4 hover:border-accent-300 transition">{{ 'View' if en else 'Ver' }}</a>
+    </div>
+</li>
+{% endmacro %}
+
+{% block account_body %}
+<section class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10 sm:pb-16">
+    <h1 class="text-2xl font-extrabold tracking-tight text-brand-800 mb-1">{{ 'Services' if en else 'Servicios' }}</h1>
+    <p class="text-sm text-slate-500 mb-5">{{ 'Everything OG is working on for you, in one place.' if en else 'Todo lo que OG está trabajando para ti, en un solo lugar.' }}</p>
+
+    {% if needs_attention %}
+    <h2 class="text-xs font-bold uppercase tracking-wider text-amber-800 mb-2">⚠️ {{ 'Needs Your Attention' if en else 'Necesita Tu Atención' }}</h2>
+    <ul class="space-y-3 mb-7">{% for e in needs_attention %}{{ row(e, en) }}{% endfor %}</ul>
+    {% endif %}
+
+    {% if families %}
+    {% for fam in families %}
+    <div class="mb-7">
+        <div class="flex items-center gap-2 mb-2">
+            <span class="w-6 h-6 rounded-lg bg-mist-100 text-accent-600 flex items-center justify-center shrink-0">{{ icon(fam.icon, 'w-3.5 h-3.5') }}</span>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">{{ fam.title }}</h2>
+        </div>
+        {% if fam.active %}<ul class="space-y-3">{% for e in fam.active %}{{ row(e, en) }}{% endfor %}</ul>{% endif %}
+        {% if fam.completed %}
+        <details class="mt-2">
+            <summary class="cursor-pointer text-[12px] font-semibold text-slate-400">{{ 'Completed' if en else 'Completados' }} ({{ fam.completed|length }})</summary>
+            <ul class="space-y-3 mt-2">{% for e in fam.completed %}{{ row(e, en) }}{% endfor %}</ul>
+        </details>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% elif not needs_attention %}
+    <div class="mb-7">{{ empty_state('No active services right now.' if en else 'No tienes servicios activos en este momento.', None, 'documents') }}</div>
+    {% endif %}
+
+    <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">{{ 'Start Another Service' if en else 'Comenzar Otro Servicio' }}</h2>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+        {% for cat in categories %}
+        <a href="{{ url_for(cat.endpoint, lang=lang) }}" class="flex flex-col items-center text-center gap-1.5 rounded-xl border border-slate-100 bg-white shadow-card px-3 py-4 hover:border-accent-300 transition">
+            <span class="w-9 h-9 rounded-lg bg-mist-100 text-accent-600 flex items-center justify-center">{{ icon(cat.icon, 'w-4.5 h-4.5') }}</span>
+            <span class="text-[13px] font-semibold text-brand-800 leading-tight">{{ cat.title(lang) }}</span>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

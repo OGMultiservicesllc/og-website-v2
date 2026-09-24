@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Certificate Verification{% endblock %}
+
+{% block content %}
+<section class="max-w-lg mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+    {% if certificate %}
+    {% if certificate.is_revoked %}
+    <span class="w-14 h-14 mx-auto rounded-full bg-red-50 text-red-500 flex items-center justify-center mb-5">
+        <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+    </span>
+    <h1 class="text-2xl font-bold text-brand-800">Certificate Revoked</h1>
+    <p class="mt-2 text-slate-500 text-sm">This certificate is no longer valid.</p>
+    {% else %}
+    <span class="w-14 h-14 mx-auto rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-5">
+        <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+    </span>
+    <h1 class="text-2xl font-bold text-brand-800">Certificate Verified</h1>
+    <p class="mt-2 text-slate-500 text-sm">This certificate is valid and was issued by {{ certificate.course.cert_issuer_name() }}.</p>
+    {% endif %}
+
+    <div class="mt-8 bg-white border border-slate-100 rounded-2xl p-6 text-left space-y-3">
+        <div>
+            <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Student</p>
+            <p class="font-semibold text-slate-900">{{ certificate.student.name }}</p>
+        </div>
+        <div>
+            <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Course</p>
+            <p class="font-semibold text-slate-900">{{ certificate.course.title(lang) }}</p>
+        </div>
+        <div>
+            <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Completion Date</p>
+            <p class="font-semibold text-slate-900">{{ certificate.issued_at.strftime('%B %d, %Y') }}</p>
+        </div>
+        <div>
+            <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Certificate ID</p>
+            <p class="font-semibold text-slate-900 font-mono">{{ certificate.code }}</p>
+        </div>
+        <div>
+            <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Status</p>
+            <p class="font-semibold {{ 'text-red-600' if certificate.is_revoked else 'text-emerald-600' }}">{{ 'Revoked' if certificate.is_revoked else 'Valid' }}</p>
+        </div>
+    </div>
+    {% else %}
+    <span class="w-14 h-14 mx-auto rounded-full bg-red-50 text-red-500 flex items-center justify-center mb-5">
+        <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+    </span>
+    <h1 class="text-2xl font-bold text-brand-800">Certificate Not Found</h1>
+    <p class="mt-2 text-slate-500 text-sm">We couldn't verify a certificate with code <span class="font-mono">{{ code }}</span>.</p>
+    {% endif %}
+</section>
+{% endblock %}

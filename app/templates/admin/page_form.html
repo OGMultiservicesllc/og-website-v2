@@ -1,0 +1,305 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}{{ 'Edit Page' if page else 'New Page' }}{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('admin.pages_list') }}" class="text-sm text-slate-500 hover:text-accent-600">&larr; All pages</a>
+<h1 class="text-2xl font-bold text-brand-800 mt-2 mb-6">{{ 'Edit Page' if page else 'New Page' }}</h1>
+
+<form method="POST" class="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 space-y-6 max-w-3xl">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Title (English)</label>
+            <input type="text" name="title_en" required value="{{ page.title_en if page else '' }}"
+                   class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Título (Español)</label>
+            <input type="text" name="title_es" required value="{{ page.title_es if page else '' }}"
+                   class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+    </div>
+
+    <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Location in menu</label>
+        <select name="parent" class="w-full max-w-md rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            <option value="">— Standalone top-level page —</option>
+            <optgroup label="Under a site section">
+                {% for key, label in nav_sections.items() %}
+                <option value="section:{{ key }}" {{ 'selected' if page and page.parent_section == key else '' }}>{{ label }}</option>
+                {% endfor %}
+            </optgroup>
+            {% if page_choices %}
+            <optgroup label="Under another page">
+                {% for depth, p in page_choices %}
+                <option value="page:{{ p.id }}" {{ 'selected' if page and page.parent_page_id == p.id else '' }}>
+                    {{ '—' * depth }} {{ p.title_en }}
+                </option>
+                {% endfor %}
+            </optgroup>
+            {% endif %}
+        </select>
+    </div>
+
+    {% if page and page.sections %}
+    <p class="text-sm text-slate-500 bg-slate-50 rounded-lg px-4 py-3">
+        This page is built from the sections below. Add, reorder and edit them under "Page sections" after saving.
+    </p>
+    {% else %}
+    <p class="text-sm text-slate-500 bg-slate-50 rounded-lg px-4 py-3">
+        {% if page %}
+        Build this page from sections (heading, text, image, button) below, or just write the text in "Simple page text".
+        {% else %}
+        Save the page first, then you can build it from sections (heading, text, image, button) below.
+        {% endif %}
+    </p>
+    {% endif %}
+
+    <details class="group">
+        <summary class="cursor-pointer text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+            Simple page text (used when the page has no sections below)
+            <svg class="w-3.5 h-3.5 text-slate-400 group-open:rotate-180 transition" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+        </summary>
+        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Content (English)</label>
+                <textarea name="content_en" rows="8"
+                          class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-accent-500">{{ page.content_en if page else '' }}</textarea>
+                <p class="mt-1 text-xs text-slate-400">Basic HTML is supported.</p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Contenido (Español)</label>
+                <textarea name="content_es" rows="8"
+                          class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-accent-500">{{ page.content_es if page else '' }}</textarea>
+            </div>
+        </div>
+    </details>
+
+    <details class="group">
+        <summary class="cursor-pointer text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+            SEO settings
+            <svg class="w-3.5 h-3.5 text-slate-400 group-open:rotate-180 transition" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+        </summary>
+        <div class="mt-4 space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">SEO Title (English)</label>
+                    <input type="text" name="seo_title_en" value="{{ page.seo_title_en if page else '' }}"
+                           class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Título SEO (Español)</label>
+                    <input type="text" name="seo_title_es" value="{{ page.seo_title_es if page else '' }}"
+                           class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">SEO Description (English)</label>
+                    <textarea name="seo_description_en" rows="2"
+                              class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ page.seo_description_en if page else '' }}</textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Descripción SEO (Español)</label>
+                    <textarea name="seo_description_es" rows="2"
+                              class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ page.seo_description_es if page else '' }}</textarea>
+                </div>
+            </div>
+        </div>
+    </details>
+
+    <div class="flex flex-col gap-2">
+        <label class="flex items-center gap-2.5 text-sm font-medium text-slate-700">
+            <input type="checkbox" name="show_in_menu" {{ 'checked' if not page or page.show_in_menu else '' }}
+                   class="w-4 h-4 rounded border-slate-300 text-accent-600 focus:ring-accent-500">
+            Show in menu
+        </label>
+        <label class="flex items-center gap-2.5 text-sm font-medium text-slate-700">
+            <input type="checkbox" name="is_published" {{ 'checked' if page and page.is_published else '' }}
+                   class="w-4 h-4 rounded border-slate-300 text-accent-600 focus:ring-accent-500">
+            Published
+        </label>
+    </div>
+
+    <button type="submit" class="rounded-lg bg-accent-600 text-white font-semibold px-6 py-2.5 text-sm hover:bg-accent-700 transition">
+        {{ 'Save Changes' if page else 'Create Page' }}
+    </button>
+</form>
+
+{% if page %}
+{% macro section_fields(csrf_token, s) %}
+<input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+<div>
+    <label class="block text-xs font-medium text-slate-600 mb-1.5">Element type</label>
+    <div class="grid grid-cols-2 sm:grid-cols-6 gap-2">
+        {% for type_value, type_label in [('heading', 'Heading'), ('text', 'Text'), ('image', 'Image'), ('button', 'Button'), ('divider', 'Divider'), ('form', 'Form')] %}
+        <label class="element-type-option cursor-pointer rounded-lg border-2 px-2 py-2 text-center text-xs font-medium {{ 'border-accent-500 bg-accent-50 text-accent-700' if (s.block_type if s else 'text') == type_value else 'border-slate-200 text-slate-600' }}">
+            <input type="radio" name="block_type" value="{{ type_value }}" class="hidden" {{ 'checked' if (s.block_type if s else 'text') == type_value else '' }}>
+            {{ type_label }}
+        </label>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="el-fields" data-types="heading">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <input type="text" name="heading_en" placeholder="Heading (EN)" value="{{ (s.heading_en or '') if s else '' }}"
+               class="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        <input type="text" name="heading_es" placeholder="Título (ES)" value="{{ (s.heading_es or '') if s else '' }}"
+               class="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+    </div>
+</div>
+
+<div class="el-fields" data-types="text">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <textarea name="text_en" rows="3" placeholder="Text (EN)"
+                  class="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ (s.text_en or '') if s else '' }}</textarea>
+        <textarea name="text_es" rows="3" placeholder="Texto (ES)"
+                  class="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ (s.text_es or '') if s else '' }}</textarea>
+    </div>
+</div>
+
+<div class="el-fields" data-types="image">
+    <input type="file" name="image_file" accept="image/*"
+           class="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 file:px-3 file:py-2 file:font-medium">
+    {% if s and s.image_filename %}
+    <img src="{{ url_for('admin.media', stored_path=s.image_filename) }}" alt="" class="mt-2 h-16 rounded-lg border border-slate-100 object-cover">
+    {% endif %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+        <input type="text" name="image_caption_en" placeholder="Caption (EN, optional)" value="{{ (s.text_en or '') if s else '' }}"
+               class="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        <input type="text" name="image_caption_es" placeholder="Título de imagen (ES, opcional)" value="{{ (s.text_es or '') if s else '' }}"
+               class="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+    </div>
+</div>
+
+<div class="el-fields" data-types="button">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <input type="text" name="button_label_en" placeholder="Button text (EN)" value="{{ (s.button_label_en or '') if s else '' }}"
+               class="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        <input type="text" name="button_label_es" placeholder="Texto del botón (ES)" value="{{ (s.button_label_es or '') if s else '' }}"
+               class="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+    </div>
+    <div class="mt-2">
+        <label class="block text-xs font-medium text-slate-600 mb-1">Link to a page on this site</label>
+        <select name="link_page_id" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            <option value="">— none —</option>
+            {% for p in linkable_pages %}
+            <option value="{{ p.id }}" {{ 'selected' if s and s.link_page_id == p.id else '' }}>{{ p.title_en }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="mt-2">
+        <label class="block text-xs font-medium text-slate-600 mb-1">...or an external URL</label>
+        <input type="url" name="link_url" placeholder="https://..." value="{{ (s.link_url or '') if s and not s.link_page_id else '' }}"
+               class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+    </div>
+</div>
+
+<div class="el-fields" data-types="divider">
+    <p class="text-xs text-slate-400">A plain horizontal divider — no extra fields.</p>
+</div>
+
+<div class="el-fields" data-types="form">
+    <label class="block text-xs font-medium text-slate-600 mb-1">Which form?</label>
+    <select name="custom_form_id" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        <option value="">— none —</option>
+        {% for f in forms %}
+        <option value="{{ f.id }}" {{ 'selected' if s and s.custom_form_id == f.id else '' }}>{{ f.name_admin }}</option>
+        {% endfor %}
+    </select>
+    {% if not forms %}
+    <p class="mt-1 text-xs text-slate-400">No forms yet — <a href="{{ url_for('admin.forms_list') }}" class="text-accent-600 hover:underline">create one</a> first.</p>
+    {% endif %}
+</div>
+{% endmacro %}
+
+<div class="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 max-w-3xl mt-6">
+    <h2 class="font-semibold text-slate-900 mb-1">Page sections</h2>
+    <p class="text-sm text-slate-500 mb-5">Build this page by stacking elements — headings, text, images, and buttons that can link to other pages.</p>
+
+    {% if page.sections %}
+    <div class="space-y-3 mb-6">
+        {% for s in page.sections %}
+        <div class="element-item border border-slate-100 rounded-xl">
+            <div class="flex items-center justify-between gap-3 px-4 py-3">
+                <button type="button" class="element-toggle flex-1 min-w-0 flex items-center gap-2 text-left cursor-pointer">
+                    <svg class="element-chevron w-3.5 h-3.5 text-slate-400 shrink-0 transition" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                    <span class="text-[10px] font-semibold uppercase tracking-wide text-accent-600 bg-accent-50 px-1.5 py-0.5 rounded shrink-0">{{ s.block_type }}</span>
+                    <span class="text-sm text-slate-800 truncate">{{ s.heading_en or s.text_en or s.button_label_en or (s.custom_form.name_admin if s.custom_form else None) or '(divider)' }}</span>
+                </button>
+                <div class="flex items-center gap-1 shrink-0">
+                    <form method="POST" action="{{ url_for('admin.page_section_move', section_id=s.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <input type="hidden" name="direction" value="up">
+                        <button type="submit" class="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-400 text-sm">↑</button>
+                    </form>
+                    <form method="POST" action="{{ url_for('admin.page_section_move', section_id=s.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <input type="hidden" name="direction" value="down">
+                        <button type="submit" class="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-400 text-sm">↓</button>
+                    </form>
+                    <form method="POST" action="{{ url_for('admin.page_section_delete', section_id=s.id) }}" data-confirm="Remove this element?">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <button type="submit" class="w-7 h-7 rounded-lg hover:bg-red-50 text-red-400 text-sm">✕</button>
+                    </form>
+                </div>
+            </div>
+            <form method="POST" action="{{ url_for('admin.page_section_edit', section_id=s.id) }}" enctype="multipart/form-data" class="element-body hidden px-4 pb-4 space-y-3">
+                {{ section_fields(csrf_token, s) }}
+                <button type="submit" class="rounded-lg bg-accent-600 text-white text-sm font-semibold px-4 py-2 hover:bg-accent-700 transition">Save Element</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="border-t border-slate-100 pt-5">
+        <h3 class="text-sm font-semibold text-slate-700 mb-3">+ Add Element</h3>
+        <form method="POST" action="{{ url_for('admin.page_section_new', page_id=page.id) }}" enctype="multipart/form-data" class="space-y-3">
+            {{ section_fields(csrf_token, None) }}
+            <button type="submit" class="rounded-lg bg-brand-800 text-white text-sm font-semibold px-5 py-2.5 hover:bg-brand-700 transition">
+                + Add Element
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    (function () {
+        document.querySelectorAll('.element-toggle').forEach((toggle) => {
+            toggle.addEventListener('click', () => {
+                const item = toggle.closest('.element-item');
+                item.querySelector('.element-body').classList.toggle('hidden');
+                item.querySelector('.element-chevron').classList.toggle('rotate-180');
+            });
+        });
+
+        document.querySelectorAll('form').forEach((form) => {
+            const typeInputs = form.querySelectorAll('input[name="block_type"]');
+            if (!typeInputs.length) return;
+            const labels = form.querySelectorAll('.element-type-option');
+            const groups = form.querySelectorAll('.el-fields');
+
+            function update() {
+                const selected = form.querySelector('input[name="block_type"]:checked');
+                const value = selected ? selected.value : 'text';
+                groups.forEach((g) => g.classList.toggle('hidden', g.dataset.types !== value));
+                labels.forEach((label) => {
+                    const input = label.querySelector('input');
+                    const active = input.checked;
+                    label.classList.toggle('border-accent-500', active);
+                    label.classList.toggle('bg-accent-50', active);
+                    label.classList.toggle('text-accent-700', active);
+                    label.classList.toggle('border-slate-200', !active);
+                    label.classList.toggle('text-slate-600', !active);
+                });
+            }
+            typeInputs.forEach((input) => input.addEventListener('change', update));
+            update();
+        });
+    })();
+</script>
+{% endif %}
+{% endblock %}

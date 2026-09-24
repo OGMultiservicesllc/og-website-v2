@@ -1,0 +1,42 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Pending Payments{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-slate-900">Pending Payments</h1>
+    <p class="text-sm text-slate-500 mt-1">Zelle, Cash App and Pay at Office requests customers created at checkout — for any OG service, not only Academy courses. None of these grant access or mark anything paid until confirmed here or from the customer's own Payments tab.</p>
+</div>
+
+<div class="rounded-2xl bg-white border border-slate-100 overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+            <tr><th class="px-4 py-3">Customer</th><th class="px-4 py-3">Email</th><th class="px-4 py-3">Payment For</th><th class="px-4 py-3">Amount</th><th class="px-4 py-3">Method</th><th class="px-4 py-3">Requested</th><th class="px-4 py-3">Status</th><th class="px-4 py-3"></th></tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            {% for p in pending %}
+            <tr>
+                <td class="px-4 py-3"><a href="{{ url_for('admin.customer_detail', student_id=p.customer_id, tab='payments') }}" class="font-medium text-slate-800 hover:text-accent-700">{{ p.customer.name }}</a></td>
+                <td class="px-4 py-3 text-slate-500">{{ p.customer.email }}</td>
+                <td class="px-4 py-3 text-slate-700">{{ p.charge.display_title('en') }}</td>
+                <td class="px-4 py-3 font-semibold text-slate-800">${{ '%.2f' % (p.amount_cents / 100) }}</td>
+                <td class="px-4 py-3">{{ dict(payment_methods)[p.method][0] if p.method in dict(payment_methods) else p.method }}</td>
+                <td class="px-4 py-3 text-slate-500 whitespace-nowrap">{{ p.created_at.strftime('%b %d, %Y') if p.created_at else '—' }}</td>
+                <td class="px-4 py-3"><span class="text-[11px] font-bold rounded-full px-2.5 py-1 bg-amber-50 text-amber-800">Awaiting Confirmation</span></td>
+                <td class="px-4 py-3 text-right whitespace-nowrap">
+                    <form method="post" action="{{ url_for('admin.payment_confirm', payment_id=p.id) }}" class="inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <button class="rounded-lg bg-accent-600 text-white font-semibold px-3 py-1.5 text-xs hover:bg-accent-700">Confirm Payment</button>
+                    </form>
+                    <form method="post" action="{{ url_for('admin.payment_manual_cancel', payment_id=p.id) }}" class="inline ml-1.5" data-confirm="Cancel this payment request? The customer will not be charged and access will not be granted.">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <button class="rounded-lg border border-slate-200 text-slate-500 font-semibold px-3 py-1.5 text-xs hover:border-red-300 hover:text-red-600">Cancel / Reject</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="8" class="px-4 py-10 text-center text-slate-500">No pending manual payments right now.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

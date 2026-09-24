@@ -1,0 +1,35 @@
+{# Price section (customer). `price` = pricing.customer_view(). No amount is ever written here: it all comes from the pricing engine. #}
+<div class="mt-4">
+    {% if price.state == 'manual' %}
+    <div class="rounded-xl bg-mist-50 border border-mist-200 px-4 py-4">
+        <p class="text-[16px] font-semibold text-brand-800 leading-snug">{{ 'Your return needs an extra review to determine the price.' if en else 'Tu declaración requiere una revisión adicional para determinar el precio.' }}</p>
+        <p class="mt-2 text-[15px] text-slate-700 leading-relaxed">{{ 'OG will review your information and confirm the cost before starting the preparation.' if en else 'OG revisará tu información y te confirmará el costo antes de comenzar la preparación.' }}</p>
+    </div>
+    {% elif price.state == 'confirmed' %}
+    <div class="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-4">
+        <p class="text-[13px] font-bold uppercase tracking-wider text-emerald-700">{{ 'Confirmed preparation fee' if en else 'Costo de preparación confirmado' }}</p>
+        <p class="mt-1 text-[28px] font-extrabold text-brand-800">{{ price.final }}</p>
+    </div>
+    {% else %}
+    <div class="rounded-xl border border-slate-200 bg-white px-4 py-4">
+        <dl class="text-[16px]">
+            <div class="flex items-center justify-between gap-3"><dt class="text-slate-700">{{ 'Preparation' if en else 'Preparación' }}</dt><dd class="font-semibold text-brand-800">{{ price.subtotal }}</dd></div>
+            {% if price.discount %}
+            <div class="mt-2 flex items-center justify-between gap-3"><dt class="text-slate-700">💙 {{ 'Returning Client Discount' if en else 'Descuento de Cliente Recurrente' }} ({{ price.discount.percent }}%)</dt><dd class="font-semibold text-emerald-700">{{ price.discount.amount }}</dd></div>
+            {% endif %}
+            <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between gap-3"><dt class="font-bold text-brand-800">{{ 'Estimated preparation fee' if en else 'Costo estimado de preparación' }}</dt><dd class="text-[26px] font-extrabold text-brand-800">{{ price.final }}</dd></div>
+        </dl>
+        <details class="mt-3"><summary class="text-[13px] font-semibold text-accent-700 cursor-pointer">{{ 'What is included' if en else 'Qué incluye' }}</summary>
+            <ul class="mt-2 space-y-1 text-[14px] text-slate-600">{% for l in price.lines %}<li class="flex justify-between gap-3"><span>{{ l.label }}</span><span>{{ l.amount }}</span></li>{% endfor %}</ul></details>
+    </div>
+    <p class="mt-3 text-[14px] text-slate-600 leading-relaxed">{{ 'This estimate is based on the information you provided. OG will review your information and documents before confirming the final preparation fee.' if en else 'Este estimado se basa en la información que diste. OG revisará tu información y documentos antes de confirmar el costo final de preparación.' }}</p>
+    <p class="mt-1 text-[13px] text-slate-500">{{ 'You are not charged now.' if en else 'No se te cobra ahora.' }}</p>
+    {% endif %}
+</div>
+<div class="mt-6 rounded-xl bg-brand-800 text-white px-4 py-5">
+    <p class="text-[17px] font-extrabold">{{ 'More than preparing your taxes' if en else 'Más que preparar tus taxes' }}</p>
+    <p class="mt-2 text-[14px] leading-relaxed text-white/90">{{ 'OG Multiservices is available all year, not only during tax season.' if en else 'OG Multiservices está disponible durante todo el año, no solamente durante tax season.' }}</p>
+    <p class="mt-2 text-[14px] leading-relaxed text-white/90">{{ 'Our service includes personalized follow-up on the return we prepare. If you later have a question or receive a communication related to your taxes, you can come back to OG and we will review the next step with you.' if en else 'Nuestro servicio incluye seguimiento personalizado sobre la declaración que preparamos. Si posteriormente tienes una pregunta o recibes una comunicación relacionada con tus taxes, puedes volver a OG para que revisemos contigo el próximo paso.' }}</p>
+    <p class="mt-2 text-[14px] leading-relaxed text-white/90">{{ 'If OG makes a mistake in preparing your return, we will correct our work at no charge to you.' if en else 'Si OG comete un error en la preparación de tu declaración, corregiremos nuestro trabajo sin cobrarte por esa corrección.' }}</p>
+    <p class="mt-2 text-[13px] leading-relaxed text-white/75">{{ 'Some later work requires an additional service. If there is an extra cost, we will tell you before doing the service.' if en else 'Algunos trabajos posteriores requieren un servicio adicional. Si existe un costo adicional, te informaremos antes de realizar el servicio.' }}</p>
+</div>

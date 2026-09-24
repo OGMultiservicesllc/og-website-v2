@@ -1,0 +1,134 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}ITIN case {{ case.case_number }}{% endblock %}
+
+{% macro chip(text, tone='slate') %}<span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-{{ tone }}-100 text-{{ tone }}-700">{{ text }}</span>{% endmacro %}
+{% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token }}">{% endmacro %}
+
+{% block content %}
+<a href="{{ url_for('admin.itin_list') }}" class="text-sm text-slate-500 hover:text-accent-600">&larr; ITIN cases</a>
+<div class="flex flex-wrap items-start justify-between gap-3 mt-2 mb-4">
+    <div>
+        <h1 class="text-2xl font-bold text-brand-800">ITIN Case <span class="font-mono">{{ case.case_number }}</span></h1>
+        <p class="text-sm text-slate-600 mt-1"><a href="{{ url_for('admin.customer_detail', student_id=case.customer_id, tab='cases') }}" class="text-accent-700 hover:underline">{{ case.customer.name }}</a> &middot; {{ case.customer.email }}
+            &middot; Tax year <span class="font-semibold">{{ cd.tax_year or '—' }}</span> &middot; <a href="{{ url_for('admin.ocase_detail', case_id=case.id) }}" class="text-accent-700 hover:underline">Full case (people, documents, activity)</a></p>
+    </div>
+    <div class="text-right"><p class="text-[11px] uppercase font-bold tracking-wide text-slate-400">Status</p><p class="text-lg font-bold text-brand-800">{{ stage_label }}</p></div>
+</div>
+<div class="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-3 text-[13px] text-slate-700 mb-5" role="note"><strong>OG MULTISERVICES DOES NOT APPROVE OR DENY ITIN APPLICATIONS.</strong> The IRS makes the final decision. “Ready for IRS” means OG's package is complete; it is not a submission. The IRS response is recorded by staff and never inferred (not even from USPS delivery).</div>
+
+<div class="grid lg:grid-cols-3 gap-4 mb-6">
+    <div class="rounded-2xl bg-white border border-slate-100 p-4 lg:col-span-2">
+        <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Package readiness</h2>
+        {% if ready.blockers %}<ul class="list-disc pl-5 text-sm text-red-700 space-y-0.5">{% for b in ready.blockers %}<li>{{ b }}</li>{% endfor %}</ul>{% else %}<p class="text-sm text-emerald-700 font-semibold">&#10003; Nothing is blocking the package.</p>{% endif %}
+        {% if ready.warnings %}<ul class="mt-2 list-disc pl-5 text-sm text-amber-800">{% for b in ready.warnings %}<li>{{ b }}</li>{% endfor %}</ul>{% endif %}
+        <div class="mt-3 flex flex-wrap gap-2">
+            {% if cd.ready_for_irs_at %}
+            <p class="text-sm text-slate-700">Ready for IRS since {{ cd.ready_for_irs_at.strftime('%b %d, %Y') }} by {{ cd.ready_for_irs_by }}</p>
+            <form method="post" action="{{ url_for('admin.itin_not_ready', case_id=case.id) }}">{{ csrf() }}<button class="rounded-lg border border-slate-200 text-slate-700 font-semibold px-4 py-2 text-sm hover:border-accent-300">Remove Ready for IRS</button></form>
+            {% else %}
+            <form method="post" action="{{ url_for('admin.itin_ready', case_id=case.id) }}">{{ csrf() }}<button class="rounded-lg bg-accent-600 text-white font-semibold px-4 py-2 text-sm hover:bg-accent-700 disabled:opacity-50" {% if ready.blockers %}title="Blockers must be cleared first"{% endif %}>Mark Ready for IRS</button></form>
+            {% endif %}
+        </div>
+    </div>
+    <div class="rounded-2xl bg-white border border-slate-100 p-4">
+        <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Status (staff steps)</h2>
+        <form method="post" action="{{ url_for('admin.itin_stage', case_id=case.id) }}" class="flex gap-2">{{ csrf() }}
+            <select name="stage" aria-label="Status" class="flex-1 rounded-lg border border-slate-200 px-2 py-2 text-sm"><option value="auto">Automatic (from the intake and documents)</option>{% for k, l in stages %}<option value="{{ k }}" {{ 'selected' if cd.stage == k else '' }}>{{ l }}</option>{% endfor %}</select>
+            <button class="rounded-lg border border-slate-200 text-slate-700 font-semibold px-3 py-2 text-sm hover:border-accent-300">Set</button>
+        </form>
+        <p class="mt-2 text-[11px] text-slate-500">Ready for IRS, Sent to IRS, IRS Processing, IRS Response and Completed have their own explicit actions below.</p>
+    </div>
+</div>
+
+<div class="rounded-2xl bg-white border border-slate-100 p-4 mb-6">
+    <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Tax information (case level)</h2>
+    <form method="post" action="{{ url_for('admin.itin_tax', case_id=case.id) }}" class="grid sm:grid-cols-4 gap-3 items-end text-sm">{{ csrf() }}
+        <label class="text-[11px] text-slate-500">Tax year<input name="tax_year" value="{{ cd.tax_year or '' }}" inputmode="numeric" maxlength="4" class="mt-0.5 w-full rounded border border-slate-200 px-2 py-1.5"></label>
+        <label class="text-[11px] text-slate-500">New or renewal<select name="request_kind" class="mt-0.5 w-full rounded border border-slate-200 px-2 py-1.5 bg-white">{% for k, l in [('new', 'New ITIN'), ('renew', 'Renewal'), ('unsure', 'Not sure')] %}<option value="{{ k }}" {{ 'selected' if cd.request_kind == k else '' }}>{{ l }}</option>{% endfor %}</select></label>
+        <label class="text-[11px] text-slate-500">Taxpayer is a U.S. citizen / permanent resident<select name="taxpayer_us_status" class="mt-0.5 w-full rounded border border-slate-200 px-2 py-1.5 bg-white">{% for k, l in [('yes', 'Yes'), ('no', 'No'), ('unsure', 'Not sure')] %}<option value="{{ k }}" {{ 'selected' if cd.taxpayer_us_status == k else '' }}>{{ l }}</option>{% endfor %}</select></label>
+        <button class="rounded-lg border border-slate-200 text-slate-700 font-semibold px-3 py-2 text-sm hover:border-accent-300">Save</button>
+    </form>
+    <p class="mt-2 text-[12px] text-slate-600">Return prepared by OG: {{ {'yes': 'Yes', 'not_sure': 'Not sure yet'}.get(cd.preparing_return, '—') }} &middot; Income (primary taxpayer): {{ cd.income_type or '—' }}{% if cd.work_activity %} &middot; {{ cd.work_activity }}{% endif %}{% if cd.occupation %} &middot; {{ cd.occupation }}{% endif %}{% if cd.gross_income %} &middot; approx. gross ${{ cd.gross_income }}{% endif %}</p>
+</div>
+
+<h2 class="text-lg font-bold text-brand-800 mb-2">Applicants — one W-7 each</h2>
+<div class="space-y-4 mb-6">
+{% for x in apps %}
+    <div class="rounded-2xl bg-white border border-slate-100 p-4">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+                <p class="font-semibold text-brand-800">{% if x.person %}<a href="{{ url_for('admin.person_detail', person_id=x.person.id) }}" class="text-accent-700 hover:underline">{{ x.name }}</a>{% else %}{{ x.name }}{% endif %} {{ chip(x.kind_label, 'slate') }}</p>
+                <p class="text-xs text-slate-500 mt-0.5"><span class="font-mono">{{ x.submission.code }}</span> &middot; {{ 'Sent to OG' if x.submission.is_complete else 'Draft' }} &middot; Passport: {% if not x.passport.applies %}none (evidence matrix){% elif x.passport.confirmed %}confirmed{% elif x.passport.uploaded %}uploaded, waiting for the customer{% else %}<span class="font-semibold text-amber-800">NEEDED</span>{% endif %}</p>
+            </div>
+            <a href="{{ url_for('admin.w7_prep', submission_id=x.submission.id) }}" class="rounded-lg bg-accent-600 text-white font-semibold px-3.5 py-2 text-sm hover:bg-accent-700">Open W-7 Preparation View</a>
+        </div>
+        <p class="mt-2 text-[13px] text-slate-700">W-7 reason: {% if x.row and x.row.reason_confirmed %}<span class="font-semibold">confirmed {{ x.row.reason_confirmed }}</span> by {{ x.row.reason_confirmed_by }}{% else %}<span class="text-amber-800 font-semibold">not confirmed</span> &middot; candidate: {{ x.candidate_label }}{% endif %}
+            &middot; CAA review: {{ 'verified by ' ~ x.row.caa_verified_by if x.row and x.row.caa_status == 'verified' else 'not recorded' }} &middot; Signature: {{ dict(signature_states).get(x.row.signature_state, '—') if x.row else '—' }}</p>
+        {% if x.flags %}<ul class="mt-2 flex flex-wrap gap-1.5">{% for f in x.flags %}<li>{{ chip(f.en, 'amber') }}</li>{% endfor %}</ul>{% endif %}
+        {% if not x.passport.applies %}
+        <p class="mt-2 text-[12px] text-slate-600">Evidence coverage: identity {{ '✓' if x.coverage.identity else '✗' }} · foreign status {{ '✓' if x.coverage.foreign_status else '✗' }} · photo {{ '✓' if x.coverage.photo else '✗' }} · residency {{ '✓' if x.coverage.residency in (True, None) else '✗' }} · document types {{ x.coverage.doc_types }}</p>
+        {% endif %}
+    </div>
+{% endfor %}
+</div>
+
+<h2 class="text-lg font-bold text-brand-800 mb-1">Documents and physical originals</h2>
+<p class="text-xs text-slate-500 mb-3">A photo uploaded by the customer is only a copy for pre-review. An original counts as received only when staff record it. OG (as a CAA) can verify passports and birth certificates for dependents, and every accepted document except a foreign military ID for the other applicants.</p>
+<div class="space-y-3 mb-8">
+{% for x in apps %}{% for r in x.reqs %}{% set t = r.itin_track %}
+    <div class="rounded-2xl bg-white border border-slate-100 p-4" id="req-{{ r.id }}">
+        <div class="flex flex-wrap items-start justify-between gap-2">
+            <div><p class="text-sm font-semibold text-brand-800">{{ r.title }} <span class="font-normal text-slate-500">— {{ x.name }}</span></p>
+                <p class="text-[11px] text-slate-500">Digital: {{ r.status.replace('_', ' ') }}{% if r.current_document %} · <a href="{{ url_for('admin.ocase_document_file', case_id=case.id, document_id=r.current_document.id) }}" target="_blank" rel="noopener" class="text-accent-700 hover:underline">{{ r.current_document.original_filename }}</a>{% endif %}
+                    · basis: {{ r.doc_basis or 'workflow' }}</p></div>
+            {% if t and t.original_required %}<span class="text-[11px] font-bold text-amber-800">Original: {{ original_labels.get(t.original_state, t.original_state) }}</span>{% else %}<span class="text-[11px] text-slate-400">Original not required</span>{% endif %}
+        </div>
+        {% if t and t.original_required %}
+        <p class="mt-1 text-[11px] text-slate-500">Who can certify it: {{ 'OG as CAA' if t.caa_route == 'caa' else 'OG cannot certify — the original goes to the IRS with the package' }}{% if t.delivery_choice %} · customer says: {{ 'mail it' if t.delivery_choice == 'mail' else 'bring it in person' }}{% endif %}
+            {% if t.caa_verified_at %}· CAA verified by {{ t.caa_verified_by }} on {{ t.caa_verified_at.strftime('%b %d, %Y') }} (document #{{ t.caa_document_id }}{% if r.current_document and t.caa_document_id != r.current_document.id %} — <span class="text-red-700 font-semibold">a newer copy was uploaded since</span>{% endif %}){% endif %}</p>
+        <form method="post" action="{{ url_for('admin.itin_original', case_id=case.id, requirement_id=r.id) }}" class="mt-2 grid sm:grid-cols-6 gap-2 items-end text-[11px] text-slate-500">{{ csrf() }}
+            <label>Status<select name="state" class="mt-0.5 w-full rounded border border-slate-200 px-1.5 py-1.5 text-xs bg-white">{% for k, l in original_states %}<option value="{{ k }}" {{ 'selected' if t.original_state == k else '' }}>{{ l }}</option>{% endfor %}</select></label>
+            <label>Delivery<select name="delivery" class="mt-0.5 w-full rounded border border-slate-200 px-1.5 py-1.5 text-xs bg-white"><option value="">—</option><option value="mail" {{ 'selected' if t.delivery_choice == 'mail' else '' }}>Mailed</option><option value="in_person" {{ 'selected' if t.delivery_choice == 'in_person' else '' }}>In person</option></select></label>
+            <label>Mailed on<input type="date" name="mailed_date" value="{{ t.mailed_date or '' }}" class="mt-0.5 w-full rounded border border-slate-200 px-1.5 py-1 text-xs"></label>
+            <label>Inbound tracking<input name="inbound_tracking" value="{{ t.inbound_tracking or '' }}" maxlength="40" class="mt-0.5 w-full rounded border border-slate-200 px-1.5 py-1.5 text-xs"></label>
+            <label>Received on<input type="date" name="received_date" value="{{ t.received_date or '' }}" class="mt-0.5 w-full rounded border border-slate-200 px-1.5 py-1 text-xs"></label>
+            <button class="rounded-lg border border-slate-200 text-slate-700 font-semibold px-3 py-1.5 text-xs hover:border-accent-300">Save</button>
+            <label>Return method<input name="return_method" value="{{ t.return_method or '' }}" maxlength="20" class="mt-0.5 w-full rounded border border-slate-200 px-1.5 py-1.5 text-xs"></label>
+            <label>Returned on<input type="date" name="returned_date" value="{{ t.returned_date or '' }}" class="mt-0.5 w-full rounded border border-slate-200 px-1.5 py-1 text-xs"></label>
+            <label>Outbound tracking (optional)<input name="outbound_tracking" value="{{ t.outbound_tracking or '' }}" maxlength="40" class="mt-0.5 w-full rounded border border-slate-200 px-1.5 py-1.5 text-xs"></label>
+        </form>
+        {% if t.received_date %}<p class="mt-1 text-[11px] text-slate-500">Received {{ t.received_date.strftime('%b %d, %Y') }}{% if t.received_by %} by {{ t.received_by }}{% endif %}</p>{% endif %}
+        {% if t.caa_route == 'caa' and t.original_state == 'received' %}
+        <form method="post" action="{{ url_for('admin.itin_original', case_id=case.id, requirement_id=r.id) }}" class="mt-2">{{ csrf() }}<input type="hidden" name="action" value="verify"><button class="rounded-lg bg-accent-600 text-white font-semibold px-3.5 py-1.5 text-xs hover:bg-accent-700">Record CAA verification of this original</button></form>
+        {% endif %}
+        {% endif %}
+    </div>
+{% endfor %}{% endfor %}
+</div>
+
+<h2 class="text-lg font-bold text-brand-800 mb-2">IRS package and response</h2>
+<div class="grid lg:grid-cols-2 gap-4 mb-10">
+    <div class="rounded-2xl bg-white border border-slate-100 p-4">
+        <h3 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Package mailed to the IRS (USPS)</h3>
+        <form method="post" action="{{ url_for('admin.itin_package', case_id=case.id) }}" class="grid grid-cols-2 gap-2 text-[11px] text-slate-500">{{ csrf() }}
+            <label class="col-span-2">USPS tracking number<input name="tracking" value="{{ cd.usps_tracking or '' }}" maxlength="40" class="mt-0.5 w-full rounded border border-slate-200 px-2 py-1.5 text-sm"></label>
+            <label>Mailed on<input type="date" name="mailed" value="{{ cd.irs_mailed_date or '' }}" class="mt-0.5 w-full rounded border border-slate-200 px-2 py-1 text-sm"></label>
+            <label>USPS delivered on<input type="date" name="delivered" value="{{ cd.irs_delivered_date or '' }}" class="mt-0.5 w-full rounded border border-slate-200 px-2 py-1 text-sm"></label>
+            <label class="col-span-2">USPS status (free text)<input name="mailing_status" value="{{ cd.irs_mailing_status or '' }}" maxlength="120" class="mt-0.5 w-full rounded border border-slate-200 px-2 py-1.5 text-sm"></label>
+            <button class="col-span-2 rounded-lg border border-slate-200 text-slate-700 font-semibold px-3 py-2 text-sm hover:border-accent-300" {% if not cd.ready_for_irs_at %}title="Mark the case Ready for IRS first"{% endif %}>Record package</button>
+        </form>
+        {% if usps_url %}<p class="mt-2 text-[12px]"><a href="{{ usps_url }}" target="_blank" rel="noopener noreferrer" class="text-accent-700 hover:underline">Track on USPS</a> <span class="text-slate-400">— USPS delivery is not IRS processing and not an approval.</span></p>{% endif %}
+        {% if stage == 'sent_irs' %}<form method="post" action="{{ url_for('admin.itin_processing', case_id=case.id) }}" class="mt-2">{{ csrf() }}<button class="rounded-lg border border-slate-200 text-slate-700 font-semibold px-3 py-1.5 text-xs hover:border-accent-300">Set status to IRS Processing</button></form>{% endif %}
+    </div>
+    <div class="rounded-2xl bg-white border border-slate-100 p-4">
+        <h3 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">IRS response (recorded by staff)</h3>
+        <form method="post" action="{{ url_for('admin.itin_response', case_id=case.id) }}" class="grid grid-cols-2 gap-2 text-[11px] text-slate-500">{{ csrf() }}
+            <label>What the IRS sent<select name="outcome" class="mt-0.5 w-full rounded border border-slate-200 px-2 py-1.5 text-sm bg-white">{% for k, v in outcomes.items() %}<option value="{{ k }}" {{ 'selected' if cd.irs_outcome == k else '' }}>{{ v[0] }}</option>{% endfor %}</select></label>
+            <label>Date<input type="date" name="when" value="{{ cd.irs_outcome_at or '' }}" class="mt-0.5 w-full rounded border border-slate-200 px-2 py-1 text-sm"></label>
+            <label class="col-span-2">Note for the customer (shown in My Account; do not write ITIN numbers)<textarea name="note" rows="2" maxlength="2000" class="mt-0.5 w-full rounded border border-slate-200 px-2 py-1.5 text-sm">{{ cd.irs_note or '' }}</textarea></label>
+            <button class="col-span-2 rounded-lg border border-slate-200 text-slate-700 font-semibold px-3 py-2 text-sm hover:border-accent-300">Record IRS response</button>
+        </form>
+        {% if cd.irs_outcome and stage != 'completed' %}<form method="post" action="{{ url_for('admin.itin_complete', case_id=case.id) }}" class="mt-2">{{ csrf() }}<button class="rounded-lg bg-accent-600 text-white font-semibold px-3.5 py-1.5 text-xs hover:bg-accent-700">Mark case Completed</button></form>{% endif %}
+    </div>
+</div>
+{% endblock %}

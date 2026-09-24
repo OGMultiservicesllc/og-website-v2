@@ -1,0 +1,74 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Services{% endblock %}
+{% from "partials/icons.html" import icon %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-slate-900">Services</h1>
+    <p class="text-sm text-slate-500 mt-1">The same structure visitors see: categories, and the services inside each one. Edit text, images, buttons, intake forms and SEO without touching code.</p>
+</div>
+
+<div class="space-y-6">
+    {% for cat in categories %}
+    <section id="cat-{{ cat.id }}" class="rounded-2xl bg-white border border-slate-100 overflow-hidden scroll-mt-20">
+        <header class="flex flex-wrap items-center gap-3 px-4 sm:px-5 py-4 bg-slate-50/70 border-b border-slate-100">
+            <span class="w-10 h-10 rounded-xl bg-accent-50 text-accent-600 flex items-center justify-center shrink-0">{{ icon(cat.icon, 'w-5 h-5') }}</span>
+            <div class="min-w-0 flex-1 basis-40">
+                <h2 class="font-semibold text-slate-900 leading-snug">{{ cat.title_en }}</h2>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    {{ cat.services|length }} service{{ '' if cat.services|length == 1 else 's' }}
+                    {% if not cat.is_published %}· <span class="text-amber-600 font-medium">Hidden</span>{% endif %}
+                    {% if cat.is_featured %}· <span class="text-accent-700 font-medium">Featured on Home</span>{% endif %}
+                </p>
+            </div>
+            <div class="flex items-center gap-1">
+                <form method="POST" action="{{ url_for('admin.service_category_move', category_id=cat.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button name="direction" value="up" {{ 'disabled' if loop.first else '' }} class="w-8 h-8 rounded-lg text-slate-500 hover:bg-white disabled:opacity-30" aria-label="Move category up">↑</button>
+                    <button name="direction" value="down" {{ 'disabled' if loop.last else '' }} class="w-8 h-8 rounded-lg text-slate-500 hover:bg-white disabled:opacity-30" aria-label="Move category down">↓</button>
+                </form>
+                <a href="{{ url_for('admin.service_category_edit', category_id=cat.id) }}" class="rounded-lg bg-accent-600 text-white text-sm font-semibold px-4 py-2 hover:bg-accent-700 transition">Edit page</a>
+            </div>
+        </header>
+
+        {% if cat.services %}
+        <ul class="divide-y divide-slate-100">
+            {% for svc in cat.services %}
+            <li class="flex flex-wrap items-center gap-3 px-4 sm:px-5 py-3">
+                <span class="w-8 h-8 rounded-lg bg-slate-50 text-slate-500 flex items-center justify-center shrink-0">{{ icon(svc.icon, 'w-4 h-4') }}</span>
+                <div class="min-w-0 flex-1 basis-44">
+                    <a href="{{ url_for('admin.service_edit', service_id=svc.id) }}" class="text-sm font-medium text-slate-800 hover:text-accent-700 block leading-snug">{{ svc.title_en }}</a>
+                    <p class="text-[11px] text-slate-400 mt-0.5">
+                        /{{ svc.slug }}
+                        {% if svc.requires_intake %}· <span class="text-accent-700">Smart intake{{ ': ' ~ svc.form.name_admin if svc.form else '' }}</span>{% endif %}{% if svc.intake_state == 'not_configured' %}· <span class="text-amber-700 font-semibold" title="Get Started uses the regular button until an intake is built and published">{{ svc.intake_label }} — NOT YET CONFIGURED</span>{% endif %}
+                    </p>
+                </div>
+                <form method="POST" action="{{ url_for('admin.service_toggle_publish', service_id=svc.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button class="text-[11px] font-bold rounded-full px-2.5 py-1 {{ 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' if svc.is_published else 'bg-amber-50 text-amber-700 hover:bg-amber-100' }}"
+                            title="{{ 'Click to hide' if svc.is_published else 'Click to publish' }}">{{ 'Published' if svc.is_published else 'Draft' }}</button>
+                </form>
+                <form method="POST" action="{{ url_for('admin.service_move', service_id=svc.id) }}" class="flex">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button name="direction" value="up" {{ 'disabled' if loop.first else '' }} class="w-7 h-7 rounded-md text-slate-500 hover:bg-slate-100 disabled:opacity-30" aria-label="Move up">↑</button>
+                    <button name="direction" value="down" {{ 'disabled' if loop.last else '' }} class="w-7 h-7 rounded-md text-slate-500 hover:bg-slate-100 disabled:opacity-30" aria-label="Move down">↓</button>
+                </form>
+                <a href="{{ url_for('admin.service_edit', service_id=svc.id) }}" class="text-sm font-semibold text-accent-700 hover:underline">Edit</a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% elif not cat.subpage_endpoint %}
+        <p class="px-5 py-4 text-sm text-slate-500">This category is a single page — everything is edited from “Edit page”.</p>
+        {% endif %}
+
+        {% if cat.subpage_endpoint %}
+        <form method="POST" action="{{ url_for('admin.service_new', category_id=cat.id) }}" class="flex flex-wrap gap-2 px-4 sm:px-5 py-3 bg-slate-50/50 border-t border-slate-100">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="text" name="title_en" required placeholder="New service name (English)" class="flex-1 min-w-[12rem] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            <button class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold hover:border-accent-300 hover:text-accent-700 transition">+ Add service</button>
+        </form>
+        {% endif %}
+    </section>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,136 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}CEAC Preparation — {{ submission.code }}{% endblock %}
+
+{% macro chip(text, tone='slate') %}<span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-{{ tone }}-100 text-{{ tone }}-700">{{ text }}</span>{% endmacro %}
+
+{% block content %}
+<a href="{{ url_for('admin.form_submission_detail', submission_id=submission.id) }}" class="text-sm text-slate-500 hover:text-accent-600">&larr; Application {{ submission.code }}</a>
+<div class="flex flex-wrap items-start justify-between gap-3 mt-2 mb-4">
+    <div>
+        <h1 class="text-2xl font-bold text-brand-800">CEAC Preparation View</h1>
+        <p class="text-sm text-slate-600 mt-1">
+            {% if ds.applicant %}<a href="{{ url_for('admin.person_detail', person_id=ds.applicant.id) }}" class="font-semibold text-accent-700 hover:underline">{{ ds.applicant.full_name }}</a>{% endif %}
+            &middot; {{ 'Principal applicant' if ds.role == 'principal' else 'Derivative applicant' }} &middot; <span class="font-mono">{{ submission.code }}</span>
+            {% if submission.case %}&middot; Case <a href="{{ url_for('admin.ocase_detail', case_id=submission.case.id) }}" class="font-mono text-accent-700 hover:underline">{{ submission.case.case_number }}</a>{% endif %}
+        </p>
+        <p class="text-xs text-slate-500 mt-1">OG status: <span class="font-semibold">{{ {'new': 'Submitted to OG', 'in_review': 'In Review', 'waiting_client': 'Waiting for Client', 'ready_for_ceac': 'Ready for CEAC', 'completed': 'Completed', 'archived': 'Archived'}.get(submission.status, submission.status) if submission.is_complete else 'Draft' }}</span>
+            &middot; CEAC status (recorded by staff): <span class="font-semibold">{{ ceac_statuses.get(row.ceac_status, row.ceac_status) }}</span></p>
+    </div>
+    <div class="text-right text-[11px] text-slate-500 max-w-xs">
+        {% if data.source %}<p>Source snapshot <span class="font-mono">{{ data.source.code }}</span></p><p>{{ data.source.sample }} &middot; verified {{ data.source.verified }} &middot; hash <span class="font-mono">{{ data.source.hash }}</span></p>{% endif %}
+    </div>
+</div>
+
+<div class="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-3 text-[13px] text-slate-700 mb-4" role="note">
+    Read each value here and type it into CEAC yourself. OG does not log in to CEAC, does not fill or submit it, and never stores a CEAC password. The applicant reviews, e-signs and submits in CEAC.
+    The wording of each question comes from the 2019 DOS sample unless noted; read the live CEAC screen for the exact question. English and English characters only.
+</div>
+{% if row.ceac_status == 'submitted' %}
+<div class="rounded-2xl border border-amber-300 bg-amber-50 px-5 py-3 text-sm text-amber-900 mb-4" role="alert">{{ after_submit_warning }}</div>
+{% endif %}
+
+<div class="grid lg:grid-cols-3 gap-4 mb-6">
+    <div class="rounded-2xl bg-white border border-slate-100 p-4 lg:col-span-2">
+        <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Readiness</h2>
+        <p class="text-sm text-slate-700">{{ data.counts.rows }} values &middot; {{ data.counts.missing }} missing &middot; {{ data.counts.translate }} need English &middot; {{ data.counts.conflict }} conflicting &middot; {{ data.counts.unconfirmed }} unconfirmed reused &middot; {{ data.counts.review }} answers to review with the applicant</p>
+        {% if data.blockers %}<ul class="mt-2 list-disc pl-5 text-sm text-red-700">{% for b in data.blockers %}<li>{{ b }}</li>{% endfor %}</ul>{% endif %}
+        {% if data.warnings %}<ul class="mt-2 list-disc pl-5 text-sm text-amber-800">{% for b in data.warnings %}<li>{{ b }}</li>{% endfor %}</ul>{% endif %}
+        <div class="mt-3 flex flex-wrap gap-2">
+            {% if submission.status != 'ready_for_ceac' %}
+            <form method="post" action="{{ url_for('admin.ds260_ready', submission_id=submission.id) }}" class="flex flex-wrap items-center gap-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                {% if data.warnings %}<label class="text-xs text-slate-600 flex items-center gap-1.5"><input type="checkbox" name="ack" value="1"> I reviewed these warnings</label>{% endif %}
+                <button type="submit" {{ 'disabled' if data.blockers }} class="rounded-lg bg-accent-600 text-white font-semibold px-4 py-2 text-sm hover:bg-accent-700 transition disabled:opacity-40 disabled:cursor-not-allowed">Mark ready for CEAC</button>
+            </form>
+            {% else %}
+            <span class="inline-flex items-center rounded-lg bg-emerald-50 text-emerald-800 text-sm font-semibold px-3 py-2">Ready for CEAC since {{ row.ready_for_ceac_at.strftime('%b %d, %Y') if row.ready_for_ceac_at }} by {{ row.ready_for_ceac_by }}</span>
+            <form method="post" action="{{ url_for('admin.ds260_not_ready', submission_id=submission.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="rounded-lg border border-slate-200 text-slate-700 font-semibold px-4 py-2 text-sm hover:border-accent-300">Back to In Review</button></form>
+            {% endif %}
+        </div>
+        <p class="mt-2 text-[11px] text-slate-500">“Ready for CEAC” means the answers are prepared. It does not mean anything was entered or submitted in CEAC.</p>
+    </div>
+    <div class="rounded-2xl bg-white border border-slate-100 p-4">
+        <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Record the CEAC status</h2>
+        <form method="post" action="{{ url_for('admin.ds260_ceac_status', submission_id=submission.id) }}" class="space-y-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <select name="ceac_status" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">{% for k, v in ceac_statuses.items() %}<option value="{{ k }}" {{ 'selected' if row.ceac_status == k }}>{{ v }}</option>{% endfor %}</select>
+            <textarea name="ceac_note" rows="2" maxlength="2000" placeholder="Internal note (never shown to the customer)" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">{{ row.ceac_note or '' }}</textarea>
+            <button type="submit" class="w-full rounded-lg border border-slate-200 text-slate-700 font-semibold px-4 py-2 text-sm hover:border-accent-300">Save CEAC status</button>
+        </form>
+        {% if row.ceac_status_at %}<p class="mt-2 text-[11px] text-slate-500">Recorded {{ row.ceac_status_at.strftime('%b %d, %Y') }} by {{ row.ceac_status_by }}. OG cannot read or change CEAC.</p>{% endif %}
+    </div>
+</div>
+
+<nav class="mb-4 flex flex-wrap gap-1.5 text-xs" aria-label="CEAC sections">
+    {% for s in data.sections %}<a href="#sec-{{ loop.index }}" class="rounded-full border border-slate-200 bg-white px-2.5 py-1 font-semibold text-slate-600 hover:border-accent-300">{{ s.title.replace('Security and Background: ', 'Security: ') }}{% if s.flags %} <span class="text-amber-700">&bull;{{ s.flags }}</span>{% endif %}</a>{% endfor %}
+</nav>
+
+{% for s in data.sections %}
+{% set sidx = loop.index %}
+<details class="mb-4 rounded-2xl bg-white border border-slate-100" id="sec-{{ sidx }}" {{ '' if s.private else 'open' }}>
+    <summary class="cursor-pointer select-none px-4 py-3 flex flex-wrap items-center gap-2">
+        <span class="text-sm font-bold text-brand-800">{{ s.title }}</span>
+        {% if s.private %}{{ chip('Private', 'slate') }}{% endif %}
+        <span class="text-[11px] text-slate-400">{{ s.rows|length }} values</span>
+    </summary>
+    {% if s.private %}<p class="px-4 pb-2 text-[12px] text-slate-500">Shown only to staff working on this case. A “Yes” is something to review with the applicant; it is not a conclusion about the case.</p>{% endif %}
+    <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead><tr class="text-left text-[10px] uppercase tracking-wide text-slate-400"><th class="px-4 py-2 w-1/4">CEAC question</th><th class="px-2 py-2 w-1/5">OG answer (customer)</th><th class="px-2 py-2 w-1/4">CEAC-ready (English)</th><th class="px-2 py-2">Traceability</th></tr></thead>
+        <tbody>
+        {% for r in s.rows %}
+        <tr class="border-t border-slate-100 align-top" id="row-{{ r.key.replace('#', '_').replace('.', '_') }}">
+            <td class="px-4 py-2 text-slate-800 break-words">{{ r.q }}</td>
+            <td class="px-2 py-2 text-slate-600 break-words whitespace-pre-line">{{ r.customer }}</td>
+            <td class="px-2 py-2">
+                <div class="flex items-start gap-2">
+                    <span class="min-w-0 flex-1 break-words font-semibold {{ 'text-red-700' if 'missing' in r.flags else 'text-slate-900' }}" data-value>{{ r.ceac if r.ceac else '— missing —' }}</span>
+                    {% if r.copy %}<button type="button" class="shrink-0 rounded-md border border-slate-200 px-2 py-1 text-[11px] font-semibold text-accent-700 hover:border-accent-300" data-copy="{{ r.ceac }}" aria-label="Copy value for {{ r.q }}">Copy</button>{% endif %}
+                </div>
+                {% if 'translate' in r.flags or r.override or 'chars' in r.flags %}
+                <details class="mt-1"><summary class="cursor-pointer text-[11px] text-accent-700">{{ 'English override' if r.override else 'Set English text' }}</summary>
+                    <form method="post" action="{{ url_for('admin.ds260_override', submission_id=submission.id) }}" class="mt-1 space-y-1">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="key" value="{{ r.key }}">
+                        <textarea name="value" rows="2" maxlength="3000" class="w-full rounded border border-slate-200 px-2 py-1 text-xs">{{ r.ceac if r.override else '' }}</textarea>
+                        <div class="flex gap-2"><button name="action" value="set" class="rounded bg-accent-600 text-white text-[11px] font-semibold px-2 py-1">Save English</button>{% if r.override %}<button name="action" value="clear" class="rounded border border-slate-200 text-[11px] px-2 py-1">Remove override</button>{% endif %}</div>
+                    </form>
+                </details>
+                {% endif %}
+            </td>
+            <td class="px-2 py-2 text-[11px] text-slate-500">
+                <div class="flex flex-wrap gap-1 mb-1">
+                    {% for f in r.flags %}{{ chip({'missing': 'Missing', 'translate': 'Needs English', 'chars': 'Characters converted', 'dk': 'Do Not Know', 'dna': 'Does Not Apply', 'review': 'Review with applicant', 'unverified': 'Unverified vs current CEAC', 'override': 'Staff override', 'native': 'Native alphabet'}.get(f, f), {'missing': 'red', 'translate': 'amber', 'review': 'amber', 'unverified': 'amber', 'override': 'emerald'}.get(f, 'slate')) }}{% endfor %}
+                    {% if r.confirm == 'conflict' %}{{ chip('Conflict', 'red') }}{% elif r.confirm == 'unconfirmed' %}{{ chip('Unconfirmed', 'amber') }}{% elif r.confirm == 'confirmed' %}{{ chip('Confirmed', 'emerald') }}{% elif r.confirm == 'updated' %}{{ chip('Updated', 'slate') }}{% endif %}
+                </div>
+                <p class="break-words">{{ r.source }}</p>
+                {% if r.prov %}<p class="break-words">{{ r.prov }}</p>{% endif %}
+                {% if r.override %}<p>English by {{ r.override.by }}{% if r.override.at %}, {{ r.override.at.strftime('%b %d, %Y') }}{% endif %}</p>{% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</details>
+{% endfor %}
+
+<div class="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-[13px] text-slate-700 mb-8">
+    <h2 class="text-sm font-bold text-brand-800 mb-1">Only in CEAC (never collected or simulated here)</h2>
+    <ul class="list-disc pl-5 space-y-0.5">
+        <li>The applicant's own review and the E-Signature and certification, and the “Sign and Submit Application” button.</li>
+        <li>The NVC case number, passport number and CAPTCHA entered at signing; the confirmation page.</li>
+        <li>The Medical Examination Disclosure and Consent and, for some countries, the FGM/C fact-sheet certification{% if ds.fgmc %} (<strong>the applicant's nationality is on the 2019 sample's FGM/C list — unverified for the current system</strong>){% endif %}.</li>
+    </ul>
+</div>
+
+<script>
+document.querySelectorAll('[data-copy]').forEach(function (b) {
+    b.addEventListener('click', function () {
+        var v = b.getAttribute('data-copy');
+        var done = function () { var t = b.textContent; b.textContent = 'Copied'; setTimeout(function () { b.textContent = t; }, 1200); };
+        if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(v).then(done); }
+        else { var ta = document.createElement('textarea'); ta.value = v; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); done(); }
+    });
+});
+</script>
+{% endblock %}

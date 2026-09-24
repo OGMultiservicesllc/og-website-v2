@@ -1,0 +1,17 @@
+Flask>=3.1,<4
+Flask-SQLAlchemy>=3.1,<4
+Flask-Migrate>=4.0,<5
+python-dotenv>=1.0,<2
+openai>=1.0,<2
+Pillow>=10.0,<13
+qrcode>=7.4,<8
+cryptography>=42,<47
+squareup>=38,<47
+
+# Production deployment (Linux VPS: Nginx + Gunicorn + PostgreSQL) — not used in local SQLite development.
+gunicorn>=21.2,<25
+# psycopg2-binary (not psycopg3): this is the driver SQLAlchemy uses automatically for a plain
+# "postgresql://..." DATABASE_URL with no dialect suffix — no other config changes needed. It remains
+# actively maintained (regular releases tracking current PostgreSQL/Python versions); psycopg3 is a
+# viable future upgrade but would require DATABASE_URL to say "postgresql+psycopg://..." explicitly.
+psycopg2-binary>=2.9,<3

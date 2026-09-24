@@ -1,0 +1,22 @@
+{# Final review: human-friendly cards (sensitive data masked), each with Edit. #}
+<p class="mt-2 text-[15px] text-slate-600">{{ 'Check each part. Use Edit to change anything.' if en else 'Revisa cada parte. Usa Editar para cambiar lo que necesites.' }}</p>
+<div class="mt-4 space-y-3">
+    {% for card in cards %}
+    <section class="rounded-xl border border-slate-200 bg-white px-4 py-3.5">
+        <div class="flex items-center justify-between gap-2">
+            <h2 class="text-[15px] font-bold text-brand-800">{{ card.icon }} {{ card.title }}</h2>
+            <a href="{{ url_for('public.tax_step', lang=lang, case_id=tax.case_id, step_key=card.edit) }}" class="min-h-[40px] inline-flex items-center px-3 rounded-lg border border-slate-200 text-[13px] font-semibold text-accent-700">{{ 'Edit' if en else 'Editar' }}</a>
+        </div>
+        <ul class="mt-1.5 space-y-0.5 text-[14px] text-slate-700">
+            {% for l in card.lines %}<li class="break-words">{% if l.label %}<span class="text-slate-500">{{ l.label }}:</span> {% endif %}{{ l.value }}</li>{% endfor %}
+        </ul>
+    </section>
+    {% endfor %}
+</div>
+{% if missing_answers %}
+<div class="mt-4 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
+    <p class="text-[14px] font-semibold text-amber-900">⚠️ {{ 'A few answers are still missing:' if en else 'Todavía faltan algunas respuestas:' }}</p>
+    <ul class="mt-1 list-disc pl-5 text-[14px] text-amber-900">{% for x in missing_answers[:6] %}<li>{{ x.label }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+{% if docs_missing %}<p class="mt-4 text-[14px] text-slate-600">⏰ {{ ('%d documents are still pending. You can send your information now and upload them later.' % docs_missing) if en else ('%d documentos siguen pendientes. Puedes enviar tu información ahora y subirlos después.' % docs_missing) }}</p>{% endif %}

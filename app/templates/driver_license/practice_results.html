@@ -1,0 +1,29 @@
+{% extends "intake_base.html" %}
+{% set en = lang == 'en' %}
+{% block title %}{{ 'Your Score' if en else 'Tu Puntaje' }}{% endblock %}
+{% block content %}
+<div class="rounded-[20px] bg-white border border-slate-100 shadow-card p-6 sm:p-9 text-center">
+    <p class="text-[13px] font-bold uppercase tracking-wider text-slate-400">{{ 'Your Score' if en else 'Tu Puntaje' }}</p>
+    <p class="mt-1 text-[3rem] font-extrabold tracking-tight text-brand-800">{{ attempt.correct }} / {{ attempt.total }}</p>
+    <p class="text-[1.5rem] font-bold {{ 'text-emerald-700' if attempt.passed else 'text-amber-700' }}">{{ attempt.percent }}%</p>
+    <p class="mt-2 text-[16px] font-bold {{ 'text-emerald-700' if attempt.passed else 'text-amber-700' }}">{{ ('PASS 🎉' if en else '¡APROBADO! 🎉') if attempt.passed else ('Not yet — keep practicing' if en else 'Todavía no — sigue practicando') }}</p>
+    <p class="mt-1 text-[13px] text-slate-500">{{ ('MVC passing target: %d%%' % pass_pct) if en else ('Meta para aprobar del MVC: %d%%' % pass_pct) }}</p>
+
+    {% if topic_rows %}
+    <div class="mt-6 text-left">
+        <p class="text-[13px] font-bold uppercase tracking-wide text-slate-400 mb-2">{{ 'Topic Performance' if en else 'Rendimiento por Tema' }}</p>
+        <ul class="space-y-1.5">
+            {% for r in topic_rows %}
+            <li class="flex items-center justify-between text-[14px]"><span class="text-slate-700">{{ r.label }}</span><span class="font-semibold {{ 'text-emerald-700' if r.correct == r.total else 'text-slate-700' }}">{{ r.correct }} / {{ r.total }}</span></li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <div class="mt-7 grid sm:grid-cols-2 gap-2.5">
+        <a href="{{ url_for('public.dl_practice_review', lang=lang, attempt_id=attempt.id) }}" class="inline-flex items-center justify-center min-h-[48px] rounded-xl border border-slate-200 text-[14px] font-semibold text-brand-800 hover:border-accent-300 transition">{{ 'Review Incorrect Answers' if en else 'Revisar Respuestas Incorrectas' }}</a>
+        <a href="{{ url_for('public.dl_practice_modes', lang=lang) }}" class="inline-flex items-center justify-center min-h-[48px] rounded-xl bg-accent-600 text-white text-[14px] font-semibold hover:bg-accent-700 transition">{{ 'Take Another Test' if en else 'Tomar Otra Prueba' }}</a>
+    </div>
+    <a href="{{ url_for('account.dashboard', lang=lang) }}" class="mt-3 inline-flex text-[13px] font-semibold text-accent-700 hover:underline">{{ 'Return to My Account' if en else 'Volver a Mi Cuenta' }} →</a>
+</div>
+{% endblock %}

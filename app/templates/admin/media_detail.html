@@ -1,0 +1,69 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}{{ asset.display_title }}{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('admin.media_library') }}" class="text-sm text-slate-500 hover:text-slate-800">&larr; Media Library</a>
+<h1 class="text-2xl font-bold text-slate-900 mt-2 mb-6 break-words">{{ asset.display_title }}</h1>
+
+<div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+    <div class="lg:col-span-3 space-y-4">
+        <div class="rounded-2xl bg-white border border-slate-100 p-3">
+            <img src="{{ media_url(asset, 960) }}" alt="{{ asset.alt_en or asset.display_title }}" class="w-full rounded-xl bg-slate-100">
+            <p class="mt-2 text-xs text-slate-400 px-1">
+                {{ asset.original_filename }}{% if asset.width %} · {{ asset.width }}×{{ asset.height }} px{% endif %} · {{ ((asset.size_bytes or 0) / 1024)|round|int }} KB · {{ asset.mime_type or 'image' }}
+            </p>
+        </div>
+
+        <div class="rounded-2xl bg-white border border-slate-100 p-5">
+            <h2 class="font-semibold text-slate-900 text-sm mb-2">Where it's used</h2>
+            {% if usage %}
+            <ul class="space-y-1.5 text-sm">
+                {% for label, href in usage %}<li><a href="{{ href }}" class="text-accent-700 hover:underline">{{ label }}</a></li>{% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-sm text-slate-500">Not used anywhere yet — safe to delete.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="lg:col-span-2 space-y-4">
+        <form method="POST" class="rounded-2xl bg-white border border-slate-100 p-5 space-y-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <h2 class="font-semibold text-slate-900 text-sm">Details</h2>
+            <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Title</label>
+                <input type="text" name="title" value="{{ asset.title or '' }}" maxlength="200" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Alt text (English) <span class="text-slate-400">— describes the image for screen readers &amp; SEO</span></label>
+                <input type="text" name="alt_en" value="{{ asset.alt_en or '' }}" maxlength="300" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Texto alternativo (Español)</label>
+                <input type="text" name="alt_es" value="{{ asset.alt_es or '' }}" maxlength="300" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Tag</label>
+                <input type="text" name="tag" list="media-tags" value="{{ asset.tag or '' }}" maxlength="60" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+                <datalist id="media-tags">{% for t in tags %}<option value="{{ t }}">{% endfor %}</datalist>
+            </div>
+            <button type="submit" class="w-full rounded-lg bg-accent-600 text-white font-semibold px-4 py-2.5 text-sm hover:bg-accent-700 transition">Save details</button>
+        </form>
+
+        <form method="POST" action="{{ url_for('admin.media_replace', asset_id=asset.id) }}" enctype="multipart/form-data" class="rounded-2xl bg-white border border-slate-100 p-5 space-y-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <h2 class="font-semibold text-slate-900 text-sm">Replace image</h2>
+            <p class="text-xs text-slate-500">Upload a new picture and every page that uses this image switches to it. Title and alt text are kept.</p>
+            <input type="file" name="file" required accept=".jpg,.jpeg,.png,.webp" class="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 file:px-3 file:py-2 file:font-medium">
+            <button type="submit" class="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50 transition">Replace</button>
+        </form>
+
+        <form method="POST" action="{{ url_for('admin.media_delete', asset_id=asset.id) }}" data-confirm="Delete this image permanently?" class="rounded-2xl bg-white border border-slate-100 p-5">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" {{ 'disabled' if usage else '' }}
+                    class="w-full rounded-lg border px-4 py-2.5 text-sm font-semibold transition {{ 'border-slate-100 text-slate-300 cursor-not-allowed' if usage else 'border-red-200 text-red-600 hover:bg-red-50' }}">Delete image</button>
+            {% if usage %}<p class="mt-2 text-xs text-slate-400">In use — replace it in those places first.</p>{% endif %}
+        </form>
+    </div>
+</div>
+{% endblock %}

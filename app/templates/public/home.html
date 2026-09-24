@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% from "partials/ui.html" import btn, pill, section_header, service_card, cta_block, media, check_item, founder_avatar %}
+{% from "partials/icons.html" import icon %}
+{% block title %}OG Multiservices LLC{% endblock %}
+{% set page_description = st('home_meta_description') %}
+
+{% block content %}
+{% set hero_image = site_asset('home_hero_image') %}
+{% set hero_mobile = site_asset('home_hero_mobile_image') %}
+{% set hero_focus = site_focus('home_hero_focus') %}
+
+<!-- 1 · Hero: who is OG, what can they help with, how do I start -->
+<section class="bg-gradient-to-b from-mist-100 via-mist-50 to-white">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-8 sm:pt-12 sm:pb-14">
+        <div class="grid grid-cols-1 lg:grid-cols-[1.1fr_.9fr] gap-6 lg:gap-14 items-center">
+            <div>
+                {{ pill(st('home_eyebrow'), 'accent', 'shield') }}
+                <h1 class="mt-3 text-[2rem] leading-[1.1] sm:text-5xl lg:text-[3.2rem] font-extrabold tracking-tight text-brand-800 text-balance">
+                    {{ st('home_title_prefix') }}<span class="bg-gradient-to-r from-accent-600 to-indigo-500 bg-clip-text text-transparent">{{ st('home_title_accent') }}</span>
+                </h1>
+                <p class="mt-3 sm:mt-4 text-[15px] sm:text-lg text-slate-600 leading-relaxed max-w-xl">{{ st('home_subtitle') }}</p>
+
+                <div class="mt-5 flex flex-col sm:flex-row sm:flex-wrap gap-2.5">
+                    {{ btn(st('home_cta_start'), '#help', 'primary', None, 'lg', False, trailing_icon='arrow-right') }}
+                    {{ btn(st('home_cta_primary'), biz.WHATSAPP_LINK, 'whatsapp', 'whatsapp', 'lg', True) }}
+                </div>
+
+                <dl class="mt-6 grid grid-cols-3 gap-3 max-w-md">
+                    {% for k in ['year', 'lang', 'mode'] %}
+                    <div class="border-l-2 border-accent-200 pl-3">
+                        <dt class="text-lg sm:text-xl font-extrabold text-brand-800 leading-none">{{ st('home_stat_' ~ k) }}</dt>
+                        <dd class="mt-1 text-[11px] sm:text-xs text-slate-500 leading-snug">{{ st('home_stat_' ~ k ~ '_label') }}</dd>
+                    </div>
+                    {% endfor %}
+                </dl>
+            </div>
+
+            {% if hero_image %}
+            <div class="mt-1 lg:mt-0">
+                {{ media(media_url(hero_image, 1600), hero_image.alt(lang), '16-9', hero_focus, media_url(hero_mobile, 960) if hero_mobile else None, 'image', 'rounded-panel shadow-pop', True) }}
+            </div>
+            {% else %}
+            <!-- No photo chosen yet: a genuinely useful "visit us" card instead of an empty box -->
+            <aside class="hidden lg:block rounded-panel bg-brand-800 text-white p-7 shadow-pop relative overflow-hidden">
+                <div class="absolute -right-12 -top-12 w-44 h-44 rounded-full bg-accent-500/15"></div>
+                <div class="relative">
+                    <span class="w-11 h-11 rounded-xl bg-white/10 text-accent-400 flex items-center justify-center">{{ icon('pin', 'w-5 h-5') }}</span>
+                    <h2 class="mt-4 text-xl font-bold">{{ t('home_visit_title') }}</h2>
+                    <p class="mt-1.5 text-slate-300 text-sm leading-relaxed">{{ biz.ADDRESS_LINE1 }}<br>{{ biz.ADDRESS_LINE2 }}</p>
+                    <p class="mt-3 flex items-center gap-2 text-sm text-slate-300">{{ icon('clock', 'w-4 h-4 text-accent-400') }} {{ biz.HOURS_DISPLAY }}</p>
+                    <div class="mt-5 flex flex-wrap gap-2.5">
+                        {{ btn(biz.PHONE_DISPLAY, 'tel:' ~ biz.PHONE_TEL, 'light', 'phone', 'md') }}
+                        {{ btn(t('mobilebar_whatsapp'), biz.WHATSAPP_LINK, 'whatsapp', 'whatsapp', 'md', True) }}
+                    </div>
+                </div>
+            </aside>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<!-- 2 · Service launcher: featured categories -->
+<section id="help" class="scroll-mt-16 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 sm:pt-6">
+    {{ section_header(st('home_card_title'), st('home_card_subtitle')) }}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
+        {% for c in featured %}
+        {{ service_card(c.icon, c.title, c.text, c.url, 'row') }}
+        {% endfor %}
+        {{ service_card('academy', t('home_add_academy_title'), t('home_add_academy_desc'), url_for('public.courses', lang=lang), 'row') }}
+    </div>
+</section>
+
+<!-- 3 · Popular requests: straight to a specific service -->
+{% if popular %}
+<section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12">
+    {{ section_header(st('home_popular_title'), st('home_popular_subtitle')) }}
+    <ul class="og-scroll-x md:flex-wrap md:overflow-visible -mx-4 px-4 md:mx-0 md:px-0 pb-1">
+        {% for s in popular %}
+        <li>
+            <a href="{{ s.url }}" class="group inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white pl-2 pr-3.5 py-1.5 text-[13.5px] font-semibold text-brand-800 shadow-card hover:border-accent-300 hover:text-accent-700 transition whitespace-nowrap">
+                <span class="w-7 h-7 rounded-full bg-mist-100 text-accent-600 flex items-center justify-center group-hover:bg-accent-600 group-hover:text-white transition">{{ icon(s.icon, 'w-4 h-4') }}</span>
+                {{ s.title }}
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+</section>
+{% endif %}
+
+<!-- 4 · More ways we help -->
+{% if more %}
+<section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12">
+    {{ section_header(st('home_more_title'), None, link_label=t('home_card_view_all'), link_href=url_for('public.services', lang=lang)) }}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
+        {% for c in more %}{{ service_card(c.icon, c.title, c.text, c.url, 'row') }}{% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<!-- 5 · Trust -->
+<section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-14">
+    <div class="rounded-panel bg-mist-50 border border-mist-200 p-5 sm:p-8">
+        <h2 class="text-xl sm:text-2xl font-extrabold tracking-tight text-brand-800 text-balance">{{ st('trust_title') }}</h2>
+        <ul class="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
+            {% for k in ['bilingual', 'confidential', 'caa', 'certified', 'local', 'experience'] %}
+            <li class="flex items-start gap-3">
+                <span class="mt-0.5 w-6 h-6 rounded-full bg-accent-600 text-white flex items-center justify-center shrink-0">{{ icon('check', 'w-3.5 h-3.5') }}</span>
+                <span>
+                    <span class="block text-sm font-bold text-brand-800">{{ st('trust_' ~ k) }}</span>
+                    <span class="block text-[13px] text-slate-600 leading-snug mt-0.5">{{ st('trust_' ~ k ~ '_desc') }}</span>
+                </span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</section>
+
+<!-- 5b · Meet the Founder: a small, compact trust/human section, not a second About page -->
+{% set founder_photo = site_asset('founder_photo') %}
+{% set founder_focus = site_focus('founder_photo_focus') %}
+<section class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-14">
+    <div class="rounded-panel bg-white border border-slate-100 shadow-card p-5 sm:p-7">
+        <div class="flex flex-col sm:flex-row items-center sm:items-center gap-5 sm:gap-6 text-center sm:text-left">
+            <div class="shrink-0">
+                {{ founder_avatar(founder_photo, founder_focus, biz.FOUNDER_NAME ~ ', ' ~ t('founder_role'), 'w-20 h-20') }}
+            </div>
+            <div class="min-w-0 flex-1">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-accent-600">{{ t('home_founder_title') }}</p>
+                <p class="mt-0.5 text-base font-extrabold text-brand-800">{{ biz.FOUNDER_NAME }}</p>
+                <p class="text-[13px] font-semibold text-slate-500">{{ t('founder_role') }}</p>
+                <p class="mt-2 text-[13.5px] sm:text-sm text-slate-600 leading-relaxed max-w-xl">{{ t('home_founder_body') }}</p>
+            </div>
+            <div class="shrink-0">
+                {{ btn(t('home_founder_cta'), url_for('public.about', lang=lang), 'secondary', None, 'md', False, trailing_icon='arrow-right') }}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 6 · OG Academy: a premium division, visually related (navy) but distinct (gold) -->
+{% set academy_image = site_asset('home_academy_image') %}
+<section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-14">
+    <div class="relative overflow-hidden rounded-panel bg-brand-800 text-white">
+        <div class="absolute -right-16 -top-16 w-56 h-56 rounded-full bg-academy-500/15" aria-hidden="true"></div>
+        <div class="relative grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-6 lg:gap-10 p-5 sm:p-9 items-center">
+            <div>
+                <span class="inline-flex items-center gap-2 rounded-full bg-academy-500/15 text-academy-100 text-[11px] font-bold tracking-wider uppercase px-3 py-1">{{ icon('academy', 'w-3.5 h-3.5') }} {{ st('academy_promo_title') }}</span>
+                <p class="mt-2 text-xs text-slate-400">{{ t('academy_division') }}</p>
+                <p class="mt-3 text-[15px] sm:text-lg text-slate-200 leading-relaxed max-w-md">{{ st('academy_promo_body') }}</p>
+                <div class="mt-5">{{ btn(st('academy_promo_cta'), url_for('public.courses', lang=lang), 'academy', None, 'lg', False, trailing_icon='arrow-right') }}</div>
+            </div>
+            <div>
+                {% if academy_image %}
+                {{ media(media_url(academy_image, 960), academy_image.alt(lang), '3-2', 'center', None, 'academy', 'rounded-card') }}
+                {% elif courses %}
+                <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">{{ t('home_academy_courses') }}</p>
+                <div class="space-y-2.5">
+                    {% for course in courses %}
+                    <a href="{{ url_for('public.course_detail', lang=lang, slug=course.slug) }}" class="flex items-center gap-3 rounded-card bg-white/5 border border-white/10 p-3 hover:bg-white/10 transition">
+                        {% if course.cover_image %}
+                        <img src="{{ url_for('public.course_asset', lang=lang, course_id=course.id, stored_path=course.cover_image) }}" alt="" class="w-14 h-14 rounded-lg object-cover shrink-0" loading="lazy">
+                        {% else %}
+                        <span class="w-14 h-14 rounded-lg bg-academy-500/20 text-academy-100 flex items-center justify-center shrink-0">{{ icon('academy', 'w-6 h-6') }}</span>
+                        {% endif %}
+                        <span class="min-w-0 flex-1">
+                            <span class="block font-semibold text-sm leading-snug">{{ course.title(lang) }}</span>
+                            {% if course.category %}<span class="block text-xs text-slate-400 mt-0.5">{{ course.category }}</span>{% endif %}
+                        </span>
+                        <span class="text-slate-400">{{ icon('chevron-right', 'w-5 h-5') }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 7 · Final call to action -->
+<section class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 sm:pt-16 pb-10 sm:pb-16">
+    {{ cta_block(t('svc_final_cta_title'), t('svc_final_cta_body'),
+        {'label': t('nav_get_started'), 'href': url_for('public.contact', lang=lang)},
+        {'label': t('svc_send_whatsapp'), 'href': biz.WHATSAPP_LINK, 'icon': 'whatsapp', 'variant': 'whatsapp', 'external': True}) }}
+</section>
+{% endblock %}

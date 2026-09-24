@@ -1,0 +1,44 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Certificates{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-slate-900">Certificates</h1>
+    <p class="text-sm text-slate-500 mt-1">Every certificate issued by OG Academy. Revoke, reissue or regenerate from the student's page.</p>
+</div>
+
+<form method="GET" class="flex flex-wrap gap-2 mb-5">
+    <input type="search" name="q" value="{{ q }}" placeholder="Search by student, email, course or certificate ID…"
+           class="flex-1 min-w-[12rem] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+    <select name="status" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
+        <option value="">All statuses</option>
+        <option value="valid" {{ 'selected' if status == 'valid' else '' }}>Valid</option>
+        <option value="revoked" {{ 'selected' if status == 'revoked' else '' }}>Revoked</option>
+    </select>
+    <button class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium hover:bg-slate-50">Filter</button>
+</form>
+
+<div class="rounded-2xl bg-white border border-slate-100 overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+            <tr><th class="px-4 py-3">Certificate ID</th><th class="px-4 py-3">Student</th><th class="px-4 py-3">Course</th><th class="px-4 py-3">Issued</th><th class="px-4 py-3">Status</th><th class="px-4 py-3"></th></tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            {% for c in certificates %}
+            <tr>
+                <td class="px-4 py-3 font-mono text-xs text-slate-700">{{ c.code }}</td>
+                <td class="px-4 py-3"><a href="{{ url_for('admin.customer_detail', student_id=c.student_id) }}" class="font-medium text-slate-800 hover:text-accent-700">{{ c.student.name }}</a><span class="block text-xs text-slate-400">{{ c.student.email }}</span></td>
+                <td class="px-4 py-3 text-slate-700">{{ c.course.title_en }}</td>
+                <td class="px-4 py-3 text-slate-500 whitespace-nowrap">{{ c.issued_at.strftime('%b %d, %Y') if c.issued_at else '—' }}</td>
+                <td class="px-4 py-3"><span class="text-[11px] font-bold rounded-full px-2.5 py-1 {{ 'bg-red-50 text-red-700' if c.is_revoked else 'bg-emerald-50 text-emerald-700' }}">{{ 'Revoked' if c.is_revoked else 'Valid' }}</span></td>
+                <td class="px-4 py-3 text-right whitespace-nowrap">
+                    <a href="{{ url_for('public.certificate_verify', lang='en', code=c.code) }}" target="_blank" rel="noopener" class="text-xs font-semibold text-accent-700 hover:underline">Verify page &nearr;</a>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="px-4 py-10 text-center text-slate-500">No certificates match.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

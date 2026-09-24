@@ -1,0 +1,37 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Quiz Attempts — {{ lesson.title_en }}{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('admin.lesson_edit', lesson_id=lesson.id) }}" class="text-sm text-slate-500 hover:text-accent-600">&larr; {{ lesson.title_en }}</a>
+<h1 class="text-2xl font-bold text-brand-800 mt-2 mb-6">Quiz Attempts</h1>
+
+{% if attempts %}
+<div class="bg-white border border-slate-100 rounded-2xl divide-y divide-slate-100 overflow-hidden max-w-3xl">
+    {% for a in attempts %}
+    <div class="flex items-center justify-between gap-4 px-6 py-3.5">
+        <div class="min-w-0">
+            <p class="text-sm font-medium text-slate-800 truncate">{{ a.student.name if a.student else 'Student #' + a.student_id|string }}</p>
+            <p class="text-xs text-slate-400">{{ a.submitted_at.strftime('%b %d, %Y %H:%M') if a.submitted_at else '' }} — {{ a.score_percent }}%</p>
+        </div>
+        <div class="flex items-center gap-3 shrink-0">
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-full
+                {% if a.status == 'needs_review' %}bg-amber-50 text-amber-700
+                {% elif a.passed %}bg-emerald-50 text-emerald-700
+                {% else %}bg-red-50 text-red-600{% endif %}">
+                {% if a.status == 'needs_review' %}Needs Review{% elif a.passed %}Passed{% else %}Failed{% endif %}
+            </span>
+            {% if a.status == 'needs_review' %}
+            <a href="{{ url_for('admin.quiz_attempt_grade', attempt_id=a.id) }}" class="text-sm font-semibold text-accent-600 hover:underline">Review &rarr;</a>
+            {% else %}
+            <a href="{{ url_for('admin.quiz_attempt_grade', attempt_id=a.id) }}" class="text-sm text-slate-400 hover:text-accent-600">View</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="rounded-2xl border-2 border-dashed border-slate-200 p-16 text-center max-w-3xl">
+    <p class="text-slate-500">No attempts yet.</p>
+</div>
+{% endif %}
+{% endblock %}

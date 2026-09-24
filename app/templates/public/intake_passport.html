@@ -1,0 +1,89 @@
+{% extends "intake_base.html" %}
+{% from "partials/ui.html" import info_panel %}
+{% set en = lang == 'en' %}
+{% block title %}{{ 'Passport' if en else 'Pasaporte' }} — {{ form.title(lang) }}{% endblock %}
+
+{% block header_actions %}
+<div class="flex items-center gap-0.5 rounded-full border border-slate-200 bg-white p-0.5 text-xs font-bold" role="group" aria-label="Language">
+    {% for code in ('en', 'es') %}
+    <a href="{{ url_for('public.og_form_passport', lang=code, slug=form.slug, t=submission.resume_token) }}" class="px-2.5 py-1.5 rounded-full {{ 'text-white bg-accent-600' if lang == code else 'text-slate-500 hover:text-slate-800' }}" {% if lang == code %}aria-current="true"{% endif %}>{{ code|upper }}</a>
+    {% endfor %}
+</div>
+<a href="{{ back_url }}" class="min-h-[40px] inline-flex items-center px-3 rounded-full text-sm font-semibold text-slate-600 hover:text-brand-800 hover:bg-mist-100 transition">{{ 'Back to my application' if en else 'Volver a mi solicitud' }}</a>
+{% endblock %}
+
+{% block content %}
+<p class="text-xs font-bold uppercase tracking-wider text-accent-700">{{ 'ITIN application' if en else 'Solicitud de ITIN' }} · {{ submission.code }}</p>
+<h1 class="mt-1 text-[1.6rem] sm:text-3xl leading-tight font-extrabold tracking-tight text-brand-800">{{ 'The passport' if en else 'El pasaporte' }}</h1>
+<p class="mt-1.5 text-[15px] text-slate-600">{{ '📘 Upload the page with your photo. We read it and you only check the information.' if en else '📘 Sube la página donde aparece la foto. Nosotros leemos los datos y tú solo los revisas.' }}</p>
+
+{% if removed %}<div class="mt-4" role="status">{{ info_panel(None, ('The file was removed. You can upload another passport.' if en else 'Se eliminó el archivo. Puedes subir otro pasaporte.'), 'info') }}</div>{% endif %}
+{% if saved %}<div class="mt-4" role="status">{{ info_panel(None, ('Saved. Your passport information is confirmed.' if en else 'Guardado. La información de tu pasaporte está confirmada.'), 'success') }}</div>{% endif %}
+{% if notice %}<div class="mt-4" role="alert">{{ info_panel(None, notice[1], 'notice') }}</div>{% endif %}
+
+<section class="mt-5 rounded-card bg-white border border-slate-100 shadow-card p-4 sm:p-5">
+    <h2 class="text-[15px] font-bold text-brand-800">{{ '1. The photo page' if en else '1. La página de la foto' }}</h2>
+    {% macro upload_form(label) %}
+    <form method="post" enctype="multipart/form-data" class="mt-3 flex flex-col sm:flex-row gap-3 sm:items-end" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="action" value="upload">
+        <label class="block flex-1"><span class="block text-xs font-semibold text-slate-500">{{ 'Choose a photo or PDF' if en else 'Elige una foto o PDF' }}</span>
+            <input type="file" name="file" accept="image/jpeg,image/png,image/webp,application/pdf" required class="mt-1 w-full text-[14px] file:mr-3 file:min-h-[44px] file:rounded-xl file:border-0 file:bg-mist-100 file:px-4 file:font-semibold file:text-accent-700"></label>
+        <button type="submit" class="min-h-[48px] rounded-xl bg-accent-600 text-white font-semibold px-6 hover:bg-accent-700 transition">{{ label }}</button>
+    </form>
+    {% endmacro %}
+    {% if doc %}
+    <p class="mt-2 text-[14px] text-slate-700 break-words"><span class="text-emerald-600" aria-hidden="true">&#10003;</span> {{ 'Uploaded:' if en else 'Subido:' }} <span class="font-semibold">{{ doc.original_filename }}</span></p>
+    {% if can_upload or can_remove %}
+    <div class="mt-3 flex flex-wrap gap-2 items-start">
+        {% if can_upload %}
+        <details class="min-w-0">
+            <summary class="inline-flex items-center min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-[14px] font-semibold text-accent-700 cursor-pointer">{{ 'Replace file' if en else 'Cambiar archivo' }}</summary>
+            {{ upload_form('Replace' if en else 'Cambiar') }}
+        </details>
+        {% endif %}
+        {% if can_remove %}
+        <form method="post" novalidate><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="action" value="remove">
+            <button type="submit" class="inline-flex items-center min-h-[44px] px-4 rounded-xl border border-red-200 bg-white text-[14px] font-semibold text-red-700 hover:bg-red-50">{{ 'Remove file' if en else 'Eliminar archivo' }}</button></form>
+        {% endif %}
+    </div>
+    {% endif %}
+    {% else %}
+    <p class="mt-2 text-[14px] text-slate-600">{{ 'No passport uploaded yet. You can also do this later from My Account.' if en else 'Aún no has subido el pasaporte. También puedes hacerlo después desde Mi Cuenta.' }}</p>
+    {% if can_upload %}{{ upload_form('Upload' if en else 'Subir') }}
+    <p class="mt-2 text-[12px] text-slate-500">{{ 'A clear photo of the whole page, not cropped.' if en else 'Una foto clara de toda la página, sin cortes.' }}</p>{% endif %}
+    {% endif %}
+</section>
+
+<section id="confirm" class="mt-5 rounded-card bg-white border border-slate-100 shadow-card p-4 sm:p-5">
+    <h2 class="text-[15px] font-bold text-brand-800">{{ '2. Confirm the information' if en else '2. Confirma la información' }}</h2>
+    {% if pending and pending.source != 'pending_read' and pending.values_json and pending.values_json != '{}' %}
+    <p class="mt-1 text-[14px] text-brand-800 font-semibold">{{ 'We found this information on the passport.' if en else 'Encontramos esta información en el pasaporte.' }}</p>
+    <p class="text-[13px] text-slate-600">{{ 'Check it and fix anything that is wrong. Then press Confirm.' if en else 'Revísala y corrige lo que esté mal. Luego presiona Confirmar.' }}</p>
+    {% else %}
+    <p class="mt-1 text-[13px] text-slate-600">{{ 'Type the details as they appear on the passport. Then press Confirm.' if en else 'Escribe los datos como aparecen en el pasaporte. Luego presiona Confirmar.' }}</p>
+    {% endif %}
+    {% if state.confirmed %}<p class="mt-2 text-[13px] font-semibold text-emerald-700"><span aria-hidden="true">&#10003;</span> {{ 'Confirmed. You can still correct anything below.' if en else 'Confirmado. Aún puedes corregir lo que necesites abajo.' }}</p>{% endif %}
+    <form method="post" class="mt-4 grid sm:grid-cols-2 gap-3" novalidate autocomplete="off">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="action" value="confirm">
+        {% for name, le, ls, kind, required in fields %}
+        <label class="block {{ 'sm:col-span-2' if name == 'a_nationality' else '' }}">
+            <span class="block text-xs font-semibold text-slate-500">{{ le if en else ls }}{% if not required %} <span class="font-normal">({{ 'optional' if en else 'opcional' }})</span>{% endif %}</span>
+            {% if kind == 'sex' %}
+            <select name="{{ name }}" class="mt-1 w-full min-h-[48px] rounded-xl border {{ 'border-red-400' if errors.get(name) else 'border-slate-200' }} px-3 text-[15px] bg-white">
+                <option value="">—</option>
+                <option value="male" {% if values.get(name) == 'male' %}selected{% endif %}>{{ 'Male' if en else 'Masculino' }}</option>
+                <option value="female" {% if values.get(name) == 'female' %}selected{% endif %}>{{ 'Female' if en else 'Femenino' }}</option>
+            </select>
+            {% else %}
+            <input type="{{ 'date' if kind == 'date' else 'text' }}" name="{{ name }}" value="{{ values.get(name, '') }}" {% if kind == 'number' %}maxlength="20" autocapitalize="characters"{% else %}maxlength="60"{% endif %}
+                   class="mt-1 w-full min-h-[48px] rounded-xl border {{ 'border-red-400' if errors.get(name) else 'border-slate-200' }} px-3.5 text-[15px]">
+            {% endif %}
+            {% if errors.get(name) %}<span class="mt-1 block text-[12px] text-red-600" role="alert">{{ errors[name] }}</span>{% endif %}
+        </label>
+        {% endfor %}
+        <div class="sm:col-span-2">
+            <button type="submit" class="w-full sm:w-auto min-h-[52px] rounded-[14px] bg-accent-600 text-white font-semibold px-8 hover:bg-accent-700 transition">{{ 'Confirm' if en else 'Confirmar' }}</button>
+        </div>
+    </form>
+</section>
+{% endblock %}

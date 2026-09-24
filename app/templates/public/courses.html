@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}{{ t('courses_title') }} — OG Multiservices LLC{% endblock %}
+{% set page_description = t('courses_meta_description') %}
+
+{% block content %}
+<section class="bg-gradient-to-b from-academy-50 via-white to-white">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-2 sm:pt-12">
+        <span class="inline-flex items-center gap-2 rounded-full bg-academy-500/10 text-academy-700 text-[11px] font-bold tracking-wider uppercase px-3 py-1">{{ t('nav_courses') }}</span>
+        <p class="mt-1.5 text-xs font-medium text-slate-500">{{ t('academy_division') }}</p>
+        <h1 class="mt-3 text-[1.75rem] leading-tight sm:text-4xl font-extrabold tracking-tight text-brand-800 text-balance max-w-2xl">{{ t('courses_title') }}</h1>
+        <p class="mt-2.5 text-[15px] sm:text-lg text-slate-600 max-w-2xl">{{ t('courses_subtitle') }}</p>
+    </div>
+</section>
+<section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+
+    {% if courses or query or active_category %}
+    <form method="GET" class="mb-8 space-y-4">
+        <input type="text" name="q" value="{{ query }}" placeholder="{{ t('crs_search_placeholder') }}"
+               class="w-full max-w-md rounded-lg border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-academy-500">
+        {% if categories %}
+        <div class="flex flex-wrap gap-2">
+            <a href="{{ url_for('public.courses', lang=lang, q=query) }}"
+               class="text-sm font-medium px-3 py-1.5 rounded-full {{ 'bg-academy-500 text-white' if not active_category else 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}">
+                {{ t('crs_all_categories') }}
+            </a>
+            {% for cat in categories %}
+            <a href="{{ url_for('public.courses', lang=lang, q=query, category=cat) }}"
+               class="text-sm font-medium px-3 py-1.5 rounded-full {{ 'bg-academy-500 text-white' if active_category == cat else 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}">
+                {{ cat }}
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </form>
+    {% endif %}
+
+    {% if courses %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for course in courses %}
+        {% set accent = course.accent_color or '#b8860b' %}
+        <a href="{{ url_for('public.course_detail', lang=lang, slug=course.slug) }}"
+           style="--course-accent: {{ accent }}"
+           class="rounded-2xl border border-slate-100 overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition flex flex-col">
+            {% if course.cover_image %}
+            <img src="{{ url_for('public.course_asset', lang=lang, course_id=course.id, stored_path=course.cover_image) }}"
+                 alt="{{ course.title(lang) }}" class="w-full h-40 object-cover" loading="lazy" width="400" height="160">
+            {% else %}
+            <div class="h-1.5" style="background-color: var(--course-accent)"></div>
+            {% endif %}
+            <div class="p-6 flex flex-col flex-1">
+                {% if course.category %}
+                <span class="text-[10px] font-semibold uppercase tracking-wide mb-1" style="color: var(--course-accent)">{{ course.category }}</span>
+                {% endif %}
+                <h3 class="font-semibold text-slate-900">{{ course.title(lang) }}</h3>
+                <p class="mt-2 text-sm text-slate-600 flex-1">{{ course.subtitle(lang) }}</p>
+                <p class="mt-4 text-xs text-slate-400">{{ course.lesson_count }} {{ t('crs_lessons_count') }} · {{ course.sections|length }} {{ t('crs_sections_count') }}</p>
+                <span class="mt-3 inline-block text-sm font-semibold" style="color: var(--course-accent)">{{ t('crs_view_course') }} &rarr;</span>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% elif query or active_category %}
+    <div class="rounded-2xl border-2 border-dashed border-slate-200 p-16 text-center">
+        <p class="text-slate-600 mb-4">{{ t('crs_no_results') }}</p>
+        <a href="{{ url_for('public.courses', lang=lang) }}" class="text-academy-600 font-semibold hover:text-academy-700">{{ t('crs_clear_filters') }}</a>
+    </div>
+    {% else %}
+    <div class="rounded-2xl border-2 border-dashed border-slate-200 p-16 text-center">
+        <div class="w-14 h-14 mx-auto rounded-xl bg-academy-50 text-academy-600 flex items-center justify-center font-bold text-xl mb-4">
+            OG
+        </div>
+        <p class="text-slate-600 max-w-md mx-auto">{{ t('courses_coming_soon') }}</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

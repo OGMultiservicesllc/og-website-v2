@@ -1,0 +1,23 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+instance/
+*.db
+.DS_Store
+
+# Local pre-migration snapshots (DB/code backups taken before risky migrations, e.g.
+# backups/2026-09-18_pre_redesign/) — never committed; these are point-in-time local
+# safety copies, not project history (git already provides that).
+backups/
+
+# Generated content-export packages (data.json + real media files) produced by
+# content_migration/export_content.py — binary content bound for the VPS via
+# scp, not source code; regenerate anytime with the same command.
+content_migration/exports/
+
+# Leftover packages from the old manual ZIP/SCP deploy process — git replaces this,
+# never source of truth.
+*.zip
+

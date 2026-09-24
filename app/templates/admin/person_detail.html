@@ -1,0 +1,76 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}{{ person.full_name }} — Person{% endblock %}
+{% block content %}
+<a href="{{ url_for('admin.person_list') }}" class="text-sm text-slate-500 hover:text-accent-600">&larr; People</a>
+<div class="mt-2 mb-6">
+    <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Person</p>
+    <h1 class="text-2xl font-bold text-brand-800">{{ person.full_name }}{% if person.is_self %} <span class="ml-1 align-middle text-[10px] font-bold uppercase tracking-wide text-accent-700 bg-accent-50 px-1.5 py-0.5 rounded">Customer · has OG login</span>{% else %} <span class="ml-1 align-middle text-[10px] font-bold uppercase tracking-wide text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">No login</span>{% endif %}</h1>
+    <p class="text-sm text-slate-500 mt-1">Belongs to <a class="text-accent-700 hover:underline" href="{{ url_for('admin.customer_detail', student_id=person.customer_id) }}">{{ person.customer.name }}</a>'s data. Facts follow this person across cases; case and application answers stay separate.</p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div class="lg:col-span-2 space-y-4">
+    <section class="bg-white border border-slate-100 rounded-2xl p-5">
+        <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-3">Cases and application roles</h2>
+        {% for x in participation %}
+        <div class="py-2 border-t first:border-t-0 border-slate-100">
+            <p class="text-sm"><a href="{{ url_for('admin.ocase_detail', case_id=x.case.id) }}" class="font-mono font-semibold text-accent-700 hover:underline">{{ x.case.case_number }}</a> <span class="text-slate-500">&middot; {{ type_title(x.case.case_type) }} &middot; as {{ x.cp.full_name }}</span></p>
+            <p class="mt-0.5 text-sm text-slate-700">{% for sub, role in x.roles %}<a href="{{ url_for('admin.form_submission_detail', submission_id=sub.id) }}" class="inline-flex items-center rounded-full bg-fog-100 px-2.5 py-1 text-xs font-semibold text-slate-700 mr-1 mb-1 hover:bg-mist-100">{{ sub.form.source_form_name or sub.form.name_admin }} &rarr; {{ role }}</a>{% else %}<span class="text-xs text-slate-400">No application role yet</span>{% endfor %}</p>
+        </div>
+        {% else %}<p class="text-sm text-slate-500">This person is not in any case.</p>{% endfor %}
+    </section>
+
+    <section class="bg-white border border-slate-100 rounded-2xl p-5">
+        <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-3">Shared facts</h2>
+        {% if facts %}
+        <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left">
+            <thead class="text-xs text-slate-400"><tr><th class="py-1.5 pr-3 font-semibold">Fact</th><th class="py-1.5 pr-3 font-semibold">Scope</th><th class="py-1.5 pr-3 font-semibold">Value</th><th class="py-1.5 pr-3 font-semibold">Sources</th><th class="py-1.5 font-semibold">Status</th></tr></thead>
+            <tbody class="divide-y divide-slate-100">
+            {% for f in facts %}
+            <tr>
+                <td class="py-2 pr-3 text-slate-500 whitespace-nowrap align-top">{{ f.label }}</td>
+                <td class="py-2 pr-3 text-xs align-top {{ 'text-accent-700' if f.scope == 'stable' else 'text-slate-500' }}">{{ f.scope }}</td>
+                <td class="py-2 pr-3 text-slate-800 break-words align-top">{{ f.display }}</td>
+                <td class="py-2 pr-3 text-xs text-slate-500 align-top">
+                    {% for c in f.claims %}<span class="block">{{ c.form or '—' }}{% if c.code %} <span class="font-mono">{{ c.code }}</span>{% endif %} &middot; {{ c.state }} &middot; {{ c.at.strftime('%b %d, %Y') if c.at else '' }}{% if c.display and c.display != f.display %} &middot; says “{{ c.display }}”{% endif %}</span>{% endfor %}
+                </td>
+                <td class="py-2 whitespace-nowrap align-top">{% if f.status == 'confirmed' %}<span class="text-xs font-semibold text-emerald-700">Confirmed {{ f.last_confirmed_at.strftime('%b %d, %Y') }}</span>{% elif f.status == 'needs_review' %}<span class="text-xs font-semibold text-amber-700">Conflict</span>{% else %}<span class="text-xs text-slate-400">Unconfirmed</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <p class="mt-2 text-[11px] text-slate-400">Sensitive values (SSN, A-Number) are masked here.</p>
+        {% else %}<p class="text-sm text-slate-500">No facts recorded yet.</p>{% endif %}
+    </section>
+</div>
+
+<div class="space-y-4">
+    <section class="bg-white border {{ 'border-amber-300' if conflicts else 'border-slate-100' }} rounded-2xl p-5">
+        <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Conflicts</h2>
+        {% for f in conflicts %}
+        <div class="py-2 border-t first:border-t-0 border-slate-100 text-sm"><p class="font-semibold text-amber-800">{{ f.label }} — unresolved</p>
+            <p class="text-xs text-slate-600">{% for c in f.claims %}{{ c.display }} <span class="text-slate-400">({{ c.form or '—' }}{% if c.code %} {{ c.code }}{% endif %}, {{ c.state }})</span>{% if not loop.last %} vs {% endif %}{% endfor %}</p>
+            <p class="text-[11px] text-slate-400 mt-0.5">The customer resolves it the next time an application asks for this information.</p></div>
+        {% endfor %}
+        {% for e in resolved %}
+        <div class="py-2 border-t first:border-t-0 border-slate-100 text-sm"><p class="font-semibold text-emerald-700">{{ e.fact.fact_key.replace('_', ' ') }} — resolved</p>
+            <p class="text-xs text-slate-500">{{ e.created_at.strftime('%b %d, %Y') }} by {{ e.actor }}{% if e.submission %} in {{ e.submission.code }}{% endif %}. Earlier values are kept as history.</p></div>
+        {% endfor %}
+        {% if not conflicts and not resolved %}<p class="text-sm text-slate-500">No conflicts.</p>{% endif %}
+    </section>
+
+    <section class="bg-white border border-slate-100 rounded-2xl p-5">
+        <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Same human?</h2>
+        {% for o, why in suggestions %}
+        <form method="POST" action="{{ url_for('admin.person_merge', person_id=person.id) }}" class="py-2 border-t first:border-t-0 border-slate-100" data-confirm="Link {{ o.full_name }} to {{ person.full_name }}? Their facts merge; any different value becomes a conflict.">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="other_id" value="{{ o.id }}">
+            <p class="text-sm"><span class="font-semibold text-slate-800">{{ o.full_name }}</span> <span class="text-xs text-slate-500">&middot; {{ why }}</span></p>
+            <button class="mt-1 text-xs font-semibold text-accent-700 hover:underline">Link as the same person</button>
+        </form>
+        {% else %}<p class="text-sm text-slate-500">No likely matches. People are never linked by name alone.</p>{% endfor %}
+    </section>
+</div>
+</div>
+{% endblock %}

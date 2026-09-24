@@ -1,0 +1,47 @@
+{# Quote request with document upload — the Certified Translations category's own entry point.
+   Public (no account); posts to the existing translation_quote handler. #}
+<section id="quote" class="scroll-mt-20 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12">
+    <div class="rounded-panel bg-mist-100 border border-mist-200 p-5 sm:p-8 grid grid-cols-1 lg:grid-cols-[.9fr_1.1fr] gap-6 lg:gap-10">
+        <div>
+            <h2 class="text-xl sm:text-2xl font-extrabold tracking-tight text-brand-800">{{ t('tr_quote_title') }}</h2>
+            <p class="mt-1.5 text-sm sm:text-[15px] text-slate-600">{{ t('tr_quote_subtitle') }}</p>
+            {% if category.intro_body(lang) %}<p class="mt-4 text-sm text-slate-600 leading-relaxed hidden lg:block">{{ category.intro_body(lang) }}</p>{% endif %}
+            {% if category.contact_note(lang) %}
+            <a href="{{ biz.WHATSAPP_LINK }}" target="_blank" rel="noopener" class="mt-4 flex items-center gap-3 rounded-card border border-emerald-200 bg-emerald-50 px-4 py-3 hover:border-emerald-300 transition">
+                <span class="w-9 h-9 rounded-full bg-wa text-white flex items-center justify-center shrink-0">{{ icon('whatsapp', 'w-5 h-5') }}</span>
+                <span class="text-sm font-medium text-emerald-900">{{ category.contact_note(lang) }}</span>
+            </a>
+            {% endif %}
+        </div>
+        <form method="POST" action="{{ url_for('public.translation_quote', lang=lang) }}" enctype="multipart/form-data" class="space-y-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <fieldset>
+                <legend class="block text-[13px] font-semibold text-brand-800 mb-1.5">{{ t('tr_quote_language') }}</legend>
+                <div class="grid grid-cols-3 gap-2">
+                    {% for value, key in [('Spanish to English', 'tr_quote_lang_es_en'), ('English to Spanish', 'tr_quote_lang_en_es'), ('Other', 'tr_quote_lang_other')] %}
+                    <label class="flex items-center justify-center text-center rounded-xl border border-slate-200 bg-white px-2 py-2.5 text-[13px] font-medium text-slate-700 cursor-pointer has-[:checked]:bg-accent-600 has-[:checked]:border-accent-600 has-[:checked]:text-white has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent-500 transition">
+                        <input type="radio" name="target_language" value="{{ value }}" {{ 'checked' if loop.first else '' }} class="sr-only">
+                        {{ t(key) }}
+                    </label>
+                    {% endfor %}
+                </div>
+            </fieldset>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div><label for="tq-name" class="sr-only">{{ t('contact_name') }}</label>
+                    <input id="tq-name" type="text" name="name" required autocomplete="name" placeholder="{{ t('contact_name') }}" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-[15px] focus:outline-none focus:ring-2 focus:ring-accent-500"></div>
+                <div><label for="tq-email" class="sr-only">{{ t('contact_email') }}</label>
+                    <input id="tq-email" type="email" name="email" required autocomplete="email" placeholder="{{ t('contact_email') }}" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-[15px] focus:outline-none focus:ring-2 focus:ring-accent-500"></div>
+            </div>
+            <div><label for="tq-phone" class="sr-only">{{ t('contact_phone') }}</label>
+                <input id="tq-phone" type="tel" name="phone" autocomplete="tel" placeholder="{{ t('contact_phone') }}" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-[15px] focus:outline-none focus:ring-2 focus:ring-accent-500"></div>
+            <div>
+                <label for="tq-file" class="block text-[13px] font-semibold text-brand-800 mb-1">{{ t('tr_quote_file') }}</label>
+                <input id="tq-file" type="file" name="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp"
+                       class="w-full rounded-xl border border-dashed border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-accent-600 file:text-white file:px-3 file:py-1.5 file:font-medium">
+            </div>
+            <div><label for="tq-msg" class="sr-only">{{ t('tr_quote_notes') }}</label>
+                <textarea id="tq-msg" name="message" rows="3" placeholder="{{ t('tr_quote_notes') }}" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-[15px] focus:outline-none focus:ring-2 focus:ring-accent-500"></textarea></div>
+            <button type="submit" class="w-full rounded-xl bg-accent-600 text-white font-semibold py-3.5 text-[15px] hover:bg-accent-700 transition shadow-sm shadow-accent-600/25">{{ t('tr_quote_submit') }}</button>
+        </form>
+    </div>
+</section>

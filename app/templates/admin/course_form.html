@@ -1,0 +1,259 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}{{ 'Edit Course' if course else 'New Course' }}{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    {% if course %}
+    <a href="{{ url_for('admin.course_builder', course_id=course.id) }}" class="text-sm text-slate-500 hover:text-accent-600">&larr; Back to course</a>
+    {% else %}
+    <a href="{{ url_for('admin.courses_list') }}" class="text-sm text-slate-500 hover:text-accent-600">&larr; Back to courses</a>
+    {% endif %}
+    <h1 class="text-2xl font-bold text-brand-800 mt-2">{{ 'Edit Course' if course else 'New Course' }}</h1>
+</div>
+
+<form method="POST" enctype="multipart/form-data" class="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 space-y-6 max-w-2xl">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Title (English)</label>
+            <input type="text" name="title_en" required value="{{ course.title_en if course else '' }}"
+                   class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Título (Español)</label>
+            <input type="text" name="title_es" required value="{{ course.title_es if course else '' }}"
+                   class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+    </div>
+
+    <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Category</label>
+        <input type="text" name="category" value="{{ course.category if course else '' }}"
+               placeholder="e.g. Notary, Tax &amp; ITIN, Immigration"
+               list="category-suggestions"
+               class="w-full max-w-xs rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        <datalist id="category-suggestions">
+            {% for cat in existing_categories %}
+            <option value="{{ cat }}">
+            {% endfor %}
+        </datalist>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Subtitle (English)</label>
+            <input type="text" name="subtitle_en" value="{{ course.subtitle_en if course else '' }}"
+                   placeholder="Short one-line summary for the catalog card"
+                   class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Subtítulo (Español)</label>
+            <input type="text" name="subtitle_es" value="{{ course.subtitle_es if course else '' }}"
+                   class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Description (English)</label>
+            <textarea name="description_en" rows="5"
+                      class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ course.description_en if course else '' }}</textarea>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Descripción (Español)</label>
+            <textarea name="description_es" rows="5"
+                      class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ course.description_es if course else '' }}</textarea>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Price</label>
+            <div class="flex items-center gap-2">
+                <span class="text-sm text-slate-500">$</span>
+                <input type="number" name="price" min="0" step="0.01"
+                       value="{{ '%.2f' % (course.price_cents / 100) if course and course.price_cents else '' }}"
+                       placeholder="Leave blank = free"
+                       class="w-32 rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            </div>
+            <p class="text-xs text-slate-400 mt-1">Blank or $0 = free enrollment (no Square payment). Otherwise students see "Enroll &amp; Pay".</p>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Course Access Duration</label>
+            <div class="flex items-center gap-2">
+                <input type="number" name="access_duration_days" min="1"
+                       value="{{ course.access_duration_days if course and course.access_duration_days else '' }}"
+                       placeholder="Leave blank = unlimited"
+                       class="w-32 rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+                <span class="text-sm text-slate-500">days from enrollment</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-1">After this, students keep their progress and exam history but content locks until they renew access.</p>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Course Accent Color</label>
+            <div class="flex items-center gap-2">
+                <input type="color" id="accent-color-picker" value="{{ course.accent_color if course and course.accent_color else '#b8860b' }}"
+                       class="w-11 h-10 rounded-lg border border-slate-200 cursor-pointer p-0.5">
+                <input type="text" name="accent_color" id="accent-color-hex"
+                       value="{{ course.accent_color if course and course.accent_color else '' }}"
+                       placeholder="#b8860b" pattern="^#[0-9a-fA-F]{6}$"
+                       class="w-32 rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-accent-500">
+            </div>
+            <p class="text-xs text-slate-400 mt-1">Used subtly in the catalog, progress bar and highlights. Leave blank for the default OG Academy gold.</p>
+        </div>
+    </div>
+
+    <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Course cover image</label>
+        <p class="text-xs text-slate-500 mb-2">Shown on the course catalog card and at the top of the course page. Landscape images work best.</p>
+        <input type="file" name="cover_image" accept="image/*"
+               class="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 file:px-3 file:py-2 file:font-medium">
+        {% if course and course.cover_image %}
+        <div class="mt-2 flex items-center gap-3">
+            <img src="{{ url_for('admin.media', stored_path=course.cover_image) }}" alt="Cover" class="h-24 rounded-lg border border-slate-100 object-cover">
+            <button type="submit" form="cover-delete-form" class="text-sm font-medium text-red-500 hover:text-red-700">Remove cover image</button>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="border-t border-slate-100 pt-6">
+        <h2 class="font-semibold text-slate-900 mb-1">Certificate</h2>
+        <p class="text-xs text-slate-500 mb-4">Automatically generated for each student who meets the trigger below — no manual upload needed per student.</p>
+
+        <label class="flex items-center gap-2.5 text-sm font-medium text-slate-700 mb-4">
+            <input type="checkbox" name="certificate_enabled" {{ 'checked' if not course or course.certificate_enabled else '' }}
+                   class="w-4 h-4 rounded border-slate-300 text-accent-600 focus:ring-accent-500">
+            Enable Certificate
+        </label>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Certificate Trigger</label>
+                <select name="certificate_trigger" class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+                    <option value="course_completion" {{ 'selected' if not course or course.certificate_trigger == 'course_completion' else '' }}>Course Completion (all lessons)</option>
+                    <option value="final_exam_passed" {{ 'selected' if course and course.certificate_trigger == 'final_exam_passed' else '' }}>Final Exam Passed</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Certificate Template</label>
+                <select name="certificate_template" class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+                    <option value="classic" {{ 'selected' if not course or course.certificate_template == 'classic' else '' }}>Classic Professional</option>
+                    <option value="modern" {{ 'selected' if course and course.certificate_template == 'modern' else '' }}>Modern Academy</option>
+                    <option value="premium" {{ 'selected' if course and course.certificate_template == 'premium' else '' }}>Premium Formal</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Certificate Title</label>
+                <input type="text" name="certificate_title" value="{{ (course.certificate_title if course else '') or '' }}"
+                       placeholder="Certificate of Completion"
+                       class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Issuer Name</label>
+                <input type="text" name="certificate_issuer_name" value="{{ (course.certificate_issuer_name if course else '') or '' }}"
+                       placeholder="OG Academy"
+                       class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Issuer Subtitle</label>
+                <input type="text" name="certificate_issuer_subtitle" value="{{ (course.certificate_issuer_subtitle if course else '') or '' }}"
+                       placeholder="A Division of OG Multiservices LLC"
+                       class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            </div>
+            <div></div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Instructor / Signatory Name</label>
+                <input type="text" name="certificate_signatory_name" value="{{ (course.certificate_signatory_name if course else '') or '' }}"
+                       placeholder="Marcos Ogando"
+                       class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Instructor Title</label>
+                <input type="text" name="certificate_signatory_title" value="{{ (course.certificate_signatory_title if course else '') or '' }}"
+                       placeholder="Founder / Instructor"
+                       class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Signature image (optional)</label>
+                <input type="file" name="certificate_signature_file" accept="image/*"
+                       class="w-full text-xs text-slate-600 file:mr-2 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 file:px-2.5 file:py-1.5 file:font-medium">
+                {% if course and course.certificate_signature_image %}
+                <label class="flex items-center gap-1.5 text-xs text-slate-500 mt-1.5">
+                    <input type="checkbox" name="remove_certificate_signature" class="rounded border-slate-300"> Remove current signature image
+                </label>
+                {% endif %}
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Certificate logo (optional)</label>
+                <input type="file" name="certificate_logo_file" accept="image/*"
+                       class="w-full text-xs text-slate-600 file:mr-2 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 file:px-2.5 file:py-1.5 file:font-medium">
+                <p class="text-xs text-slate-400 mt-1">Defaults to no logo mark if left blank.</p>
+                {% if course and course.certificate_logo_image %}
+                <label class="flex items-center gap-1.5 text-xs text-slate-500 mt-1.5">
+                    <input type="checkbox" name="remove_certificate_logo" class="rounded border-slate-300"> Remove current logo
+                </label>
+                {% endif %}
+            </div>
+        </div>
+
+        <p class="text-xs text-slate-500 mb-2">Accent color reuses this course's Course Accent Color above.</p>
+
+        <div class="space-y-2">
+            <label class="flex items-center gap-2.5 text-sm text-slate-700">
+                <input type="checkbox" name="certificate_show_id" {{ 'checked' if not course or course.certificate_show_id else '' }}
+                       class="w-4 h-4 rounded border-slate-300 text-accent-600 focus:ring-accent-500">
+                Show Certificate ID on the certificate
+            </label>
+            <label class="flex items-center gap-2.5 text-sm text-slate-700">
+                <input type="checkbox" name="certificate_show_qr" {{ 'checked' if not course or course.certificate_show_qr else '' }}
+                       class="w-4 h-4 rounded border-slate-300 text-accent-600 focus:ring-accent-500">
+                Enable QR verification on the certificate
+            </label>
+        </div>
+    </div>
+
+    {% if course %}
+    <label class="flex items-center gap-2.5 text-sm font-medium text-slate-700">
+        <input type="checkbox" name="is_published" {{ 'checked' if course.is_published else '' }}
+               class="w-4 h-4 rounded border-slate-300 text-accent-600 focus:ring-accent-500">
+        Published (visible on the public course catalog)
+    </label>
+    {% else %}
+    <p class="text-sm text-slate-500">You'll be able to publish the course after adding at least one section and lesson.</p>
+    {% endif %}
+
+    <div class="flex items-center gap-3 pt-2">
+        <button type="submit" name="action" value="save" class="rounded-lg bg-accent-600 text-white font-semibold px-6 py-2.5 text-sm hover:bg-accent-700 transition">
+            {{ 'Save Changes' if course else 'Create Course & Continue' }}
+        </button>
+        <button type="submit" name="action" value="preview" class="rounded-lg border border-slate-200 text-slate-600 font-semibold px-5 py-2.5 text-sm hover:border-accent-300 transition">
+            Save &amp; Preview Certificate
+        </button>
+    </div>
+</form>
+
+{% if course and course.cover_image %}
+<form id="cover-delete-form" method="POST" action="{{ url_for('admin.course_cover_delete', course_id=course.id) }}" data-confirm="Remove the cover image?" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+</form>
+{% endif %}
+
+<script>
+    (function () {
+        var picker = document.getElementById('accent-color-picker');
+        var hex = document.getElementById('accent-color-hex');
+        if (!picker || !hex) return;
+        picker.addEventListener('input', function () { hex.value = picker.value; });
+        hex.addEventListener('input', function () {
+            if (/^#[0-9a-fA-F]{6}$/.test(hex.value)) picker.value = hex.value;
+        });
+    })();
+</script>
+{% endblock %}

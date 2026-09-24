@@ -1,0 +1,102 @@
+<!-- Media Library picker (shared by every image slot) -->
+<div id="media-picker" class="hidden fixed inset-0 z-[90] bg-black/50 items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="media-picker-title">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[88vh] flex flex-col overflow-hidden">
+        <div class="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-100">
+            <h2 id="media-picker-title" class="font-semibold text-slate-900">Choose an image</h2>
+            <button type="button" data-picker-close class="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Close">&times;</button>
+        </div>
+        <div class="px-5 py-3 border-b border-slate-100 flex flex-wrap gap-2 items-center">
+            <input type="search" data-picker-search placeholder="Search images…" class="flex-1 min-w-[10rem] rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            <label class="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium hover:bg-slate-50 cursor-pointer transition">
+                Upload new
+                <input type="file" data-picker-upload accept=".jpg,.jpeg,.png,.webp" class="hidden">
+            </label>
+        </div>
+        <p data-picker-error class="hidden px-5 pt-3 text-sm text-red-600"></p>
+        <div data-picker-grid class="p-5 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 min-h-[12rem]"></div>
+        <p data-picker-empty class="hidden px-5 pb-6 text-sm text-slate-500 text-center">No images yet — use “Upload new”, or manage images in the Media Library.</p>
+    </div>
+</div>
+<script>
+(function () {
+    var modal = document.getElementById('media-picker');
+    if (!modal) return;
+    var grid = modal.querySelector('[data-picker-grid]');
+    var search = modal.querySelector('[data-picker-search]');
+    var empty = modal.querySelector('[data-picker-empty]');
+    var errorEl = modal.querySelector('[data-picker-error]');
+    var csrf = {{ csrf_token|tojson }};
+    var activeSlot = null, timer = null;
+
+    function open(slot) {
+        activeSlot = slot;
+        modal.classList.remove('hidden'); modal.classList.add('flex');
+        search.value = ''; errorEl.classList.add('hidden');
+        load('');
+        search.focus();
+    }
+    function close() { modal.classList.add('hidden'); modal.classList.remove('flex'); activeSlot = null; }
+
+    function load(q) {
+        fetch({{ url_for('admin.media_picker_json')|tojson }} + '?q=' + encodeURIComponent(q), { credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) { render(data.assets || []); });
+    }
+    function render(assets) {
+        grid.innerHTML = '';
+        empty.classList.toggle('hidden', assets.length > 0);
+        assets.forEach(function (a) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'group text-left rounded-xl border border-slate-200 overflow-hidden hover:border-accent-500 focus:outline-none focus:ring-2 focus:ring-accent-500 transition';
+            b.innerHTML = '<div class="aspect-[4/3] bg-slate-100"><img class="w-full h-full object-cover" loading="lazy" alt=""></div><div class="px-2 py-1.5"><p class="text-xs font-medium text-slate-700 truncate"></p></div>';
+            b.querySelector('img').src = a.url;
+            b.querySelector('p').textContent = a.title;
+            b.addEventListener('click', function () { choose(a); });
+            grid.appendChild(b);
+        });
+    }
+    function choose(a) {
+        if (!activeSlot) return;
+        activeSlot.querySelector('[data-slot-input]').value = a.id;
+        var prev = activeSlot.querySelector('[data-slot-preview]');
+        prev.innerHTML = '';
+        var img = document.createElement('img');
+        img.src = a.url; img.alt = ''; img.className = 'w-full h-full object-cover';
+        prev.appendChild(img);
+        activeSlot.querySelector('[data-slot-pick]').textContent = 'Change';
+        activeSlot.querySelector('[data-slot-clear]').classList.remove('hidden');
+        close();
+    }
+
+    document.addEventListener('click', function (e) {
+        var pick = e.target.closest('[data-slot-pick]');
+        if (pick) { open(pick.closest('[data-slot]')); return; }
+        var clear = e.target.closest('[data-slot-clear]');
+        if (clear) {
+            var slot = clear.closest('[data-slot]');
+            slot.querySelector('[data-slot-input]').value = '';
+            slot.querySelector('[data-slot-preview]').innerHTML = '<div class="absolute inset-0 flex items-center justify-center text-slate-400 text-xs">Placeholder shown on the site</div>';
+            slot.querySelector('[data-slot-pick]').textContent = 'Choose from Library';
+            clear.classList.add('hidden');
+            return;
+        }
+        if (e.target.closest('[data-picker-close]') || e.target === modal) close();
+    });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !modal.classList.contains('hidden')) close(); });
+    search.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(function () { load(search.value); }, 250); });
+
+    modal.querySelector('[data-picker-upload]').addEventListener('change', function (e) {
+        var file = e.target.files[0]; if (!file) return;
+        var fd = new FormData(); fd.append('file', file);
+        errorEl.classList.add('hidden');
+        fetch({{ url_for('admin.media_upload_json')|tojson }}, { method: 'POST', body: fd, headers: { 'X-CSRFToken': csrf }, credentials: 'same-origin' })
+            .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+            .then(function (res) {
+                if (!res.ok) { errorEl.textContent = res.j.error || 'Upload failed.'; errorEl.classList.remove('hidden'); return; }
+                choose(res.j.asset);
+            });
+        e.target.value = '';
+    });
+})();
+</script>

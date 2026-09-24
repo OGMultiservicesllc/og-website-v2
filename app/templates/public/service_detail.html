@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% from "partials/ui.html" import btn, pill, page_hero, section_header, service_card, info_panel, cta_block, check_item, faq_list, media %}
+{% from "partials/icons.html" import icon %}
+{% block title %}{{ page_title }} — OG Multiservices LLC{% endblock %}
+
+{# One layout for every individual service (I-90, I-130, ITIN, a certified translation, an apostille…).
+   Everything comes from the Service record; nothing here is specific to one service. #}
+{% block content %}
+{% set wa = {'label': t('mobilebar_whatsapp'), 'href': biz.WHATSAPP_LINK, 'icon': 'whatsapp', 'variant': 'whatsapp', 'external': True} if whatsapp_enabled else None %}
+{{ page_hero(
+    svc.title(lang),
+    svc.hero_text(lang),
+    icon_name=svc.icon or category.icon,
+    primary=cta,
+    secondary=wa,
+    tertiary=secondary_cta,
+    image_url=hero_url,
+    mobile_image_url=hero_mobile_url,
+    focus=hero_focus,
+    notice=disclaimer or None,
+    breadcrumbs=[
+        {'label': t('breadcrumb_home'), 'href': url_for('public.home', lang=lang)},
+        {'label': category.title(lang), 'href': url_for(category.endpoint, lang=lang)},
+        {'label': svc.title(lang)}
+    ]
+) }}
+
+{% if application %}
+<section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-5" aria-label="{{ t('svc_resume_title') }}">
+    <div class="rounded-card bg-white border border-accent-200 shadow-card p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+        <div class="flex-1 min-w-0">
+            <p class="text-xs font-bold uppercase tracking-wider text-accent-700">{{ t('svc_resume_title') }}</p>
+            <p class="mt-1 text-[15px] font-semibold text-brand-800">{{ application.label }}{% if application.status == 'draft' %} · {{ t('svc_resume_pct') % application.percent }}{% endif %}</p>
+            {% if application.status == 'draft' %}
+            <div class="mt-2 h-2 max-w-xs rounded-full bg-fog-200 overflow-hidden" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ application.percent }}"><div class="h-full rounded-full bg-accent-600" style="width: {{ [application.percent, 4]|max }}%"></div></div>
+            {% endif %}
+            {% if application.updated_at %}<p class="mt-1.5 text-xs text-slate-500">{{ t('svc_resume_saved') }} {{ application.updated_at.strftime('%b %d, %Y') }}</p>{% endif %}
+        </div>
+        {% if not application.draft %}<a href="{{ application.url }}" class="inline-flex items-center justify-center min-h-[48px] rounded-[14px] bg-accent-600 text-white text-[15px] font-semibold px-6 hover:bg-accent-700 transition">{{ t('svc_resume_view') }}</a>{% endif %}
+    </div>
+</section>
+{% endif %}
+
+<!-- Where / how it is offered: real facts from the service record -->
+{% if svc.nj_in_person or svc.tx_in_person or svc.remote_nationwide %}
+<section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-1">
+    <ul class="og-scroll-x -mx-1 px-1 pb-1" aria-label="{{ t('svc_areas_title') }}">
+        {% if svc.nj_in_person %}<li>{{ pill(t('svc_scope_nj'), 'neutral', 'pin') }}</li>{% endif %}
+        {% if svc.tx_in_person %}<li>{{ pill(t('svc_scope_tx'), 'neutral', 'pin') }}</li>{% endif %}
+        {% if svc.remote_nationwide %}<li>{{ pill(t('svc_scope_remote'), 'neutral', 'globe') }}</li>{% endif %}
+        <li>{{ pill(t('svc_bilingual'), 'neutral', 'globe') }}</li>
+    </ul>
+</section>
+{% endif %}
+
+<!-- Short explanation -->
+{% if svc.content(lang) %}
+<section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-10">
+    <div class="grid grid-cols-1 {{ 'lg:grid-cols-[1.2fr_.8fr]' if overview_url else '' }} gap-6 lg:gap-10 items-center">
+        <div>
+            {{ section_header(svc.content_title(lang) or svc.title(lang), None, tag='h2') }}
+            <div class="text-[15px] text-slate-600 leading-relaxed space-y-3 max-w-2xl">
+                {% for p in content_paragraphs %}<p>{{ p }}</p>{% endfor %}
+            </div>
+        </div>
+        {% if overview_url %}{{ media(overview_url, svc.title(lang), '3-2', 'center', cls='rounded-panel shadow-card') }}{% endif %}
+    </div>
+</section>
+{% endif %}
+
+<!-- Key information: when it applies / what is included -->
+{% if when_needed or included %}
+<section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-10">
+    <div class="grid grid-cols-1 {{ 'md:grid-cols-2' if when_needed and included else '' }} gap-3 sm:gap-4">
+        {% if when_needed %}
+        <div class="rounded-panel bg-mist-50 border border-mist-200 p-4 sm:p-6">
+            <h2 class="font-bold text-brand-800 text-[17px] mb-3">{{ t('svc_when_title') }}</h2>
+            <ul class="space-y-2.5">{% for i in when_needed %}{{ check_item(i.title(lang)) }}{% endfor %}</ul>
+        </div>
+        {% endif %}
+        {% if included %}
+        <div class="rounded-panel bg-white border border-slate-100 shadow-card p-4 sm:p-6">
+            <h2 class="font-bold text-brand-800 text-[17px] mb-3">{{ t('svc_included_title') }}</h2>
+            <ul class="space-y-2.5">{% for i in included %}{{ check_item(i.title(lang)) }}{% endfor %}</ul>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
+
+<!-- Primary action, repeated after the key information so it is reachable without scrolling back up -->
+<section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8">
+    <div class="rounded-panel bg-brand-800 text-white p-5 sm:p-7 flex flex-col md:flex-row md:items-center gap-4 md:gap-8">
+        <div class="flex-1 min-w-0">
+            <p class="font-bold text-lg leading-snug">{{ t('svc_final_cta_title') }}</p>
+            <p class="mt-1 text-sm text-slate-300">{{ t('svc_final_cta_body') }}</p>
+        </div>
+        <div class="flex flex-col sm:flex-row sm:flex-wrap gap-2.5 md:shrink-0">
+            {{ btn(cta.label, cta.href, cta.variant or 'primary', None, 'lg', cta.external, trailing_icon='arrow-right') }}
+            {% if wa %}{{ btn(t('svc_send_whatsapp'), biz.WHATSAPP_LINK, 'whatsapp', 'whatsapp', 'lg', True) }}{% endif %}
+        </div>
+    </div>
+</section>
+
+{% if faq %}
+<section class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12">
+    {{ section_header(t('svc_faq_title'), None) }}
+    {{ faq_list(faq, lang) }}
+</section>
+{% endif %}
+
+<!-- Service areas (local SEO, scoped per service — see the Details tab in Admin) -->
+{% if svc.nj_in_person or svc.tx_in_person or svc.remote_nationwide %}
+<section class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12">
+    <div class="rounded-card border border-slate-100 bg-fog-50 p-4 sm:p-5 text-sm text-slate-600 leading-relaxed">
+        <h2 class="font-bold text-brand-800 text-[15px] mb-1.5">{{ t('svc_areas_title') }}</h2>
+        {% if svc.remote_nationwide and (svc.nj_in_person or svc.tx_in_person) %}
+            <p>{{ t('svc_areas_both_bases_nationwide') if (svc.nj_in_person and svc.tx_in_person) else t('svc_areas_nj_base_nationwide') }}</p>
+            <p class="mt-2 flex flex-wrap gap-x-3 text-xs font-medium">
+                {% if svc.nj_in_person %}<a href="{{ url_for('public.location_paterson', lang=lang) }}" class="text-accent-700 hover:underline">{{ t('svc_areas_paterson_link') }}</a>{% endif %}
+                {% if svc.tx_in_person %}<a href="{{ url_for('public.location_spring', lang=lang) }}" class="text-accent-700 hover:underline">{{ t('svc_areas_spring_link') }}</a>{% endif %}
+            </p>
+        {% else %}
+            {% if svc.nj_in_person %}<p><span class="font-medium text-slate-700">{{ t('svc_areas_nj_intro') }}</span> {{ biz.NJ_SERVICE_CITIES|join(', ') }}, NJ. <a href="{{ url_for('public.location_paterson', lang=lang) }}" class="text-accent-700 hover:underline">{{ t('svc_areas_paterson_link') }}</a></p>{% endif %}
+            {% if svc.tx_in_person %}<p class="mt-2"><span class="font-medium text-slate-700">{{ t('svc_areas_tx_intro') }}</span> {{ biz.TX_SERVICE_CITIES|join(', ') }}, TX. <a href="{{ url_for('public.location_spring', lang=lang) }}" class="text-accent-700 hover:underline">{{ t('svc_areas_spring_link') }}</a></p>{% endif %}
+            {% if svc.remote_nationwide %}<p class="mt-2">{{ t('svc_areas_remote_intro') }}</p>{% endif %}
+        {% endif %}
+        {% if scope_note %}<p class="mt-3 text-xs text-slate-500">{{ scope_note }}</p>{% endif %}
+    </div>
+</section>
+{% endif %}
+
+{% if related_cards %}
+<section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12">
+    {{ section_header(t('svc_related_title'), None, link_label=t('svc_view_all_services'), link_href=url_for(category.endpoint, lang=lang)) }}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
+        {% for c in related_cards %}{{ service_card(c.icon, c.title, c.text, c.url, 'row', c.badge or None) }}{% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<div class="h-10 sm:h-16"></div>
+
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "Service", "name": {{ svc.title(lang)|tojson }}, "description": {{ page_description|tojson }},
+ "areaServed": {{ area_served_json|tojson }},
+ "provider": {"@type": "ProfessionalService", "name": "OG Multiservices LLC", "telephone": {{ biz.PHONE_TEL|tojson }}, "email": {{ biz.EMAIL|tojson }}}}
+</script>
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+    {"@type": "ListItem", "position": 1, "name": {{ t('breadcrumb_home')|tojson }}, "item": {{ url_for('public.home', lang=lang, _external=True)|tojson }}},
+    {"@type": "ListItem", "position": 2, "name": {{ category.title(lang)|tojson }}, "item": {{ category_url|tojson }}},
+    {"@type": "ListItem", "position": 3, "name": {{ svc.title(lang)|tojson }}, "item": {{ request.url|tojson }}}
+]}
+</script>
+{% if faq_jsonld %}
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": {{ faq_jsonld|tojson }}}
+</script>
+{% endif %}
+{% endblock %}

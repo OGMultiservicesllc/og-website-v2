@@ -1,0 +1,92 @@
+{# My OG Account shell: top header (account/_account_header.html, included by base.html) + left sidebar (desktop)
+   / off-canvas drawer (mobile) + main content + an optional right context column a page can fill via
+   `account_aside`. Every account page extends this instead of base.html directly and fills `account_body`
+   (never `content` — that block now belongs to this shell). #}
+{% extends "base.html" %}
+{% from "partials/icons.html" import icon %}
+{% set en = lang == 'en' %}
+{% set _actions = account_action_count() %}
+{% set _nav_items = [
+    ('overview', 'account.dashboard', ('Home', 'Inicio'), 'user'),
+    ('services', 'account.services', ('Services', 'Servicios'), 'documents'),
+    ('documents', 'account.documents', ('My Documents', 'Mis Documentos'), 'upload'),
+    ('files_from_og', 'account.files_from_og', ('Files from OG', 'Archivos de OG'), 'folder'),
+    ('payments', 'account.payments', ('Payments', 'Pagos'), 'card'),
+    ('messages', 'account.messages', ('Messages', 'Mensajes'), 'chat'),
+    ('courses', 'account.courses', ('OG Academy', 'OG Academy'), 'academy'),
+    ('profile', 'account.profile', ('Profile & Settings', 'Perfil y Configuración'), 'edit'),
+] %}
+
+{% block content %}
+<div class="lg:flex lg:items-start lg:gap-6 max-w-[1400px] mx-auto lg:px-6 lg:pt-6 lg:pb-16">
+
+    <!-- Desktop sidebar -->
+    <aside class="hidden lg:flex lg:flex-col lg:w-56 lg:shrink-0 lg:sticky lg:top-[4.75rem] lg:h-[calc(100vh-5.5rem)]">
+        <nav class="flex-1 space-y-0.5" aria-label="My OG Account">
+            {% for key, endpoint, label, ic in _nav_items %}
+            <a href="{{ url_for(endpoint, lang=lang) }}" {% if section == key %}aria-current="page"{% endif %}
+               class="relative flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[14px] font-semibold transition {{ 'bg-mist-100 text-accent-700' if section == key else 'text-slate-600 hover:bg-fog-50 hover:text-brand-800' }}">
+                {{ icon(ic, 'w-[18px] h-[18px] shrink-0') }}
+                <span class="truncate">{{ label[0] if en else label[1] }}</span>
+                {% if key == 'services' and _actions %}<span class="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center leading-none">{{ _actions if _actions < 10 else '9+' }}</span>{% endif %}
+            </a>
+            {% endfor %}
+        </nav>
+        <div class="rounded-2xl border border-mist-200 bg-mist-50 p-4 mt-4">
+            <p class="text-[13px] font-bold text-brand-800">{{ 'Need Help?' if en else '¿Necesitas Ayuda?' }}</p>
+            <p class="mt-1 text-[12px] text-slate-500 leading-relaxed">{{ 'Our team is here Mon–Fri, 9am–5pm.' if en else 'Nuestro equipo está disponible de lunes a viernes, 9am–5pm.' }}</p>
+            <a href="{{ biz.WHATSAPP_LINK }}" target="_blank" rel="noopener" class="mt-2.5 inline-flex items-center gap-1.5 text-[13px] font-bold text-wa-700 hover:underline">
+                {{ icon('whatsapp', 'w-4 h-4') }} WhatsApp
+            </a>
+        </div>
+        <a href="{{ url_for('public.home', lang=lang) }}" class="mt-3 inline-flex items-center gap-1.5 px-3 py-2 text-[12.5px] font-semibold text-slate-400 hover:text-slate-600 transition">
+            {{ icon('arrow-left', 'w-3.5 h-3.5') }} {{ 'Back to OG Website' if en else 'Volver al sitio de OG' }}
+        </a>
+    </aside>
+
+    <!-- Mobile off-canvas drawer -->
+    <div id="acct-drawer-backdrop" class="hidden lg:hidden fixed inset-0 bg-brand-900/40 z-[60]"></div>
+    <div id="acct-drawer" class="hidden lg:hidden fixed inset-y-0 left-0 z-[70] w-[78vw] max-w-xs bg-white shadow-2xl flex flex-col" role="dialog" aria-modal="true" aria-label="{{ 'My OG Account menu' if en else 'Menú de Mi Cuenta' }}">
+        <div class="flex items-center justify-between h-14 px-4 border-b border-slate-100 shrink-0">
+            <span class="font-bold text-brand-800">{{ 'Menu' if en else 'Menú' }}</span>
+            <button type="button" id="acct-drawer-close" class="inline-flex items-center justify-center w-9 h-9 rounded-lg text-slate-500 hover:bg-fog-50" aria-label="{{ 'Close' if en else 'Cerrar' }}">{{ icon('close', 'w-5 h-5') }}</button>
+        </div>
+        <nav class="flex-1 overflow-y-auto p-3 space-y-0.5" aria-label="My OG Account">
+            {% for key, endpoint, label, ic in _nav_items %}
+            <a href="{{ url_for(endpoint, lang=lang) }}" {% if section == key %}aria-current="page"{% endif %}
+               class="relative flex items-center gap-3 px-3 py-3 rounded-xl text-[15px] font-semibold transition {{ 'bg-mist-100 text-accent-700' if section == key else 'text-slate-700 hover:bg-fog-50' }}">
+                {{ icon(ic, 'w-5 h-5 shrink-0') }}
+                <span class="truncate">{{ label[0] if en else label[1] }}</span>
+                {% if key == 'services' and _actions %}<span class="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center leading-none">{{ _actions if _actions < 10 else '9+' }}</span>{% endif %}
+            </a>
+            {% endfor %}
+        </nav>
+        <div class="p-3 border-t border-slate-100 shrink-0 space-y-2">
+            <a href="{{ biz.WHATSAPP_LINK }}" target="_blank" rel="noopener" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[14px] font-bold text-wa-700 bg-wa-50">{{ icon('whatsapp', 'w-[18px] h-[18px]') }} {{ 'WhatsApp Us' if en else 'Escríbenos por WhatsApp' }}</a>
+            <a href="{{ url_for('public.home', lang=lang) }}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[14px] font-semibold text-slate-500">{{ icon('arrow-left', 'w-[18px] h-[18px]') }} {{ 'Back to OG Website' if en else 'Volver al sitio de OG' }}</a>
+            <a href="{{ url_for('account.logout', lang=lang) }}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[14px] font-semibold text-slate-600">{{ icon('logout', 'w-[18px] h-[18px]') }} {{ t('acct_logout') }}</a>
+        </div>
+    </div>
+
+    <!-- Main content + optional right column -->
+    <div class="min-w-0 flex-1 xl:flex xl:items-start xl:gap-6">
+        <div class="min-w-0 flex-1">
+            {% block account_body %}{% endblock %}
+        </div>
+        {% block account_aside %}{% endblock %}
+    </div>
+</div>
+
+<script>
+    (function () {
+        var btn = document.getElementById('acct-drawer-btn'), drawer = document.getElementById('acct-drawer'),
+            backdrop = document.getElementById('acct-drawer-backdrop'), closeBtn = document.getElementById('acct-drawer-close');
+        if (!btn || !drawer) { return; }
+        function open() { drawer.classList.remove('hidden'); backdrop.classList.remove('hidden'); btn.setAttribute('aria-expanded', 'true'); }
+        function close() { drawer.classList.add('hidden'); backdrop.classList.add('hidden'); btn.setAttribute('aria-expanded', 'false'); }
+        btn.addEventListener('click', open);
+        closeBtn.addEventListener('click', close);
+        backdrop.addEventListener('click', close);
+    })();
+</script>
+{% endblock %}

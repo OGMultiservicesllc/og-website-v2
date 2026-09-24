@@ -1,0 +1,37 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Inquiries{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold text-brand-800 mb-6">Inquiries</h1>
+
+<div class="flex gap-2 mb-6">
+    <a href="{{ url_for('admin.inquiries_list') }}" class="text-sm font-medium px-3 py-1.5 rounded-full {{ 'bg-accent-600 text-white' if not status else 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}">All</a>
+    <a href="{{ url_for('admin.inquiries_list', status='new') }}" class="text-sm font-medium px-3 py-1.5 rounded-full {{ 'bg-accent-600 text-white' if status == 'new' else 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}">New ({{ counts.new }})</a>
+    <a href="{{ url_for('admin.inquiries_list', status='contacted') }}" class="text-sm font-medium px-3 py-1.5 rounded-full {{ 'bg-accent-600 text-white' if status == 'contacted' else 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}">Contacted ({{ counts.contacted }})</a>
+    <a href="{{ url_for('admin.inquiries_list', status='closed') }}" class="text-sm font-medium px-3 py-1.5 rounded-full {{ 'bg-accent-600 text-white' if status == 'closed' else 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}">Closed ({{ counts.closed }})</a>
+</div>
+
+{% if inquiries %}
+<div class="bg-white border border-slate-100 rounded-2xl divide-y divide-slate-100 overflow-hidden">
+    {% for inquiry in inquiries %}
+    <a href="{{ url_for('admin.inquiry_detail', inquiry_id=inquiry.id) }}" class="flex items-center justify-between px-6 py-4 hover:bg-slate-50 transition">
+        <div class="min-w-0">
+            <p class="font-semibold text-slate-900">{{ inquiry.name or (inquiry.form.name_admin if inquiry.form else 'Form submission') }}</p>
+            <p class="text-sm text-slate-500 truncate">{{ (inquiry.email + ' · ') if inquiry.email else '' }}{{ inquiry.source.replace('_', ' ') }}</p>
+        </div>
+        <div class="flex items-center gap-3 shrink-0">
+            <span class="text-xs text-slate-400">{{ inquiry.created_at.strftime('%b %d') }}</span>
+            <span class="text-xs font-semibold px-2.5 py-1 rounded-full
+                {{ 'bg-accent-50 text-accent-700' if inquiry.status == 'new' else ('bg-amber-50 text-amber-700' if inquiry.status == 'contacted' else 'bg-slate-100 text-slate-500') }}">
+                {{ inquiry.status }}
+            </span>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="rounded-2xl border-2 border-dashed border-slate-200 p-16 text-center">
+    <p class="text-slate-500">No inquiries here yet.</p>
+</div>
+{% endif %}
+{% endblock %}

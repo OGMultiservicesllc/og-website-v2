@@ -1,0 +1,22 @@
+{% extends "intake_base.html" %}
+{% from "partials/ui.html" import info_panel %}
+{% from "partials/icons.html" import icon %}
+{% block title %}{{ t('intake_done_title') }} — {{ form.title(lang) }}{% endblock %}
+
+{% block header_actions %}
+<a href="{{ url_for('account.applications', lang=lang) }}" class="min-h-[40px] inline-flex items-center px-3 rounded-full text-sm font-semibold text-slate-600 hover:text-brand-800 hover:bg-mist-100 transition">{{ t('acct_applications') }}</a>
+{% endblock %}
+
+{% block content %}
+<div class="rounded-[20px] bg-white border border-slate-100 shadow-card p-6 sm:p-9 text-center">
+    <span class="w-16 h-16 mx-auto rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">{{ icon('check', 'w-8 h-8') }}</span>
+    <h1 class="mt-4 text-2xl sm:text-3xl font-extrabold tracking-tight text-brand-800">{{ t('intake_done_title') }}</h1>
+    <p class="mt-2 text-[15px] text-slate-600 leading-relaxed max-w-md mx-auto">{{ form.success_message(lang) or t('intake_done_body') }}</p>
+    <p class="mt-4 text-sm text-slate-500">{{ t('intake_reference') }}: <span class="font-mono font-semibold text-brand-800">{{ submission.code }}</span></p>
+    <div class="mt-5 text-left">{{ info_panel(None, t('intake_done_not_filed'), 'legal') }}</div>
+    <div class="mt-6 flex flex-col sm:flex-row gap-2.5 justify-center">
+        <a href="{{ url_for('account.application_detail', lang=lang, submission_id=submission.id) }}" class="inline-flex items-center justify-center min-h-[52px] rounded-[14px] bg-accent-600 text-white font-semibold px-7 hover:bg-accent-700 transition">{{ t('intake_view_application') }}</a>
+        <a href="{{ url_for('account.dashboard', lang=lang) }}" class="inline-flex items-center justify-center min-h-[52px] rounded-[14px] border border-slate-200 font-semibold text-brand-800 px-7 hover:border-accent-300 transition">{{ t('intake_back_to_account') }}</a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% from "partials/ui.html" import page_hero, cta_block, founder_avatar %}
+{% from "partials/icons.html" import icon %}
+{% block title %}{{ t('about_seo_title') }}{% endblock %}
+{% set page_description = t('about_meta_description') %}
+
+{% block content %}
+{% set about_hero_image = site_asset('about_hero_image') %}
+{% set about_hero_focus = site_focus('about_hero_image_focus') %}
+{{ page_hero(
+    t('about_title'),
+    t('about_body'),
+    icon_name='briefcase',
+    image_url=media_url(about_hero_image, 1600) if about_hero_image else None,
+    image_alt=(about_hero_image.alt(lang) if about_hero_image else None) or t('about_hero_image_alt'),
+    focus=about_hero_focus,
+    breadcrumbs=[{'label': t('breadcrumb_home'), 'href': url_for('public.home', lang=lang)}, {'label': t('about_title')}]
+) }}
+
+{% set founder_photo = site_asset('founder_photo') %}
+{% set founder_focus = site_focus('founder_photo_focus') %}
+<!-- Meet the Founder -->
+<section class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-14">
+    <div class="rounded-panel bg-mist-50 border border-mist-200 p-6 sm:p-10">
+        <div class="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8">
+            <div class="shrink-0">
+                {{ founder_avatar(founder_photo, founder_focus, biz.FOUNDER_NAME ~ ', ' ~ t('founder_role')) }}
+            </div>
+            <div class="min-w-0 text-center sm:text-left">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-accent-600">{{ t('founder_section_title') }}</p>
+                <h2 class="mt-1 text-xl sm:text-2xl font-extrabold tracking-tight text-brand-800">{{ biz.FOUNDER_NAME }}</h2>
+                <p class="text-sm font-semibold text-slate-500">{{ t('founder_role') }}</p>
+                <div class="mt-4 space-y-3 text-[15px] text-slate-600 leading-relaxed">
+                    <p>{{ t('founder_bio_p1') }}</p>
+                    <p>{{ t('founder_bio_p2') }}</p>
+                    <p>{{ t('founder_bio_p3') }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Our Story -->
+<section class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 sm:pt-14">
+    <h2 class="text-xl sm:text-2xl font-extrabold tracking-tight text-brand-800">{{ t('about_story_title') }}</h2>
+    <p class="mt-3 text-[15px] text-slate-600 leading-relaxed">{{ t('about_story_body') }}</p>
+</section>
+
+<!-- What OG Stands For -->
+<section class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 sm:pt-14">
+    <h2 class="text-xl sm:text-2xl font-extrabold tracking-tight text-brand-800 text-center">{{ t('about_principles_title') }}</h2>
+    <div class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        {% for key, icon_name in [('guidance', 'resources'), ('attention', 'heart'), ('practical', 'shield')] %}
+        <div class="rounded-card bg-white border border-slate-100 shadow-card p-5 text-center">
+            <span class="mx-auto w-11 h-11 rounded-xl bg-mist-100 text-accent-600 flex items-center justify-center">{{ icon(icon_name, 'w-5 h-5') }}</span>
+            <h3 class="mt-3 text-[15px] font-bold text-brand-800">{{ t('principle_' ~ key ~ '_title') }}</h3>
+            <p class="mt-1.5 text-[13.5px] text-slate-500 leading-relaxed">{{ t('principle_' ~ key ~ '_body') }}</p>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<!-- Where We Serve -->
+<section class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 sm:pt-14">
+    <h2 class="text-xl sm:text-2xl font-extrabold tracking-tight text-brand-800 text-center">{{ t('about_serve_title') }}</h2>
+    <div class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <a href="{{ url_for('public.location_paterson', lang=lang) }}" class="group rounded-card bg-white border border-slate-100 shadow-card p-5 text-center hover:border-accent-300 transition">
+            <span class="mx-auto w-11 h-11 rounded-xl bg-mist-100 text-accent-600 flex items-center justify-center group-hover:bg-accent-600 group-hover:text-white transition">{{ icon('pin', 'w-5 h-5') }}</span>
+            <h3 class="mt-3 text-[15px] font-bold text-brand-800">Paterson, New Jersey</h3>
+        </a>
+        <a href="{{ url_for('public.location_spring', lang=lang) }}" class="group rounded-card bg-white border border-slate-100 shadow-card p-5 text-center hover:border-accent-300 transition">
+            <span class="mx-auto w-11 h-11 rounded-xl bg-mist-100 text-accent-600 flex items-center justify-center group-hover:bg-accent-600 group-hover:text-white transition">{{ icon('pin', 'w-5 h-5') }}</span>
+            <h3 class="mt-3 text-[15px] font-bold text-brand-800">Spring / Klein, Texas</h3>
+        </a>
+        <div class="rounded-card bg-white border border-slate-100 shadow-card p-5 text-center">
+            <span class="mx-auto w-11 h-11 rounded-xl bg-mist-100 text-accent-600 flex items-center justify-center">{{ icon('globe', 'w-5 h-5') }}</span>
+            <h3 class="mt-3 text-[15px] font-bold text-brand-800">{{ t('about_serve_remote') }}</h3>
+            <p class="mt-1 text-[12.5px] text-slate-500 leading-snug">{{ t('about_serve_remote_note') }}</p>
+        </div>
+    </div>
+</section>
+
+<section class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 sm:pt-14 pb-10 sm:pb-16">
+    {{ cta_block(t('svc_final_cta_title'), t('svc_final_cta_body'),
+        {'label': t('nav_get_started'), 'href': url_for('public.contact', lang=lang)},
+        {'label': t('svc_send_whatsapp'), 'href': biz.WHATSAPP_LINK, 'icon': 'whatsapp', 'variant': 'whatsapp', 'external': True}) }}
+</section>
+{% endblock %}

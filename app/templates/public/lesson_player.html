@@ -1,0 +1,617 @@
+{% extends "base.html" %}
+{% block title %}{{ lesson.title(lang) }} — {{ course.title(lang) }}{% endblock %}
+
+{% block content %}
+<div class="bg-brand-800 text-white">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <a href="{{ url_for('public.course_detail', lang=lang, slug=course.slug) }}" class="text-sm text-slate-300 hover:text-white">
+            &larr; {{ course.title(lang) }}
+        </a>
+    </div>
+</div>
+
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-8" style="--course-accent: {{ course.accent_color or '#b8860b' }}">
+    <!-- Sidebar -->
+    <aside class="lg:sticky lg:top-20 lg:self-start bg-white border border-slate-100 rounded-2xl overflow-hidden order-2 lg:order-1"
+           id="course-sidebar" data-course-id="{{ course.id }}">
+        {% for section in course.sections %}
+        {% set is_current_section = lesson in section.lessons %}
+        <button type="button" class="sidebar-section-toggle w-full flex items-center justify-between gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-100 text-xs font-bold uppercase tracking-wide text-slate-500 hover:bg-slate-100"
+                data-section-id="{{ section.id }}" data-current="{{ '1' if is_current_section else '0' }}">
+            <span class="truncate">{{ section.title(lang) }}</span>
+            <svg class="sidebar-chevron w-3.5 h-3.5 shrink-0 transition-transform" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+        </button>
+        <div class="sidebar-section-body divide-y divide-slate-50" data-section-id="{{ section.id }}">
+            {% for l in section.lessons %}
+            {% set is_locked = is_enrolled and l.id not in unlocked_lesson_ids and l.id not in completed_lesson_ids %}
+            {% if is_locked %}
+            <div class="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-350 opacity-60 cursor-not-allowed" title="{{ t('lp_locked') }}">
+                <span class="w-5 h-5 rounded-full flex items-center justify-center shrink-0 bg-slate-100 text-slate-400">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                </span>
+                <span class="truncate text-slate-400">{{ l.title(lang) }}</span>
+            </div>
+            {% else %}
+            <a href="{{ url_for('public.lesson_view', lang=lang, slug=course.slug, lesson_id=l.id) }}"
+               class="flex items-center gap-2.5 px-4 py-2.5 text-sm {{ 'font-semibold' if l.id == lesson.id else 'text-slate-600 hover:bg-slate-50' }}"
+               {% if l.id == lesson.id %}style="background-color: color-mix(in srgb, var(--course-accent) 12%, white); color: var(--course-accent)"{% endif %}>
+                <span class="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[10px]
+                             {{ 'bg-emerald-500 text-white' if l.id in completed_lesson_ids else 'bg-slate-100 text-slate-400' }}">
+                    {% if l.id in completed_lesson_ids %}✓{% else %}{{ {'text':'Aa','video':'▶','presentation':'▤','quiz':'?','assignment':'✎','case_simulation':'🗂'}[l.lesson_type] }}{% endif %}
+                </span>
+                <span class="truncate">{{ l.title(lang) }}</span>
+            </a>
+            {% endif %}
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </aside>
+
+    <!-- Main content -->
+    <div class="order-1 lg:order-2 min-w-0">
+        <h1 class="text-2xl font-bold text-brand-800 mb-6">{{ lesson.title(lang) }}</h1>
+
+        {% if lesson.lesson_type == 'text' %}
+        <div class="prose prose-slate max-w-none bg-white border border-slate-100 rounded-2xl p-6 sm:p-8">
+            {{ lesson.content(lang)|safe }}
+        </div>
+
+        {% elif lesson.lesson_type == 'video' %}
+        <div class="bg-white border border-slate-100 rounded-2xl p-4 sm:p-6">
+            {% if lesson.video_source == 'upload' and lesson.video_filename %}
+            <video controls class="w-full rounded-xl bg-black" preload="metadata"
+                   src="{{ url_for('public.lesson_asset', lang=lang, slug=course.slug, lesson_id=lesson.id, stored_path=lesson.video_filename) }}">
+            </video>
+            {% elif video_embed_url %}
+            <div class="aspect-video">
+                <iframe class="w-full h-full rounded-xl" src="{{ video_embed_url }}" allowfullscreen
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+            </div>
+            {% else %}
+            <p class="text-slate-500 text-sm">{{ t('lp_no_video') }}</p>
+            {% endif %}
+        </div>
+
+        {% elif lesson.lesson_type == 'presentation' %}
+        <div class="bg-white border border-slate-100 rounded-2xl p-4 sm:p-6" id="presentation-player"
+             data-slides='{{ slides_json|safe }}' data-lesson-id="{{ lesson.id }}">
+            <div class="relative bg-slate-50 rounded-xl overflow-hidden aspect-video flex items-center justify-center">
+                <img id="slide-image" src="" alt="Slide" class="max-w-full max-h-full object-contain hidden">
+                <p id="slide-missing" class="hidden text-sm text-slate-400 px-6 text-center">{{ t('lp_slide_missing_image') }}</p>
+            </div>
+            <audio id="slide-audio" class="w-full mt-3 hidden" controls></audio>
+            <div class="flex items-center justify-between mt-4">
+                <button type="button" id="slide-prev" class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:border-accent-300 disabled:opacity-40">&larr; {{ t('lp_slide_prev') }}</button>
+                <span id="slide-counter" class="text-sm text-slate-500"></span>
+                <button type="button" id="slide-next" class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:border-accent-300 disabled:opacity-40">{{ t('lp_slide_next') }} &rarr;</button>
+            </div>
+        </div>
+
+        {% if student and is_enrolled %}
+        {% if completed %}
+        <div class="mt-4 flex items-center justify-between gap-3 flex-wrap">
+            <span class="inline-flex items-center gap-2 rounded-lg bg-emerald-50 text-emerald-700 font-semibold px-4 py-2.5 text-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                {{ t('lp_completed') }}
+            </span>
+            {% if next_lesson %}
+            <a href="{{ url_for('public.lesson_view', lang=lang, slug=course.slug, lesson_id=next_lesson.id) }}"
+               class="rounded-lg bg-accent-600 text-white font-semibold px-5 py-2.5 text-sm hover:bg-accent-700 transition">
+                {{ t('lp_continue_to_next') }} &rarr;
+            </a>
+            {% endif %}
+        </div>
+        {% else %}
+        <form id="presentation-complete-form" method="POST" action="{{ url_for('account.lesson_complete', lang=lang, lesson_id=lesson.id) }}" class="hidden mt-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="next_lesson_id" value="{{ next_lesson.id if next_lesson else '' }}">
+            <button type="submit" class="w-full rounded-lg bg-accent-600 text-white font-semibold px-6 py-3 text-sm hover:bg-accent-700 transition">
+                {% if next_lesson and next_lesson.lesson_type == 'quiz' %}{{ t('lp_complete_section_and_continue') }}
+                {% else %}{{ t('lp_complete_and_continue') }}{% endif %}
+            </button>
+        </form>
+        {% endif %}
+        {% endif %}
+
+        {% elif lesson.lesson_type == 'quiz' %}
+        {% if latest_attempt %}
+        {% if lesson.quiz_kind == 'formative' %}
+        <div class="mb-5 rounded-xl px-5 py-4 bg-accent-50 border border-accent-100 text-accent-700">
+            <p class="font-semibold text-sm">
+                {{ t('lp_quiz_needs_review') if latest_attempt.status == 'needs_review' else (latest_attempt.score_points ~ ' / ' ~ latest_attempt.max_score_points ~ ' ' ~ t('lp_quiz_points')) }}
+            </p>
+            {% if lesson.quiz_show_results %}
+            <a href="{{ url_for('account.quiz_result', lang=lang, attempt_id=latest_attempt.id) }}" class="text-xs font-semibold underline hover:no-underline">{{ t('lp_quiz_view_results') }}</a>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="mb-5 rounded-xl px-5 py-4 {{ 'bg-amber-50 border border-amber-100 text-amber-700' if latest_attempt.status == 'needs_review' else ('bg-emerald-50 border border-emerald-100 text-emerald-700' if latest_attempt.passed else 'bg-amber-50 border border-amber-100 text-amber-700') }}">
+            <p class="font-semibold text-sm">
+                {% if latest_attempt.status == 'needs_review' %}{{ t('lp_quiz_needs_review') }}
+                {% elif latest_attempt.passed %}{{ t('lp_passed') }} — {{ latest_attempt.score_percent }}%
+                {% else %}{{ t('lp_last_attempt') }}: {{ latest_attempt.score_percent }}% — {{ lesson.quiz_passing_percentage }}% {{ t('lp_needed_to_pass') }}{% endif %}
+            </p>
+            {% if lesson.quiz_show_results %}
+            <a href="{{ url_for('account.quiz_result', lang=lang, attempt_id=latest_attempt.id) }}" class="text-xs font-semibold underline hover:no-underline">{{ t('lp_quiz_view_results') }}</a>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% endif %}
+
+        {% if not lesson.quiz_questions %}
+        <p class="text-sm text-slate-500">{{ t('lp_no_questions') }}</p>
+        {% elif not can_attempt_quiz %}
+        <p class="text-sm text-amber-700 bg-amber-50 rounded-lg px-4 py-3">{{ t('lp_quiz_no_attempts_left') }}</p>
+        {% else %}
+        {% set has_file_upload = lesson.quiz_questions|selectattr('question_type', 'equalto', 'file_upload')|list %}
+        {% set total_questions = lesson.quiz_questions|length %}
+        {% set questions_per_page = lesson.quiz_questions_per_page or 8 %}
+        {% set total_pages = ((total_questions - 1) // questions_per_page) + 1 if total_questions else 1 %}
+        <form method="POST" action="{{ url_for('account.quiz_submit', lang=lang, lesson_id=lesson.id) }}"
+              {% if has_file_upload %}enctype="multipart/form-data"{% endif %}
+              id="quiz-form" data-lesson-id="{{ lesson.id }}" data-student-id="{{ student.id if student else '' }}"
+              data-total-questions="{{ total_questions }}" data-per-page="{{ questions_per_page }}"
+              class="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 space-y-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+            {% if total_pages > 1 %}
+            <p id="quiz-page-indicator" class="text-xs font-semibold text-slate-400"></p>
+            {% endif %}
+
+            {% for q in lesson.quiz_questions %}
+            <div class="quiz-page" data-page="{{ loop.index0 // questions_per_page }}">
+                <p class="font-semibold text-slate-900 mb-1">{{ loop.index }}. {{ q.question(lang) }}</p>
+                <p class="text-xs text-slate-400 mb-3">{{ q.points }} pt{{ 's' if q.points != 1 else '' }}{% if not q.required %} · {{ t('lp_quiz_optional') }}{% endif %}</p>
+
+                {% if q.question_type in ('single_choice', 'true_false') %}
+                <div class="space-y-2">
+                    {% for o in q.options %}
+                    <label class="flex items-center gap-3 rounded-lg border border-slate-200 px-4 py-2.5 text-sm cursor-pointer hover:border-accent-300 has-[:checked]:border-accent-500 has-[:checked]:bg-accent-50">
+                        <input type="radio" name="question_{{ q.id }}" value="{{ o.id }}" {{ 'required' if q.required else '' }} class="text-accent-600 focus:ring-accent-500">
+                        {{ o.text(lang) }}
+                    </label>
+                    {% endfor %}
+                </div>
+
+                {% elif q.question_type == 'multi_select' %}
+                <div class="space-y-2">
+                    {% for o in q.options %}
+                    <label class="flex items-center gap-3 rounded-lg border border-slate-200 px-4 py-2.5 text-sm cursor-pointer hover:border-accent-300 has-[:checked]:border-accent-500 has-[:checked]:bg-accent-50">
+                        <input type="checkbox" name="question_{{ q.id }}" value="{{ o.id }}" class="rounded text-accent-600 focus:ring-accent-500">
+                        {{ o.text(lang) }}
+                    </label>
+                    {% endfor %}
+                </div>
+
+                {% elif q.question_type == 'image_choice' %}
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {% for o in q.options %}
+                    <label class="rounded-lg border-2 border-slate-200 p-2 cursor-pointer hover:border-accent-300 has-[:checked]:border-accent-500 has-[:checked]:bg-accent-50">
+                        <input type="radio" name="question_{{ q.id }}" value="{{ o.id }}" {{ 'required' if q.required else '' }} class="sr-only">
+                        <img src="{{ url_for('admin.media', stored_path=o.image_filename) }}" alt="{{ o.text(lang) }}" class="w-full aspect-video object-cover rounded-md">
+                        {% if o.text(lang) %}<p class="text-xs text-slate-600 mt-1.5 text-center">{{ o.text(lang) }}</p>{% endif %}
+                    </label>
+                    {% endfor %}
+                </div>
+
+                {% elif q.question_type == 'short_answer' %}
+                <input type="text" name="question_{{ q.id }}" {{ 'required' if q.required else '' }}
+                       class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+
+                {% elif q.question_type == 'number' %}
+                <input type="number" step="any" name="question_{{ q.id }}" {{ 'required' if q.required else '' }}
+                       class="w-full sm:w-48 rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+
+                {% elif q.question_type == 'long_answer' %}
+                <textarea name="question_{{ q.id }}" rows="4" {{ 'required' if q.required else '' }}
+                          class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500"></textarea>
+                <p class="text-xs text-slate-400 mt-1.5">{{ t('lp_quiz_manual_review_note') }}</p>
+
+                {% elif q.question_type == 'file_upload' %}
+                <input type="file" name="question_{{ q.id }}" accept=".pdf,.jpg,.jpeg,.png,.docx" {{ 'required' if q.required else '' }}
+                       class="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 file:px-3 file:py-2 file:font-medium">
+                <p class="text-xs text-slate-400 mt-1.5">{{ t('lp_quiz_manual_review_note') }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            <div class="flex items-center justify-between gap-3 pt-2 border-t border-slate-100">
+                <button type="button" id="quiz-prev-btn" class="hidden rounded-lg border border-slate-200 text-slate-600 font-semibold px-5 py-2.5 text-sm hover:border-accent-300 transition">
+                    &larr; {{ t('lp_quiz_back') }}
+                </button>
+                <div class="flex items-center gap-3 ml-auto">
+                    <span id="quiz-save-indicator" class="text-xs text-emerald-600 font-medium" aria-live="polite"></span>
+                    <button type="button" id="quiz-save-btn" class="rounded-lg border border-slate-200 text-slate-600 font-semibold px-5 py-2.5 text-sm hover:border-accent-300 transition">
+                        {{ t('lp_quiz_save_progress') }}
+                    </button>
+                    <button type="button" id="quiz-next-btn" class="{{ 'hidden' if total_pages <= 1 }} rounded-lg bg-accent-600 text-white font-semibold px-6 py-2.5 text-sm hover:bg-accent-700 transition">
+                        {{ t('lp_quiz_continue') }} &rarr;
+                    </button>
+                    <button type="submit" id="quiz-submit-btn" class="{{ 'hidden' if total_pages > 1 }} rounded-lg bg-accent-600 text-white font-semibold px-6 py-2.5 text-sm hover:bg-accent-700 transition">
+                        {{ t('lp_submit_quiz') }}
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <script>
+            (function () {
+                var form = document.getElementById('quiz-form');
+                if (!form) return;
+
+                var pages = Array.prototype.slice.call(form.querySelectorAll('.quiz-page'));
+                var totalPages = {{ total_pages }};
+                var perPage = parseInt(form.dataset.perPage, 10) || 8;
+                var totalQuestions = parseInt(form.dataset.totalQuestions, 10) || 0;
+                var currentPage = 0;
+
+                var prevBtn = document.getElementById('quiz-prev-btn');
+                var nextBtn = document.getElementById('quiz-next-btn');
+                var submitBtn = document.getElementById('quiz-submit-btn');
+                var saveBtn = document.getElementById('quiz-save-btn');
+                var saveIndicator = document.getElementById('quiz-save-indicator');
+                var pageIndicator = document.getElementById('quiz-page-indicator');
+                var rangeTemplate = {{ t('lp_quiz_question_range')|tojson }};
+                var savedLabel = {{ t('lp_quiz_saved')|tojson }};
+                var restoredLabel = {{ t('lp_quiz_progress_restored')|tojson }};
+
+                var storageKey = 'og_quiz_progress_' + form.dataset.lessonId + '_' + form.dataset.studentId;
+
+                function updateIndicator() {
+                    if (!pageIndicator) return;
+                    var start = currentPage * perPage + 1;
+                    var end = Math.min((currentPage + 1) * perPage, totalQuestions);
+                    pageIndicator.textContent = rangeTemplate
+                        .replace('{start}', start)
+                        .replace('{end}', end)
+                        .replace('{total}', totalQuestions);
+                }
+
+                function showPage(n) {
+                    currentPage = Math.max(0, Math.min(n, totalPages - 1));
+                    pages.forEach(function (p) {
+                        p.style.display = (parseInt(p.dataset.page, 10) === currentPage) ? '' : 'none';
+                    });
+                    if (prevBtn) prevBtn.classList.toggle('hidden', currentPage === 0);
+                    if (nextBtn) nextBtn.classList.toggle('hidden', currentPage === totalPages - 1);
+                    if (submitBtn) {
+                        submitBtn.classList.toggle('hidden', currentPage !== totalPages - 1);
+                        submitBtn.disabled = currentPage !== totalPages - 1;
+                    }
+                    updateIndicator();
+                }
+
+                function collectAnswers() {
+                    var data = {};
+                    Array.prototype.forEach.call(form.querySelectorAll('input, textarea, select'), function (el) {
+                        if (!el.name || el.type === 'file' || el.name === 'csrf_token') return;
+                        if (el.type === 'radio' || el.type === 'checkbox') {
+                            if (el.checked) {
+                                if (!data[el.name]) data[el.name] = [];
+                                data[el.name].push(el.value);
+                            }
+                        } else {
+                            data[el.name] = el.value;
+                        }
+                    });
+                    return data;
+                }
+
+                function saveProgress(announce) {
+                    try {
+                        localStorage.setItem(storageKey, JSON.stringify({
+                            answers: collectAnswers(), page: currentPage, savedAt: Date.now(),
+                        }));
+                    } catch (e) { return; }
+                    if (announce && saveIndicator) {
+                        saveIndicator.textContent = savedLabel;
+                        setTimeout(function () {
+                            if (saveIndicator.textContent === savedLabel) saveIndicator.textContent = '';
+                        }, 2500);
+                    }
+                }
+
+                function restoreProgress() {
+                    var raw;
+                    try { raw = localStorage.getItem(storageKey); } catch (e) { return; }
+                    if (!raw) return;
+                    var saved;
+                    try { saved = JSON.parse(raw); } catch (e) { return; }
+                    if (!saved || !saved.answers) return;
+
+                    Object.keys(saved.answers).forEach(function (name) {
+                        var value = saved.answers[name];
+                        var els = form.querySelectorAll('[name="' + name.replace(/"/g, '\\"') + '"]');
+                        Array.prototype.forEach.call(els, function (el) {
+                            if (el.type === 'file') return;
+                            if (el.type === 'radio' || el.type === 'checkbox') {
+                                el.checked = Array.isArray(value) && value.indexOf(el.value) !== -1;
+                            } else {
+                                el.value = Array.isArray(value) ? value[0] : value;
+                            }
+                        });
+                    });
+
+                    if (typeof saved.page === 'number') showPage(saved.page);
+                    if (saveIndicator) {
+                        saveIndicator.textContent = restoredLabel;
+                        setTimeout(function () {
+                            if (saveIndicator.textContent === restoredLabel) saveIndicator.textContent = '';
+                        }, 5000);
+                    }
+                }
+
+                if (nextBtn) {
+                    nextBtn.addEventListener('click', function () {
+                        if (!form.reportValidity()) return;
+                        saveProgress(false);
+                        showPage(currentPage + 1);
+                        form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    });
+                }
+                if (prevBtn) {
+                    prevBtn.addEventListener('click', function () {
+                        showPage(currentPage - 1);
+                        form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    });
+                }
+                if (saveBtn) {
+                    saveBtn.addEventListener('click', function () { saveProgress(true); });
+                }
+                form.addEventListener('change', function () { saveProgress(false); });
+                form.addEventListener('submit', function () {
+                    try { localStorage.removeItem(storageKey); } catch (e) {}
+                });
+
+                showPage(0);
+                restoreProgress();
+            })();
+        </script>
+        {% endif %}
+
+        {% elif lesson.lesson_type == 'assignment' %}
+        <div class="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8">
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500 mb-3">{{ t('lp_assignment_instructions') }}</h2>
+            <div class="prose prose-slate max-w-none mb-6">{{ lesson.content(lang)|safe }}</div>
+
+            {% if submission %}
+            <div class="mb-6 rounded-xl px-5 py-4 border
+                {{ 'bg-emerald-50 border-emerald-100' if submission.status == 'approved' else ('bg-amber-50 border-amber-100' if submission.status == 'needs_revision' else 'bg-accent-50 border-accent-100') }}">
+                <p class="font-semibold text-sm
+                    {{ 'text-emerald-700' if submission.status == 'approved' else ('text-amber-700' if submission.status == 'needs_revision' else 'text-accent-700') }}">
+                    {{ t('lp_assignment_status_' + submission.status) }}
+                </p>
+                {% if submission.feedback %}
+                <p class="mt-2 text-sm text-slate-600"><strong>{{ t('lp_assignment_feedback') }}:</strong> {{ submission.feedback }}</p>
+                {% endif %}
+                {% if submission.file_filename %}
+                <a href="{{ url_for('public.lesson_asset', lang=lang, slug=course.slug, lesson_id=lesson.id, stored_path=submission.file_filename) }}"
+                   target="_blank" class="mt-2 inline-block text-sm text-accent-600 hover:underline">{{ t('lp_assignment_your_file') }}</a>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if not submission or submission.status != 'approved' %}
+            <form method="POST" action="{{ url_for('account.assignment_submit', lang=lang, lesson_id=lesson.id) }}" enctype="multipart/form-data" class="space-y-4">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">{{ t('lp_assignment_response_label') }}</label>
+                    <textarea name="text_response" rows="6"
+                              class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ submission.text_response if submission else '' }}</textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">{{ t('lp_assignment_file_label') }}</label>
+                    <input type="file" name="file"
+                           class="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 file:px-3 file:py-2 file:font-medium">
+                </div>
+                <button type="submit" class="rounded-lg bg-accent-600 text-white font-semibold px-6 py-2.5 text-sm hover:bg-accent-700 transition">
+                    {{ t('lp_assignment_resubmit') if submission else t('lp_assignment_submit') }}
+                </button>
+            </form>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if lesson.lesson_type == 'case_simulation' %}
+        {% set civ_endpoint = 'account.case_lesson' %}
+        {% set civ_intro = lesson.case_simulation.description(lang) if lesson.case_simulation else '' %}
+        {% set civ_cta = t('case_start_cta') %}
+        <div class="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 text-center">
+            <p class="text-slate-600 mb-5">{{ civ_intro }}</p>
+            {% if student and is_enrolled or lesson.is_preview %}
+            <a href="{{ url_for(civ_endpoint, lang=lang, lesson_id=lesson.id) }}"
+               class="inline-flex items-center rounded-lg bg-accent-600 text-white font-semibold px-6 py-3 hover:bg-accent-700 transition">
+                {{ civ_cta }}
+            </a>
+            {% else %}
+            <a href="{{ url_for('account.login', lang=lang, next=request.path) }}" class="text-accent-600 font-semibold hover:underline">{{ t('nav_login') }}</a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if lesson.resources %}
+        <div class="mt-5 bg-white border border-slate-100 rounded-2xl p-5">
+            <h3 class="text-sm font-semibold text-slate-700 mb-3">{{ t('lp_resources_title') }}</h3>
+            <div class="space-y-2">
+                {% for r in lesson.resources %}
+                {% set asset_url = r.external_url if r.external_url else url_for('public.lesson_asset', lang=lang, slug=course.slug, lesson_id=lesson.id, stored_path=r.file_filename) %}
+                {% set is_pdf = r.file_filename and r.file_filename.lower().endswith('.pdf') %}
+                {% if is_pdf %}
+                <div class="resource-pdf border border-slate-100 rounded-xl overflow-hidden">
+                    <button type="button" class="resource-pdf-toggle w-full flex items-center justify-between gap-3 text-left px-3.5 py-2.5 hover:bg-slate-50 transition">
+                        <span class="flex items-center gap-2.5 text-sm font-medium text-slate-700 min-w-0">
+                            <svg class="w-4 h-4 shrink-0 text-accent-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                            <span class="truncate">{{ r.title(lang) }}</span>
+                        </span>
+                        <span class="flex items-center gap-3 shrink-0">
+                            <a href="{{ asset_url }}" download class="text-xs font-semibold text-accent-600 hover:text-accent-700">{{ t('lp_resource_download') }}</a>
+                            <svg class="resource-pdf-chevron w-3.5 h-3.5 text-slate-400 transition" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                        </span>
+                    </button>
+                    <div class="resource-pdf-body hidden border-t border-slate-100">
+                        <iframe src="{{ asset_url }}" title="{{ r.title(lang) }}" class="w-full h-[70vh]"></iframe>
+                    </div>
+                </div>
+                {% else %}
+                <a href="{{ asset_url }}" target="_blank" rel="noopener"
+                   class="flex items-center gap-2.5 text-sm text-accent-600 hover:text-accent-700">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    {{ r.title(lang) }}
+                </a>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if student and is_enrolled and lesson.lesson_type not in ('quiz', 'assignment', 'case_simulation', 'presentation') %}
+        <div class="mt-5 flex items-center gap-3 flex-wrap">
+            {% if completed %}
+            <span class="inline-flex items-center gap-2 rounded-lg bg-emerald-50 text-emerald-700 font-semibold px-4 py-2.5 text-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                {{ t('lp_completed') }}
+            </span>
+            {% if next_lesson %}
+            <a href="{{ url_for('public.lesson_view', lang=lang, slug=course.slug, lesson_id=next_lesson.id) }}"
+               class="rounded-lg bg-accent-600 text-white font-semibold px-5 py-2.5 text-sm hover:bg-accent-700 transition">
+                {{ t('lp_continue_to_next') }} &rarr;
+            </a>
+            {% endif %}
+            {% else %}
+            <form method="POST" action="{{ url_for('account.lesson_complete', lang=lang, lesson_id=lesson.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="next_lesson_id" value="{{ next_lesson.id if next_lesson else '' }}">
+                <button type="submit" class="rounded-lg bg-accent-600 text-white font-semibold px-6 py-2.5 text-sm hover:bg-accent-700 transition">
+                    {% if next_lesson %}
+                        {% if next_lesson.lesson_type == 'quiz' %}{{ t('lp_complete_section_and_continue') }}
+                        {% else %}{{ t('lp_complete_and_continue') }}{% endif %}
+                    {% else %}{{ t('lp_mark_complete') }}{% endif %}
+                </button>
+            </form>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="flex items-center justify-between mt-8 pt-6 border-t border-slate-100">
+            {% if prev_lesson %}
+            <a href="{{ url_for('public.lesson_view', lang=lang, slug=course.slug, lesson_id=prev_lesson.id) }}" class="text-sm font-semibold text-slate-500 hover:text-accent-600">&larr; {{ prev_lesson.title(lang) }}</a>
+            {% else %}<span></span>{% endif %}
+            {% if next_lesson and (not is_enrolled or next_lesson.id in unlocked_lesson_ids) %}
+            <a href="{{ url_for('public.lesson_view', lang=lang, slug=course.slug, lesson_id=next_lesson.id) }}" class="text-sm font-semibold text-slate-500 hover:text-accent-600">{{ next_lesson.title(lang) }} &rarr;</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        var sidebar = document.getElementById('course-sidebar');
+        if (!sidebar) return;
+        var storageKey = 'og_sidebar_sections_' + sidebar.dataset.courseId;
+        var collapsed = {};
+        try { collapsed = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch (e) { collapsed = {}; }
+
+        function setState(id, isCollapsed) {
+            var body = sidebar.querySelector('.sidebar-section-body[data-section-id="' + id + '"]');
+            var toggle = sidebar.querySelector('.sidebar-section-toggle[data-section-id="' + id + '"]');
+            if (!body || !toggle) return;
+            body.style.display = isCollapsed ? 'none' : '';
+            var chevron = toggle.querySelector('.sidebar-chevron');
+            if (chevron) chevron.style.transform = isCollapsed ? 'rotate(-90deg)' : '';
+        }
+
+        sidebar.querySelectorAll('.sidebar-section-toggle').forEach(function (toggle) {
+            var id = toggle.dataset.sectionId;
+            var isCurrent = toggle.dataset.current === '1';
+            var isCollapsed = isCurrent ? false : (id in collapsed ? collapsed[id] : true);
+            setState(id, isCollapsed);
+
+            toggle.addEventListener('click', function () {
+                var body = sidebar.querySelector('.sidebar-section-body[data-section-id="' + id + '"]');
+                var nowCollapsed = body.style.display !== 'none';
+                setState(id, nowCollapsed);
+                collapsed[id] = nowCollapsed;
+                try { localStorage.setItem(storageKey, JSON.stringify(collapsed)); } catch (e) {}
+            });
+        });
+    })();
+</script>
+
+{% if lesson.resources %}
+<script>
+    document.querySelectorAll('.resource-pdf-toggle').forEach(function (toggle) {
+        toggle.addEventListener('click', function () {
+            const wrapper = toggle.closest('.resource-pdf');
+            wrapper.querySelector('.resource-pdf-body').classList.toggle('hidden');
+            wrapper.querySelector('.resource-pdf-chevron').classList.toggle('rotate-180');
+        });
+    });
+</script>
+{% endif %}
+
+{% if lesson.lesson_type == 'presentation' %}
+<script>
+    (function () {
+        const el = document.getElementById('presentation-player');
+        if (!el) return;
+        const slides = JSON.parse(el.dataset.slides || '[]');
+        const storageKey = 'og_presentation_slide_' + el.dataset.lessonId;
+
+        let index = 0;
+        try {
+            const saved = parseInt(sessionStorage.getItem(storageKey), 10);
+            if (!isNaN(saved) && saved >= 0 && saved < slides.length) index = saved;
+        } catch (e) { /* sessionStorage unavailable — start at slide 1 */ }
+
+        const img = document.getElementById('slide-image');
+        const missing = document.getElementById('slide-missing');
+        const audio = document.getElementById('slide-audio');
+        const counter = document.getElementById('slide-counter');
+        const prevBtn = document.getElementById('slide-prev');
+        const nextBtn = document.getElementById('slide-next');
+        const completeForm = document.getElementById('presentation-complete-form');
+
+        function render() {
+            if (!slides.length) return;
+            const slide = slides[index];
+            if (slide.image) {
+                img.src = slide.image;
+                img.classList.remove('hidden');
+                missing.classList.add('hidden');
+            } else {
+                img.removeAttribute('src');
+                img.classList.add('hidden');
+                missing.classList.remove('hidden');
+            }
+            if (slide.audio) {
+                audio.src = slide.audio;
+                audio.classList.remove('hidden');
+            } else {
+                audio.pause();
+                audio.removeAttribute('src');
+                audio.classList.add('hidden');
+            }
+            counter.textContent = (index + 1) + ' / ' + slides.length;
+            prevBtn.disabled = index === 0;
+            const onLastSlide = index === slides.length - 1;
+            if (completeForm) {
+                nextBtn.classList.toggle('hidden', onLastSlide);
+                completeForm.classList.toggle('hidden', !onLastSlide);
+            } else {
+                nextBtn.disabled = onLastSlide;
+            }
+            try { sessionStorage.setItem(storageKey, String(index)); } catch (e) {}
+        }
+
+        prevBtn.addEventListener('click', function () {
+            if (index > 0) { index -= 1; render(); }
+        });
+        nextBtn.addEventListener('click', function () {
+            if (index < slides.length - 1) { index += 1; render(); }
+        });
+
+        render();
+    })();
+</script>
+{% endif %}
+{% endblock %}

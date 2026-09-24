@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}{{ case.title(lang) }} — {{ t('case_tasks_title') }}{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    {% if preview %}
+    <p class="mb-4 text-sm font-semibold text-amber-700 bg-amber-50 rounded-lg px-4 py-2.5">{{ t('case_preview_banner') }}</p>
+    {% else %}
+    <a href="{{ url_for('public.lesson_view', lang=lang, slug=case.lesson.section.course.slug, lesson_id=case.lesson.id) }}" class="text-sm text-slate-500 hover:text-accent-600">&larr; {{ case.lesson.section.course.title(lang) }}</a>
+    {% endif %}
+    {% if 'demo' in case.title_en|lower %}
+    <p class="mt-3 text-xs font-semibold text-amber-700 bg-amber-50 rounded-lg px-3 py-2 inline-block">{{ t('case_demo_banner') }}</p>
+    {% endif %}
+
+    <h1 class="text-2xl sm:text-3xl font-extrabold text-brand-800 mt-4">{{ case.title(lang) }}</h1>
+
+    {% if case.client_profile(lang) %}
+    <details class="mt-4 rounded-2xl border border-slate-100 p-4 sm:p-5" open>
+        <summary class="text-sm font-semibold uppercase tracking-wide text-slate-500 cursor-pointer">{{ t('case_client_profile_title') }}</summary>
+        <p class="text-slate-700 whitespace-pre-line mt-2">{{ case.client_profile(lang) }}</p>
+    </details>
+    {% endif %}
+    {% if case.instructions(lang) %}
+    <p class="mt-3 text-sm text-slate-600 bg-accent-50 border border-accent-100 rounded-xl px-4 py-3 whitespace-pre-line">{{ case.instructions(lang) }}</p>
+    {% endif %}
+
+    <!-- Documents -->
+    <div class="mt-6">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500 mb-3">{{ t('case_documents_title') }}</h2>
+        <div class="flex flex-wrap gap-2.5" id="case-document-list">
+            {% for doc in case.active_documents %}
+            <button type="button" class="case-doc-btn inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:border-accent-300 transition"
+                    data-index="{{ loop.index0 }}">
+                <svg class="w-4 h-4 text-accent-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                {{ doc.label(lang) }}
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Tasks -->
+    <form id="case-form" method="POST" action="{{ '#' if preview else url_for('account.case_submit', lang=lang, attempt_id=attempt.id) }}" class="mt-8 space-y-6" data-preview="{{ 'true' if preview else 'false' }}">
+        {% if not preview %}<input type="hidden" name="csrf_token" value="{{ csrf_token }}">{% endif %}
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">{{ t('case_tasks_title') }}</h2>
+
+        {% for task in case.active_tasks %}
+        <div class="rounded-2xl border border-slate-100 p-5 sm:p-6">
+            <p class="font-semibold text-slate-900">{{ loop.index }}. {{ task.prompt(lang) }}</p>
+            <p class="text-xs text-slate-400 mt-1">{{ task.points }} pt{{ 's' if task.points != 1 else '' }}</p>
+
+            {% if task.task_type == 'multiple_choice' %}
+            <div class="mt-4 space-y-2">
+                {% for o in task.options %}
+                <label class="flex items-center gap-3 rounded-lg border border-slate-200 px-4 py-2.5 text-sm cursor-pointer hover:border-accent-300 has-[:checked]:border-accent-500 has-[:checked]:bg-accent-50">
+                    <input type="radio" name="option_{{ task.id }}" value="{{ o.id }}" {{ 'disabled' if preview else 'required' }} class="text-accent-600 focus:ring-accent-500">
+                    {{ o.text(lang) }}
+                </label>
+                {% endfor %}
+            </div>
+
+            {% elif task.task_type == 'multi_select' %}
+            <p class="text-xs text-slate-400 mt-1">{{ t('case_select_all_that_apply') }}</p>
+            <div class="mt-3 space-y-2 multi-select-group" data-task-id="{{ task.id }}">
+                {% for o in task.options %}
+                <label class="flex items-center gap-3 rounded-lg border border-slate-200 px-4 py-2.5 text-sm cursor-pointer hover:border-accent-300 has-[:checked]:border-accent-500 has-[:checked]:bg-accent-50">
+                    <input type="checkbox" name="option_{{ task.id }}" value="{{ o.id }}" {{ 'disabled' if preview else '' }} class="rounded text-accent-600 focus:ring-accent-500">
+                    {{ o.text(lang) }}
+                </label>
+                {% endfor %}
+            </div>
+
+            {% elif task.task_type == 'short_answer' %}
+            <input type="text" name="answer_{{ task.id }}" {{ 'disabled' if preview else 'required' }} placeholder="{{ t('case_type_answer_placeholder') }}"
+                   class="mt-4 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+
+            {% else %}
+            <textarea name="answer_{{ task.id }}" rows="4" {{ 'disabled' if preview else 'required' }} placeholder="{{ t('case_type_answer_placeholder') }}"
+                      class="mt-4 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500"></textarea>
+            {% endif %}
+
+            {% if task.requires_justification %}
+            <div class="mt-3">
+                <label class="block text-xs font-medium text-slate-500 mb-1">{{ t('case_justification_label') }}</label>
+                <textarea name="justification_{{ task.id }}" rows="2" {{ 'disabled' if preview else 'required' }}
+                          class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500"></textarea>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        {% if not preview %}
+        <button type="submit" class="rounded-lg bg-accent-600 text-white font-semibold px-6 py-3 text-sm hover:bg-accent-700 transition">
+            {{ t('case_submit_cta') }}
+        </button>
+        {% endif %}
+    </form>
+</section>
+
+<!-- Document viewer overlay -->
+<div id="case-doc-viewer" class="hidden fixed inset-0 z-50 bg-black/70 flex flex-col">
+    <div class="flex items-center justify-between px-4 py-3 bg-brand-800 text-white shrink-0">
+        <span id="case-doc-viewer-title" class="text-sm font-semibold truncate"></span>
+        <button type="button" id="case-doc-close" class="text-sm font-medium text-slate-300 hover:text-white shrink-0 ml-4">{{ t('case_doc_close') }} ✕</button>
+    </div>
+    <div class="flex-1 min-h-0 bg-slate-900 flex items-center justify-center overflow-auto">
+        <img id="case-doc-image" class="hidden max-w-full max-h-full object-contain" alt="">
+        <iframe id="case-doc-pdf" class="hidden w-full h-full" title="Document"></iframe>
+    </div>
+    <div class="flex items-center justify-between px-4 py-3 bg-brand-800 shrink-0">
+        <button type="button" id="case-doc-prev" class="rounded-lg border border-white/20 text-white px-4 py-2 text-sm font-medium hover:border-white/40 disabled:opacity-30">&larr; {{ t('lp_slide_prev') }}</button>
+        <span id="case-doc-counter" class="text-sm text-slate-300"></span>
+        <button type="button" id="case-doc-next" class="rounded-lg border border-white/20 text-white px-4 py-2 text-sm font-medium hover:border-white/40 disabled:opacity-30">{{ t('lp_slide_next') }} &rarr;</button>
+    </div>
+</div>
+
+<script>
+    window.OG_CASE_DOCUMENTS = [
+        {% for doc in case.active_documents %}
+        {% set doc_url = url_for('admin.media', stored_path=doc.file_filename) if preview else url_for('public.lesson_asset', lang=lang, slug=case.lesson.section.course.slug, lesson_id=case.lesson.id, stored_path=doc.file_filename) %}
+        { label: {{ doc.label(lang)|tojson }}, url: {{ doc_url|tojson }}, isPdf: {{ doc.is_pdf|tojson }} },
+        {% endfor %}
+    ];
+    window.OG_CASE_I18N = { selectAllRequired: {{ t('case_select_all_that_apply')|tojson }} };
+</script>
+<script src="{{ url_for('static', filename='js/case_simulation.js') }}"></script>
+{% endblock %}

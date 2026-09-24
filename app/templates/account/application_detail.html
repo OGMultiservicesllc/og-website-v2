@@ -1,0 +1,66 @@
+{% extends "account/base_account.html" %}
+{% from "partials/ui.html" import pill, info_panel %}
+{% from "partials/icons.html" import icon %}
+{% block title %}{{ card.title }}{% endblock %}
+
+{% block account_body %}
+<section class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10 sm:pb-16">
+    <a href="{{ url_for('account.services', lang=lang) }}" class="text-sm text-slate-500 hover:text-accent-700">&larr; {{ 'Services' if lang == 'en' else 'Servicios' }}</a>
+    <div class="mt-2 flex flex-wrap items-center gap-3">
+        <h1 class="text-2xl font-extrabold tracking-tight text-brand-800">{{ card.title }}</h1>
+        {{ pill(label, {'draft': 'warn', 'new': 'accent', 'in_review': 'accent', 'waiting_client': 'warn', 'completed': 'success', 'archived': 'neutral', 'reopened': 'warn', 'ready_for_ceac': 'success'}.get(status, 'accent')) }}
+    </div>
+    <p class="mt-1 text-sm text-slate-500">
+        {% if form.source_form_name %}Form {{ form.source_form_name }} · {% endif %}{{ t('intake_reference') }}: <span class="font-mono">{{ sub.code }}</span>
+        {% if sub.submitted_at and sub.is_complete %} · {{ sub.submitted_at.strftime('%b %d, %Y') }}{% endif %}
+    </p>
+
+    <div class="mt-4">
+        <div class="flex items-center justify-between text-xs font-semibold text-slate-500 mb-1"><span>{{ card.percent }}% {{ t('acct_complete') }}</span></div>
+        <div class="h-2 rounded-full bg-fog-200 overflow-hidden" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ card.percent }}"><div class="h-full rounded-full {{ 'bg-accent-600' if not sub.is_complete else 'bg-emerald-500' }}" style="width: {{ card.percent }}%"></div></div>
+    </div>
+
+    {% if card.reopened %}
+    <div class="mt-4">{{ info_panel(t('acct_needs_attention'), t('acct_reopened_note') ~ ((' — ' ~ sub.reopen_message) if sub.reopen_message else ''), 'notice') }}</div>
+    {% endif %}
+    {% if card.continue_url %}
+    <a href="{{ card.continue_url }}" class="mt-4 inline-flex items-center justify-center min-h-[48px] rounded-xl bg-accent-600 text-white font-semibold px-6 hover:bg-accent-700 transition">{{ t('acct_continue_editing') if card.reopened else t('svc_cta_continue') }} &rarr;</a>
+    {% endif %}
+
+    {% if status == 'waiting_client' and messages %}
+    <div class="mt-5 space-y-3">
+        {% for m in messages %}{{ info_panel(t('acct_app_requested'), m.body, 'notice') }}{% endfor %}
+        <p class="text-sm text-slate-600">{{ t('svc_cta_whatsapp_help') }}: <a href="{{ biz.WHATSAPP_LINK }}" target="_blank" rel="noopener" class="font-semibold text-wa-700 hover:underline">{{ biz.WHATSAPP_DISPLAY }}</a></p>
+    </div>
+    {% endif %}
+
+    {% if sub.is_complete %}
+    <div class="mt-5">{{ info_panel(None, t('intake_done_not_filed'), 'legal') }}</div>
+    {% for s in sections %}
+    <div class="mt-5 rounded-card bg-white border border-slate-100 shadow-card p-4 sm:p-5">
+        <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-3">{{ s.title }}</h2>
+        <dl class="space-y-2.5">
+            {% for it in s['items'] %}
+            <div><dt class="text-xs text-slate-400">{{ it.label }}</dt><dd class="text-sm text-brand-800 break-words">{{ it.value or '—' }}</dd></div>
+            {% endfor %}
+        </dl>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% if files %}
+    <div class="mt-5 rounded-card bg-white border border-slate-100 shadow-card p-4 sm:p-5">
+        <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-3">{{ t('acct_documents') }}</h2>
+        <ul class="divide-y divide-slate-100">
+            {% for f in files if f.original_filename != 'signature.png' %}
+            <li class="py-2.5 flex items-center gap-3">
+                <span class="text-slate-400">{{ icon('documents', 'w-5 h-5') }}</span>
+                <span class="min-w-0 flex-1 text-sm text-brand-800 truncate">{{ f.original_filename }}</span>
+                <a href="{{ url_for('account.document_file', lang=lang, file_id=f.id) }}" class="text-sm font-semibold text-accent-700 hover:underline">{{ t('acct_doc_download') }}</a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

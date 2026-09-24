@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}{{ course.title(lang) }} — OG Academy{% endblock %}
+{% set page_description = course.subtitle(lang) or course.description(lang)[:160] or t('seo_default_description') %}
+{% if course.cover_image %}{% set page_image = url_for('public.course_asset', lang=lang, course_id=course.id, stored_path=course.cover_image, _external=True) %}{% endif %}
+
+{% block content %}
+<div style="--course-accent: {{ course.accent_color or '#b8860b' }}">
+<section class="bg-brand-800 text-white">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 grid grid-cols-1 {{ 'lg:grid-cols-[1fr_320px] lg:gap-10 items-center' if course.cover_image else '' }}">
+        <div>
+        <span class="inline-block text-xs font-bold tracking-wide uppercase mb-3" style="color: var(--course-accent)">OG Academy</span>
+        <h1 class="text-3xl sm:text-4xl font-extrabold">{{ course.title(lang) }}</h1>
+        {% if course.subtitle(lang) %}
+        <p class="mt-4 text-lg text-slate-300">{{ course.subtitle(lang) }}</p>
+        {% endif %}
+        <p class="mt-4 text-sm text-slate-400">{{ course.lesson_count }} {{ t('crs_lessons_count') }} · {{ course.sections|length }} {{ t('crs_sections_count') }}</p>
+        {% if course.price_cents and not is_enrolled %}
+        <p class="mt-3 text-2xl font-extrabold text-white">{{ '$%.2f' % (course.price_cents / 100) }}</p>
+        {% endif %}
+
+        {% if is_enrolled and progress %}
+        <div class="mt-6 max-w-sm">
+            <div class="flex items-center justify-between text-xs text-slate-300 mb-1.5">
+                <span>{{ progress.completed }} / {{ progress.total }} {{ t('crs_lessons_count') }}</span>
+                <span>{{ progress.percent }}% {{ t('crs_progress_label') }}</span>
+            </div>
+            <div class="h-2 rounded-full bg-white/10 overflow-hidden">
+                <div class="h-full rounded-full" style="width: {{ progress.percent }}%; background-color: var(--course-accent)"></div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if enrollment and enrollment.is_expired %}
+        <div class="mt-6 max-w-md rounded-xl bg-red-500/10 border border-red-400/30 px-5 py-4">
+            <p class="font-semibold text-sm text-red-200">{{ t('crs_access_expired_title') }}</p>
+            <p class="text-xs text-red-200/80 mt-1">{{ t('crs_access_expired_body') }}</p>
+        </div>
+        {% endif %}
+
+        <div class="mt-8 flex flex-wrap items-center gap-3">
+            {% if certificate %}
+            <span class="inline-flex items-center gap-2 rounded-lg bg-emerald-500/20 text-emerald-300 font-semibold px-5 py-3 text-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                {{ t('crs_certificate_unlocked') }}
+            </span>
+            <a href="{{ url_for('account.certificate', lang=lang, slug=course.slug) }}"
+               class="inline-flex items-center rounded-lg text-white font-semibold px-6 py-3 hover:opacity-90 transition" style="background-color: var(--course-accent)">
+                {{ t('crs_certificate_cta') }}
+            </a>
+            {% elif enrollment and enrollment.is_expired %}
+            <form method="POST" action="{{ url_for('account.enroll', lang=lang, course_id=course.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="inline-flex items-center rounded-lg text-white font-semibold px-7 py-3.5 hover:opacity-90 transition" style="background-color: var(--course-accent)">
+                    {{ t('crs_renew_access_cta') }}
+                </button>
+            </form>
+            {% elif is_enrolled and continue_lesson %}
+            <a href="{{ url_for('public.lesson_view', lang=lang, slug=course.slug, lesson_id=continue_lesson.id) }}"
+               class="inline-flex items-center rounded-lg text-white font-semibold px-7 py-3.5 hover:opacity-90 transition" style="background-color: var(--course-accent)">
+                {{ t('crs_continue_cta') if progress.completed > 0 else t('crs_start_cta') }}
+            </a>
+            {% elif student and course.price_cents %}
+            <a href="{{ url_for('account.course_enroll_pay', lang=lang, course_id=course.id) }}"
+               class="inline-flex items-center gap-2 rounded-lg text-white font-semibold px-7 py-3.5 hover:opacity-90 transition" style="background-color: var(--course-accent)">
+                {{ ('Enroll & Pay' if lang == 'en' else 'Inscribirse y Pagar') }} — {{ '$%.2f' % (course.price_cents / 100) }}
+            </a>
+            {% elif student %}
+            <form method="POST" action="{{ url_for('account.enroll', lang=lang, course_id=course.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="inline-flex items-center rounded-lg text-white font-semibold px-7 py-3.5 hover:opacity-90 transition" style="background-color: var(--course-accent)">
+                    {{ t('crs_enroll_cta') }}
+                </button>
+            </form>
+            {% else %}
+            <a href="{{ url_for('account.login', lang=lang, next=url_for('public.course_detail', lang=lang, slug=course.slug)) }}"
+               class="inline-flex items-center rounded-lg text-white font-semibold px-7 py-3.5 hover:opacity-90 transition" style="background-color: var(--course-accent)">
+                {{ t('crs_login_to_enroll') }}
+            </a>
+            {% endif %}
+        </div>
+        </div>
+        {% if course.cover_image %}
+        <img src="{{ url_for('public.course_asset', lang=lang, course_id=course.id, stored_path=course.cover_image) }}"
+             alt="{{ course.title(lang) }}" class="w-full h-56 object-cover rounded-2xl shadow-lg mt-8 lg:mt-0">
+        {% endif %}
+    </div>
+</section>
+
+{% if course.description(lang) %}
+<section class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <p class="text-slate-700 leading-relaxed">{{ course.description(lang) }}</p>
+</section>
+{% endif %}
+
+<section class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+    <h2 class="text-xl font-bold text-brand-800 mb-5">{{ t('crs_outline_title') }}</h2>
+    <div class="space-y-4">
+        {% for section in course.sections %}
+        <div class="rounded-2xl border border-slate-100 overflow-hidden">
+            <div class="px-5 py-3 bg-slate-50 border-b border-slate-100 font-semibold text-sm text-slate-700">
+                {{ loop.index }}. {{ section.title(lang) }}
+            </div>
+            <div class="divide-y divide-slate-50">
+                {% for lesson in section.lessons %}
+                {% set clickable = (is_enrolled and not (enrollment and enrollment.is_expired) and lesson.id in unlocked_lesson_ids) or (not is_enrolled and lesson.is_preview) %}
+                {% set row_content %}
+                    <div class="flex items-center gap-3 min-w-0">
+                        <span class="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold shrink-0 {{ 'bg-emerald-500 text-white' if lesson.id in completed_lesson_ids else 'bg-brand-50 text-brand-700' }}">
+                            {% if lesson.id in completed_lesson_ids %}✓{% else %}{{ {'text': 'Aa', 'video': '▶', 'presentation': '▤', 'quiz': '?', 'assignment': '✎'}[lesson.lesson_type] }}{% endif %}
+                        </span>
+                        <span class="text-slate-700 truncate">{{ lesson.title(lang) }}</span>
+                    </div>
+                    {% if lesson.is_preview and not is_enrolled %}
+                    <span class="text-[10px] font-semibold uppercase tracking-wide text-academy-600 bg-academy-50 px-1.5 py-0.5 rounded shrink-0">{{ t('crs_preview_badge') }}</span>
+                    {% elif not clickable %}
+                    <svg class="w-3.5 h-3.5 text-slate-300 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                    {% endif %}
+                {% endset %}
+                {% if clickable %}
+                <a href="{{ url_for('public.lesson_view', lang=lang, slug=course.slug, lesson_id=lesson.id) }}"
+                   class="flex items-center justify-between gap-3 px-5 py-3 text-sm hover:bg-slate-50 transition">
+                    {{ row_content }}
+                </a>
+                {% else %}
+                <div class="flex items-center justify-between gap-3 px-5 py-3 text-sm">
+                    {{ row_content }}
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+{% if certificate or course_resources %}
+<section class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+    <h2 class="text-xl font-bold text-brand-800 mb-5">Course Completion &amp; Resources</h2>
+
+    {% if certificate %}
+    <div class="rounded-2xl border border-slate-100 p-5 mb-4 flex items-center justify-between gap-4 flex-wrap">
+        <div class="flex items-center gap-3 min-w-0">
+            <span class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style="background-color: color-mix(in srgb, var(--course-accent) 12%, white); color: var(--course-accent)">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </span>
+            <div class="min-w-0">
+                <p class="font-semibold text-slate-900">Certificate of Completion</p>
+                {% if certificate.is_revoked %}
+                <p class="text-xs font-semibold text-red-600 mt-0.5">Revoked</p>
+                {% else %}
+                <p class="text-xs text-slate-500 mt-0.5">ID {{ certificate.code }} · Completed {{ cert.date }}</p>
+                {% endif %}
+            </div>
+        </div>
+        {% if not certificate.is_revoked %}
+        <div class="flex items-center gap-2 shrink-0">
+            <a href="{{ url_for('account.certificate', lang=lang, slug=course.slug) }}"
+               class="rounded-lg border border-slate-200 text-slate-600 font-semibold px-4 py-2 text-sm hover:border-accent-300 transition">
+                View Certificate
+            </a>
+            <a href="{{ url_for('account.certificate', lang=lang, slug=course.slug) }}"
+               class="rounded-lg text-white font-semibold px-4 py-2 text-sm hover:opacity-90 transition" style="background-color: var(--course-accent)">
+                Download PDF
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if course_resources %}
+    <div class="rounded-2xl border border-slate-100 divide-y divide-slate-50">
+        {% for lesson, resource in course_resources %}
+        {% set asset_url = resource.external_url if resource.external_url else url_for('public.lesson_asset', lang=lang, slug=course.slug, lesson_id=lesson.id, stored_path=resource.file_filename) %}
+        <a href="{{ asset_url }}" target="_blank" rel="noopener"
+           class="flex items-center gap-3 px-5 py-3 text-sm hover:bg-slate-50 transition">
+            <svg class="w-4 h-4 text-accent-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+            <span class="text-slate-800 font-medium">{{ resource.title(lang) }}</span>
+            <span class="text-slate-400 truncate">— {{ lesson.title(lang) }}</span>
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+</section>
+{% endif %}
+</div>
+{% endblock %}

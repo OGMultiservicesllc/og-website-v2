@@ -1,0 +1,40 @@
+{# Right-panel content when no field is selected — page-level settings. #}
+<div class="p-4">
+    <p class="text-[11px] font-bold uppercase tracking-wide text-slate-400 mb-3">Page Settings</p>
+
+    <form method="POST" action="{{ url_for('admin.form_page_update', page_id=page.id) }}" class="space-y-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Page Title (English)</label>
+            <input type="text" name="title_en" value="{{ page.title_en or '' }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Título de Página (Español)</label>
+            <input type="text" name="title_es" value="{{ page.title_es or '' }}" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Description (English)</label>
+            <textarea name="description_en" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ page.description_en or '' }}</textarea>
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Descripción (Español)</label>
+            <textarea name="description_es" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ page.description_es or '' }}</textarea>
+        </div>
+        <button type="submit" class="w-full rounded-lg bg-accent-600 text-white font-semibold px-4 py-2 text-sm hover:bg-accent-700 transition">Save Page</button>
+    </form>
+
+    <div class="mt-6 pt-4 border-t border-slate-100">
+        <p class="text-[11px] font-bold uppercase tracking-wide text-slate-400 mb-2">Page Logic</p>
+        <p class="text-xs text-slate-400 mb-3">Rules that show, skip, or jump to this page based on earlier answers.</p>
+        {% set page_rules = form.rules|selectattr('target_page_id', 'equalto', page.id)|list %}
+        {% for rule in page_rules %}
+        {% include "admin/forms/_rule_card.html" %}
+        {% endfor %}
+        <form method="POST" action="{{ url_for('admin.form_rule_new', form_id=form.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="return_page_id" value="{{ page.id }}">
+            <button type="submit" class="text-xs font-semibold text-accent-600 hover:text-accent-700">+ Add rule for this page</button>
+        </form>
+        <p class="text-[11px] text-slate-400 mt-2">New rules default to "Show Field" — after adding, set the action to a page action (Show Page / Skip Page / Go To Page / End Form) and pick this page as the target.</p>
+    </div>
+</div>

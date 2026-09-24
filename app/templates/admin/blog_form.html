@@ -1,0 +1,229 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}{{ 'Edit Post' if post else 'New Post' }}{% endblock %}
+
+{% block content %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.snow.min.css" rel="stylesheet">
+<style>
+    .editor-wrap .ql-container { min-height: 260px; font-size: 0.9rem; border-bottom-left-radius: 0.5rem; border-bottom-right-radius: 0.5rem; }
+    .editor-wrap .ql-toolbar { border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; background: #f8fafc; }
+    .editor-wrap .ql-editor { min-height: 260px; }
+</style>
+<a href="{{ url_for('admin.blog_list') }}" class="text-sm text-slate-500 hover:text-accent-600">&larr; All posts</a>
+<h1 class="text-2xl font-bold text-brand-800 mt-2 mb-6">{{ 'Edit Post' if post else 'New Post' }}</h1>
+
+<form method="POST" enctype="multipart/form-data" class="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 space-y-6 max-w-3xl">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Title (English)</label>
+            <input type="text" name="title_en" required value="{{ post.title_en if post else '' }}"
+                   class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Título (Español)</label>
+            <input type="text" name="title_es" required value="{{ post.title_es if post else '' }}"
+                   class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Excerpt (English)</label>
+            <textarea name="excerpt_en" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ post.excerpt_en if post else '' }}</textarea>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Extracto (Español)</label>
+            <textarea name="excerpt_es" rows="2" class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">{{ post.excerpt_es if post else '' }}</textarea>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="editor-wrap">
+            <label class="block text-sm font-medium text-slate-700 mb-1">Content (English)</label>
+            <div id="editor-content_en" class="bg-white"></div>
+            <textarea name="content_en" class="hidden">{{ post.content_en if post else '' }}</textarea>
+        </div>
+        <div class="editor-wrap">
+            <label class="block text-sm font-medium text-slate-700 mb-1">Contenido (Español)</label>
+            <div id="editor-content_es" class="bg-white"></div>
+            <textarea name="content_es" class="hidden">{{ post.content_es if post else '' }}</textarea>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Category</label>
+            <input type="text" name="category" value="{{ post.category if post else '' }}" placeholder="e.g. Immigration, Taxes, Notary"
+                   list="category-suggestions"
+                   class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            <datalist id="category-suggestions">
+                {% for cat in existing_categories %}
+                <option value="{{ cat }}">
+                {% endfor %}
+            </datalist>
+            <p class="mt-1 text-xs text-slate-400">Type a new category name or pick an existing one — it's created automatically when you save.</p>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Author</label>
+            <input type="text" name="author_name" value="{{ post.author_name if post else 'OG Multiservices Team' }}"
+                   class="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+    </div>
+
+    <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Cover image</label>
+        <input type="file" name="cover_image" accept="image/*"
+               class="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 file:px-3 file:py-2 file:font-medium">
+        {% if post and post.cover_image %}
+        <div class="mt-2 flex items-center gap-3">
+            <img src="{{ url_for('admin.media', stored_path=post.cover_image) }}" alt="Cover" class="h-24 rounded-lg border border-slate-100 object-cover">
+            <button type="submit" form="cover-delete-form" class="text-sm font-medium text-red-500 hover:text-red-700">Remove cover image</button>
+        </div>
+        {% endif %}
+    </div>
+
+    <label class="flex items-center gap-2.5 text-sm font-medium text-slate-700">
+        <input type="checkbox" name="is_published" {{ 'checked' if post and post.is_published else '' }}
+               class="w-4 h-4 rounded border-slate-300 text-accent-600 focus:ring-accent-500">
+        Published
+    </label>
+
+    <button type="submit" class="rounded-lg bg-accent-600 text-white font-semibold px-6 py-2.5 text-sm hover:bg-accent-700 transition">
+        {{ 'Save Changes' if post else 'Create Post' }}
+    </button>
+</form>
+
+{% if post and post.cover_image %}
+<form id="cover-delete-form" method="POST" action="{{ url_for('admin.blog_cover_delete', post_id=post.id) }}" data-confirm="Remove the cover image?" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+</form>
+{% endif %}
+
+{% if post %}
+<div class="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 max-w-3xl mt-6">
+    <h2 class="font-semibold text-slate-900 mb-1">Photos, Audio &amp; Video</h2>
+    <p class="text-sm text-slate-500 mb-5">Attach media to this article — it will appear in order within the post.</p>
+
+    {% if post.media %}
+    <div class="space-y-2 mb-6">
+        {% for m in post.media %}
+        <div class="flex items-center gap-3 border border-slate-100 rounded-lg px-3 py-2.5">
+            <span class="text-xs font-semibold uppercase tracking-wide text-accent-600 w-14 shrink-0">{{ m.media_type }}</span>
+            {% if m.media_type == 'image' and m.filename %}
+            <img src="{{ url_for('admin.media', stored_path=m.filename) }}" alt="" class="w-14 h-10 object-cover rounded-md border border-slate-100 shrink-0">
+            {% endif %}
+            <span class="text-sm text-slate-600 flex-1 truncate">{{ m.caption_en or m.external_url or (m.filename.split('/')[-1] if m.filename else '') }}</span>
+            <form method="POST" action="{{ url_for('admin.blog_media_move', media_id=m.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="direction" value="up">
+                <button type="submit" class="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-400 text-sm">↑</button>
+            </form>
+            <form method="POST" action="{{ url_for('admin.blog_media_move', media_id=m.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="direction" value="down">
+                <button type="submit" class="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-400 text-sm">↓</button>
+            </form>
+            <form method="POST" action="{{ url_for('admin.blog_media_delete', media_id=m.id) }}" data-confirm="Remove this media item?">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="w-7 h-7 rounded-lg hover:bg-red-50 text-red-400 text-sm">✕</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('admin.blog_media_new', post_id=post.id) }}" enctype="multipart/form-data" class="border-t border-slate-100 pt-5 space-y-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="flex gap-4 text-sm">
+            <label class="flex items-center gap-1.5"><input type="radio" name="media_type" value="image" checked> Photo</label>
+            <label class="flex items-center gap-1.5"><input type="radio" name="media_type" value="audio"> Audio</label>
+            <label class="flex items-center gap-1.5"><input type="radio" name="media_type" value="video"> Video</label>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <input type="file" name="file" class="text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 file:px-3 file:py-2 file:font-medium">
+            <input type="url" name="external_url" placeholder="...or a video URL (YouTube/Vimeo)" class="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <input type="text" name="caption_en" placeholder="Caption (EN, optional)" class="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            <input type="text" name="caption_es" placeholder="Título (ES, opcional)" class="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+        <button type="submit" class="rounded-lg bg-brand-800 text-white text-sm font-semibold px-5 py-2.5 hover:bg-brand-700 transition">
+            + Add Media
+        </button>
+    </form>
+</div>
+{% endif %}
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/quill-image-resize-module@3.0.0/image-resize.min.js"></script>
+<script>
+    (function () {
+        if (window.ImageResize) {
+            Quill.register('modules/imageResize', window.ImageResize.default || window.ImageResize);
+        }
+
+        const csrfToken = {{ csrf_token|tojson }};
+        const uploadUrl = {{ url_for('admin.editor_image_upload')|tojson }};
+
+        function imageHandler() {
+            const input = document.createElement('input');
+            input.setAttribute('type', 'file');
+            input.setAttribute('accept', 'image/*');
+            input.click();
+            input.onchange = () => {
+                const file = input.files[0];
+                if (!file) return;
+                const formData = new FormData();
+                formData.append('csrf_token', csrfToken);
+                formData.append('image', file);
+                fetch(uploadUrl, { method: 'POST', body: formData })
+                    .then((res) => res.json())
+                    .then((data) => {
+                        if (!data.url) {
+                            alert(data.error || 'Upload failed.');
+                            return;
+                        }
+                        const range = this.quill.getSelection(true);
+                        this.quill.insertEmbed(range.index, 'image', data.url, 'user');
+                        this.quill.setSelection(range.index + 1);
+                    })
+                    .catch(() => alert('Upload failed.'));
+            };
+        }
+
+        const toolbarOptions = [
+            [{ header: [2, 3, false] }],
+            ['bold', 'italic', 'underline', 'strike'],
+            [{ color: [] }, { background: [] }],
+            [{ list: 'ordered' }, { list: 'bullet' }],
+            [{ indent: '-1' }, { indent: '+1' }],
+            [{ align: [] }],
+            ['blockquote', 'code-block'],
+            ['link', 'image'],
+            ['clean'],
+        ];
+
+        function buildEditor(fieldName) {
+            const container = document.getElementById('editor-' + fieldName);
+            const textarea = document.querySelector('textarea[name="' + fieldName + '"]');
+            const quill = new Quill(container, {
+                theme: 'snow',
+                modules: {
+                    toolbar: { container: toolbarOptions, handlers: { image: imageHandler } },
+                    imageResize: window.ImageResize ? { modules: ['Resize', 'DisplaySize', 'Toolbar'] } : undefined,
+                },
+            });
+            quill.root.innerHTML = textarea.value;
+
+            const form = textarea.closest('form');
+            form.addEventListener('submit', () => {
+                textarea.value = quill.root.innerHTML;
+            });
+        }
+
+        buildEditor('content_en');
+        buildEditor('content_es');
+    })();
+</script>
+{% endblock %}

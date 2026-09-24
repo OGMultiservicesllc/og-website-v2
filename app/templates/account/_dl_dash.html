@@ -1,0 +1,78 @@
+{# NJ Driver License case dashboard (My Account). Hierarchy (item 30): current step + required action are the
+   strongest thing on the page; the 6-milestone roadmap is a compact secondary reference below, not six equally
+   weighted boxes. Never implies an MVC decision, appointment guarantee or Road Test outcome. #}
+{% set en = lang == 'en' %}
+<div class="mt-6 rounded-[20px] border border-slate-100 bg-white shadow-card p-5">
+    <span class="inline-flex items-center rounded-full bg-mist-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-accent-700">{{ 'NJ Driver License' if en else 'Licencia de Conducir de NJ' }}</span>
+    <p class="mt-2 text-[15px] font-bold text-brand-800">{{ dl_dash.milestone_label }}</p>
+
+    {% if dl_dash.actions %}
+    <h2 class="mt-4 text-[12px] font-bold uppercase tracking-wide text-amber-800">{{ 'What you need to do now' if en else 'Qué necesitas hacer ahora' }}</h2>
+    <ul class="mt-2 space-y-2">
+        {% for emoji, text in dl_dash.actions %}
+        <li class="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5">
+            <span aria-hidden="true">{{ emoji }}</span>
+            <span class="min-w-0 text-[14px] font-semibold text-amber-900 break-words">{{ text }}</span>
+        </li>
+        {% endfor %}
+    </ul>
+    {% if dl_dash.editable %}
+    <div class="mt-3 flex flex-wrap gap-2">
+        <a href="{{ url_for(dl_dash.continue_url[0], **dl_dash.continue_url[1]) }}" class="inline-flex items-center min-h-[48px] px-5 rounded-xl bg-accent-600 text-white text-[15px] font-bold hover:bg-accent-700 transition">{{ 'Continue' if en else 'Continuar' }} &rarr;</a>
+        {% if dl_dash.self_editing %}
+        <a href="{{ url_for(dl_dash.discard_url[0], **dl_dash.discard_url[1]) }}" class="inline-flex items-center min-h-[48px] px-5 rounded-xl border border-slate-200 text-[15px] font-bold text-slate-600 hover:border-red-300 hover:text-red-700 transition">{{ 'Discard Changes' if en else 'Descartar Cambios' }}</a>
+        {% endif %}
+    </div>
+    {% endif %}
+    {% else %}
+    <p class="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[14px] font-semibold text-emerald-800">{{ dl_dash.next_step_text }}</p>
+    {% if dl_dash.next_step_route %}
+    <a href="{{ url_for(dl_dash.next_step_route[0], **dl_dash.next_step_route[1]) }}" class="mt-3 inline-flex items-center min-h-[48px] px-5 rounded-xl border border-slate-200 text-[15px] font-bold text-accent-700 hover:border-accent-300 transition">{{ 'Practice Now' if en else 'Practicar ahora' }} &rarr;</a>
+    {% endif %}
+    {% if dl_dash.can_self_edit %}
+    <a href="{{ url_for(dl_dash.edit_url[0], **dl_dash.edit_url[1]) }}" class="mt-3 ml-1 inline-flex items-center text-[13px] font-semibold text-slate-500 hover:text-accent-700 hover:underline">{{ 'Made a mistake? Edit My Information' if en else '¿Te equivocaste? Editar Mi Información' }}</a>
+    {% endif %}
+    {% endif %}
+</div>
+
+<details class="mt-4 group">
+    <summary class="cursor-pointer list-none flex items-center gap-1.5 text-[13px] font-semibold text-slate-500 hover:text-brand-800">
+        <span>{{ 'Your progress' if en else 'Tu progreso' }}</span>
+        <svg class="h-3.5 w-3.5 transition-transform group-open:rotate-90" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 5l6 5-6 5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </summary>
+    <ol class="mt-2 divide-y divide-slate-100 rounded-xl border border-slate-100 bg-white overflow-hidden">
+        {% for st in dl_dash.roadmap %}
+        <li class="flex items-center gap-2.5 px-3.5 py-2 text-[13px]">
+            <span class="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold {{ {'done': 'bg-emerald-100 text-emerald-700', 'current': 'bg-accent-100 text-accent-700'}.get(st.state, 'bg-slate-100 text-slate-400') }}" aria-hidden="true">{{ '&#10003;'|safe if st.state == 'done' else ('&middot;'|safe if st.state == 'current' else '') }}</span>
+            <span class="min-w-0 flex-1 font-semibold text-slate-700 break-words">{{ st.label }}</span>
+            <span class="text-[11px] font-semibold text-slate-400">
+                {%- if st.state == 'done' %}{{ 'Done' if en else 'Listo' }}
+                {%- elif st.state == 'current' %}{{ 'Current' if en else 'Actual' }}
+                {%- elif st.state == 'not_required' %}{{ 'Not required' if en else 'No requerido' }}
+                {%- elif st.state == 'to_be_determined' %}{{ 'To be determined' if en else 'Por determinar' }}
+                {%- else %}{{ 'Upcoming' if en else 'Próximo' }}
+                {%- endif %}</span>
+        </li>
+        {% endfor %}
+    </ol>
+    <p class="mt-2 text-[12px] text-slate-500">{{ 'This shows where things stand with OG. It is not a decision by the NJ MVC.' if en else 'Esto muestra cómo van las cosas con OG. No es una decisión del MVC de NJ.' }}</p>
+</details>
+
+{% if dl_dash.price %}
+<h2 class="mt-6 mb-3 text-lg font-bold text-brand-800">{{ 'OG Services' if en else 'Servicios de OG' }}</h2>
+<div class="rounded-card bg-white border border-slate-100 shadow-card p-4">
+    {% if dl_dash.price.state == 'confirmed' %}
+    <div class="flex items-center justify-between text-[15px] font-bold text-brand-800"><span>{{ 'Confirmed price' if en else 'Precio confirmado' }}</span><span class="tabular-nums">{{ dl_dash.price.final }}</span></div>
+    {% if dl_dash.price.needs_ack %}<a href="{{ url_for('public.dl_price_ack', lang=lang) }}" class="mt-3 inline-flex items-center min-h-[44px] px-4 rounded-xl bg-accent-600 text-white text-sm font-semibold hover:bg-accent-700 transition">{{ 'Review updated price' if en else 'Revisar precio actualizado' }} &rarr;</a>{% endif %}
+    {% elif dl_dash.price.lines %}
+    {% for line in dl_dash.price.lines %}
+    <div class="flex items-center justify-between text-[14px] text-slate-700 py-1"><span class="min-w-0 break-words">{{ line.label }}</span><span class="font-semibold {{ 'text-amber-700' if line.amount in ('Needs review', 'Requiere revisión') else 'text-brand-800' }} tabular-nums">{{ line.amount }}</span></div>
+    {% endfor %}
+    <div class="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[15px] font-bold text-brand-800"><span>{{ 'Estimated total' if en else 'Total estimado' }}</span><span class="tabular-nums">{{ dl_dash.price.subtotal }}{% if dl_dash.price.has_review_item %} +{% endif %}</span></div>
+    {% if dl_dash.price.has_review_item %}<p class="mt-2 text-[12px] text-amber-800 font-semibold">{{ '+ a document requiring OG review' if en else '+ un documento que requiere revisión de OG' }}</p>{% endif %}
+    <p class="mt-2 text-[12px] text-slate-500">{{ 'OG confirms the final price before doing the work. You are not charged now.' if en else 'OG confirma el precio final antes de hacer el trabajo. No se te cobra ahora.' }}</p>
+    {% else %}
+    <p class="text-[14px] text-slate-700">{{ 'Based on your answers, no translations or appointment assistance are needed right now.' if en else 'Según tus respuestas, no se necesitan traducciones ni asistencia con citas por ahora.' }}</p>
+    {% endif %}
+</div>
+{% endif %}

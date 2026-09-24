@@ -1,0 +1,40 @@
+{# Tax return dashboard (My Account). Shows OG's own workflow status; never a government decision. #}
+{% set en = lang == 'en' %}
+{% set d = tax_dash %}
+<div class="mt-6 flex flex-wrap items-center gap-2">
+    <span class="inline-flex items-center rounded-full bg-mist-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-accent-700">{{ 'Tax & ITIN Services' if en else 'Servicios de impuestos e ITIN' }}</span>
+    <span class="text-[13px] font-semibold text-slate-600">{{ 'Tax year' if en else 'Año fiscal' }} {{ d.year }}</span>
+</div>
+<h2 class="mt-3 mb-3 text-lg font-bold text-brand-800">{{ 'Where things stand' if en else 'Cómo va todo' }}</h2>
+<div class="rounded-card bg-white border border-slate-100 shadow-card p-4">
+    <p class="text-[17px] font-extrabold text-brand-800">{{ d.status }}</p>
+    <p class="mt-1 text-[14px] text-slate-600">{{ d.help }}</p>
+    {% if d.editable %}
+    <div class="mt-3 h-2 rounded-full bg-slate-100 overflow-hidden" role="progressbar" aria-valuenow="{{ d.percent }}" aria-valuemin="0" aria-valuemax="100"><div class="h-2 rounded-full bg-accent-600" style="width: {{ d.percent }}%"></div></div>
+    <a href="{{ url_for(d.continue_url[0], **d.continue_url[1]) }}" class="mt-4 inline-flex items-center justify-center min-h-[48px] px-6 rounded-[14px] bg-accent-600 text-white font-bold hover:bg-accent-700 transition">{{ ('Continue Your %d Tax Return' % d.year) if en else ('Continuar tu declaración %d' % d.year) }} &rarr;</a>
+    {% endif %}
+</div>
+
+{% if d.actions %}
+<h2 class="mt-7 mb-3 text-lg font-bold text-brand-800">{{ 'What you need to do' if en else 'Lo que necesitas hacer' }}</h2>
+<ul class="space-y-2">
+    {% for icon, text in d.actions %}<li class="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-[15px] text-amber-900 break-words">{{ icon }} {{ text }}</li>{% endfor %}
+</ul>
+{% endif %}
+
+{% if d.price %}
+<h2 class="mt-7 mb-3 text-lg font-bold text-brand-800">{{ 'Price' if en else 'Precio' }}</h2>
+{% set price = d.price %}
+{% include "tax/_price.html" %}
+{% if price.state == 'confirmed' and price.needs_ack %}
+<form method="post" action="{{ url_for('public.tax_price_ack', lang=lang, case_id=d.tax.case_id) }}" class="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <p class="text-[14px] text-amber-900">{{ ('The preparation fee changed%s. Please confirm you saw the new price.' % ((' from ' ~ price.previous) if price.previous else '')) if en else ('El costo de preparación cambió%s. Por favor confirma que viste el nuevo precio.' % ((' de ' ~ price.previous) if price.previous else '')) }}</p>
+    <button type="submit" class="mt-2 min-h-[44px] px-5 rounded-lg bg-accent-600 text-white text-[14px] font-bold">{{ 'I saw the new price' if en else 'Vi el nuevo precio' }}</button>
+</form>
+{% endif %}
+{% endif %}
+
+<div class="mt-6 flex flex-wrap gap-2">
+    <a href="{{ url_for(d.docs_url[0], **d.docs_url[1]) }}" class="inline-flex items-center min-h-[44px] px-4 rounded-xl border border-slate-200 text-sm font-semibold text-accent-700 hover:border-accent-300 transition">📄 {{ 'My tax documents' if en else 'Mis documentos de impuestos' }} ({{ d.docs_have }}/{{ d.docs_total }})</a>
+</div>

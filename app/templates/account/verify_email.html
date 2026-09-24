@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ t('verify_title') }}{% endblock %}
+
+{% block content %}
+<section class="bg-gradient-to-b from-mist-100 to-white">
+<div class="max-w-md mx-auto px-4 sm:px-6 py-8 sm:py-14">
+    <div class="text-center mb-6">
+        <img src="{{ logo_url() }}" alt="OG Multiservices" class="h-10 w-auto mx-auto mb-3">
+        <h1 class="text-2xl font-extrabold tracking-tight text-brand-800">{{ t('verify_title') }}</h1>
+        <p class="mt-2 text-slate-600 text-[15px] leading-relaxed">
+            {{ t('verify_sent_prefix') }}<strong class="text-brand-800">{{ masked_email }}</strong>{{ t('verify_sent_suffix') }}
+        </p>
+    </div>
+
+    <form method="POST" class="bg-white border border-slate-100 shadow-card rounded-panel p-5 sm:p-6 space-y-5">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="next" value="{{ next or '' }}">
+        <div>
+            <label for="verify-code" class="block text-sm font-semibold text-brand-800 mb-2 text-center">{{ t('verify_code_label') }}</label>
+            <input id="verify-code" type="text" name="code" required autofocus
+                   inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code"
+                   aria-describedby="verify-code-hint"
+                   class="w-full min-h-[64px] rounded-xl border border-slate-200 text-center text-3xl font-extrabold tracking-[0.5em] text-brand-800 focus:outline-none focus:ring-2 focus:ring-accent-500">
+            <p id="verify-code-hint" class="mt-2 text-xs text-slate-400 text-center">{{ t('verify_code_hint') }}</p>
+        </div>
+        <button type="submit" class="w-full min-h-[52px] rounded-xl bg-accent-600 text-white font-semibold hover:bg-accent-700 transition shadow-sm shadow-accent-600/25">
+            {{ t('verify_cta') }}
+        </button>
+    </form>
+
+    <form method="POST" action="{{ url_for('account.verify_email_resend', lang=lang) }}" class="mt-5 text-center">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="purpose" value="{{ purpose }}">
+        <input type="hidden" name="next" value="{{ next or '' }}">
+        <p class="text-sm text-slate-500 mb-2">{{ t('verify_no_code') }}</p>
+        <button type="submit" class="text-sm font-semibold text-accent-700 hover:text-accent-600">{{ t('verify_resend_cta') }}</button>
+    </form>
+
+    {% if show_change_email %}
+    <p class="mt-4 text-center text-sm text-slate-500">
+        <a href="{{ url_for('account.verify_email_change', lang=lang, next=next) }}" class="font-semibold text-slate-600 hover:text-brand-800">{{ t('verify_change_email_cta') }}</a>
+    </p>
+    {% endif %}
+
+    <p class="mt-6 text-center text-xs text-slate-400">
+        <a href="{{ url_for('account.logout', lang=lang) }}" class="hover:text-slate-600">{{ t('acct_logout') }}</a>
+    </p>
+</div>
+</section>
+{% endblock %}

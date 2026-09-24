@@ -1,0 +1,122 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}{{ cat.title_en }}{% endblock %}
+{% from "admin/_form_kit.html" import bi, toggle, tab_nav, tab_script, items_editor %}
+{% from "admin/_media_slot.html" import image_slot %}
+
+{% block content %}
+<a href="{{ url_for('admin.services_list') }}" class="text-sm text-slate-500 hover:text-slate-800">&larr; Services</a>
+<div class="flex flex-wrap items-center justify-between gap-3 mt-2 mb-6">
+    <h1 class="text-2xl font-bold text-slate-900">{{ cat.title_en }}</h1>
+    <a href="{{ url_for(cat.endpoint, lang='en') }}" target="_blank" rel="noopener" class="text-sm font-semibold text-accent-700 hover:underline">View page &nearr;</a>
+</div>
+
+<form method="POST" class="pb-24">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="tab" value="{{ tab }}">
+
+    {{ tab_nav([('general', 'General'), ('hero', 'Hero'), ('services', 'Services'), ('content', 'Content'), ('media', 'Media'), ('cta', 'Buttons'), ('legal', 'Legal'), ('seo', 'SEO')], tab) }}
+
+    <div data-tab-panel="general" class="max-w-3xl">
+        {{ bi('Page name', 'title', cat, required=True, hint='Shown in menus, cards and breadcrumbs') }}
+        {{ bi('Short description', 'short', cat, 'textarea', 2, hint='Used on the Home launcher and service cards') }}
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+            {{ toggle('is_published', 'Published', cat.is_published, 'Hidden pages disappear from the site and menus') }}
+            {{ toggle('show_in_nav', 'Show in menu', cat.show_in_nav) }}
+            {{ toggle('is_featured', 'Featured on Home', cat.is_featured, 'Appears in the Home service launcher') }}
+        </div>
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">Icon</label>
+            <select name="icon" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
+                {% for i in icons %}<option value="{{ i }}" {{ 'selected' if i == cat.icon else '' }}>{{ i|replace('-', ' ')|capitalize }}</option>{% endfor %}
+            </select>
+        </div>
+        <p class="text-xs text-slate-400">Page address: <code class="bg-slate-100 rounded px-1.5 py-0.5">{{ url_for(cat.endpoint, lang='en') }}</code> — fixed so existing links and Google results keep working.</p>
+    </div>
+
+    <div data-tab-panel="hero" class="hidden max-w-3xl">
+        {{ bi('Badge (small label above the title)', 'hero_badge', cat) }}
+        {{ bi('Hero title (H1)', 'hero_title', cat, hint='Leave empty to use the page name') }}
+        {{ bi('Hero description', 'hero_text', cat, 'textarea', 3) }}
+        {{ bi('Intro title', 'intro_title', cat, hint='Optional heading for the intro block') }}
+        {{ bi('Intro text', 'intro_body', cat, 'textarea', 4, hint='Short paragraph shown next to the quote/inquiry form when the page has one') }}
+        {{ bi('Contact note', 'contact_note', cat, 'textarea', 2, hint='The small WhatsApp callout') }}
+    </div>
+
+    <div data-tab-panel="services" class="hidden max-w-3xl">
+        {% if cat.subpage_endpoint %}
+        <p class="text-sm text-slate-600 mb-4">The services in this category are managed individually.</p>
+        <ul class="rounded-2xl bg-white border border-slate-100 divide-y divide-slate-100 mb-4">
+            {% for svc in cat.services %}
+            <li class="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+                <a href="{{ url_for('admin.service_edit', service_id=svc.id) }}" class="font-medium text-slate-800 hover:text-accent-700">{{ svc.title_en }}</a>
+                <span class="text-[11px] font-bold rounded-full px-2 py-0.5 {{ 'bg-emerald-50 text-emerald-700' if svc.is_published else 'bg-amber-50 text-amber-700' }}">{{ 'Published' if svc.is_published else 'Draft' }}</span>
+            </li>
+            {% else %}<li class="px-4 py-3 text-sm text-slate-500">No services yet.</li>{% endfor %}
+        </ul>
+        <a href="{{ url_for('admin.services_list') }}#cat-{{ cat.id }}" class="text-sm font-semibold text-accent-700 hover:underline">Reorder or add services &rarr;</a>
+        {% else %}
+        <p class="text-sm text-slate-600">This category is a single page without separate services. Use the Content tab to manage its lists.</p>
+        {% endif %}
+    </div>
+
+    <div data-tab-panel="content" class="hidden max-w-4xl">
+        {{ bi('Important information — title', 'info_title', cat) }}
+        {{ bi('Important information — text', 'info_body', cat, 'textarea', 3) }}
+        {{ bi('Supporting content', 'content', cat, 'textarea', 6, hint='Detailed, indexable text (SEO). Separate paragraphs with a blank line.') }}
+        {{ bi('Closing call-to-action — title', 'final_cta_title', cat) }}
+        {{ bi('Closing call-to-action — text', 'final_cta_body', cat, 'textarea', 2) }}
+        <h3 class="text-sm font-bold uppercase tracking-wide text-slate-400 mt-8 mb-1">Lists</h3>
+        <p class="text-xs text-slate-400 mb-4">Give each list a heading; a list with no rows is not shown.</p>
+        {{ bi('Feature cards — heading', 'features_title', cat) }}
+        {{ bi('Checklist / chips — heading', 'checklist_title', cat) }}
+        {{ bi("What's included — heading", 'included_title', cat) }}
+        {{ items_editor(cat, item_kinds) }}
+    </div>
+
+    <div data-tab-panel="media" class="hidden">
+        <p class="text-sm text-slate-500 mb-4 max-w-2xl">Pick images from the <a href="{{ url_for('admin.media_library') }}" class="text-accent-700 font-medium hover:underline">Media Library</a>. Until you do, the site shows a polished placeholder. Images are cropped automatically to fit.</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 max-w-5xl">
+            {{ image_slot('hero_image_id', 'Hero Image', cat.hero_image, '16:9', 'hero_focus', cat.hero_focus) }}
+            {{ image_slot('hero_mobile_image_id', 'Mobile Hero Image (optional)', cat.hero_mobile_image, '4:3', hint='If empty, phones use the Hero Image.') }}
+            {{ image_slot('card_image_id', 'Card Image', cat.card_image, '4:3', 'card_focus', cat.card_focus) }}
+            {{ image_slot('overview_image_id', 'Overview Image', cat.overview_image, '3:2') }}
+            {{ image_slot('social_image_id', 'Social / SEO Image', cat.social_image, '1200×630', hint='Shown when the page is shared.') }}
+        </div>
+    </div>
+
+    <div data-tab-panel="cta" class="hidden max-w-3xl">
+        {{ bi('Primary button label', 'cta_label', cat) }}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Button goes to</label>
+                <select name="cta_mode" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
+                    {% for m, label in [('default', 'Default (Contact page)'), ('contact', 'Contact page'), ('whatsapp', 'WhatsApp'), ('url', 'A custom link')] %}
+                    <option value="{{ m }}" {{ 'selected' if m == cat.cta_mode else '' }}>{{ label }}</option>{% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Custom link</label>
+                <input type="text" name="cta_url" value="{{ cat.cta_url or '' }}" placeholder="#quote or https://…" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            </div>
+        </div>
+        {{ toggle('whatsapp_enabled', 'Show WhatsApp as a secondary option', cat.whatsapp_enabled) }}
+    </div>
+
+    <div data-tab-panel="legal" class="hidden max-w-3xl">
+        {{ bi('Disclaimer / compliance notice', 'disclaimer', cat, 'textarea', 4, hint='Always shown on the page when filled in') }}
+        <p class="text-xs text-slate-400">OG provides document preparation and administrative assistance, never legal representation — keep that wording on immigration-related pages.</p>
+    </div>
+
+    <div data-tab-panel="seo" class="hidden max-w-3xl">
+        {{ bi('SEO title', 'seo_title', cat, maxlength=200, hint='Shown in Google results. Empty = page name') }}
+        {{ bi('Meta description', 'seo_description', cat, 'textarea', 3, hint='About 150 characters') }}
+        <p class="text-xs text-slate-400">The social image is chosen in the Media tab.</p>
+    </div>
+
+    <div class="fixed bottom-0 inset-x-0 md:left-60 z-30 bg-white/95 backdrop-blur border-t border-slate-200 px-4 py-3 flex items-center justify-end gap-3">
+        <a href="{{ url_for('admin.services_list') }}" class="text-sm text-slate-500 hover:text-slate-800">Cancel</a>
+        <button type="submit" class="rounded-lg bg-accent-600 text-white font-semibold px-6 py-2.5 text-sm hover:bg-accent-700 transition">Save changes</button>
+    </div>
+</form>
+{{ tab_script(tab) }}
+{% endblock %}
