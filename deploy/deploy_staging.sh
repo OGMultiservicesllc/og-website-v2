@@ -26,6 +26,12 @@ TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 cd "$APP_DIR"
 
 echo "==> [1/7] Pre-flight: checking for local/uncommitted changes"
+if [ ! -d .git ]; then
+    echo "ERROR: $APP_DIR is not a git working tree yet."
+    echo "       This script only handles ONGOING deploys to an already-reconciled repo."
+    echo "       Run the one-time reconciliation procedure first (see deploy/README.md)."
+    exit 1
+fi
 if [ -n "$(git status --porcelain)" ]; then
     echo "ERROR: the server working tree has uncommitted changes. Refusing to deploy"
     echo "       over unknown local state. Inspect with 'git status' / 'git diff' first."
@@ -34,19 +40,28 @@ fi
 
 echo "==> [2/7] Backing up the staging database"
 mkdir -p "$BACKUP_DIR"
-# Sourced only inside this server-side shell — never printed, never logged.
-set -a
-# shellcheck disable=SC1091
-source "$APP_DIR/.env"
-set +a
-if [[ "${DATABASE_URL:-}" == postgresql* ]]; then
-    pg_dump "$DATABASE_URL" > "$BACKUP_DIR/staging_${TIMESTAMP}.sql"
+# Read DATABASE_URL with python-dotenv (the same parser the app itself uses via
+# load_dotenv() in wsgi.py) rather than `source .env`. .env is a dotenv file, not
+# shell script: values containing spaces, '#', quotes, or '$' are valid dotenv but
+# break or silently truncate under `source`. This pulls exactly one value into a
+# local shell variable — the rest of .env is never exported into this process.
+DB_URL="$("$VENV_DIR/bin/python" -c "
+from dotenv import dotenv_values
+v = dotenv_values('$APP_DIR/.env').get('DATABASE_URL', '')
+print(v)
+")"
+if [[ "$DB_URL" == postgresql* ]]; then
+    pg_dump "$DB_URL" > "$BACKUP_DIR/staging_${TIMESTAMP}.sql"
     echo "    backup written: $BACKUP_DIR/staging_${TIMESTAMP}.sql"
     # Keep the last 20 backups only, so this directory doesn't grow unbounded.
     ls -1t "$BACKUP_DIR"/staging_*.sql 2>/dev/null | tail -n +21 | xargs -r rm --
+elif [ -z "$DB_URL" ]; then
+    echo "ERROR: DATABASE_URL not found in .env — aborting before touching anything."
+    exit 1
 else
     echo "    DATABASE_URL is not PostgreSQL — skipping pg_dump (unexpected on staging, check .env)"
 fi
+unset DB_URL
 
 echo "==> [3/7] Fetching and checking out latest $BRANCH"
 BEFORE_COMMIT="$(git rev-parse HEAD)"
