@@ -149,6 +149,29 @@ def _itin_entry(case, lang):
             "is_action": is_action, "updated_at": case.updated_at}
 
 
+def _ct_entry(case, lang):
+    from app.consent_travel import docs as ct_docs
+    from app.consent_travel import service as ct_service
+
+    ct = case.consent_travel_data
+    if ct is None:
+        return None
+    editable = ct.status in ct_service.EDITABLE
+    have, total, missing = _safe(ct_docs.counts, ct, default=(0, 0, 0))
+    label, tone = customer_status.case_status(case.status, lang)
+    is_action = editable or missing > 0 or ct.status == "waiting_client"
+    if is_action and tone not in ("action",):
+        tone = "action"
+    title = "Consent to Travel Authorization" if lang != "es" else "Autorización de Viaje para Menores"
+    continue_url = None
+    if editable:
+        key = ct.current_step if ct_service.step_by_key(ct_service.ctx(ct, lang), ct.current_step or "") else "intro"
+        continue_url = _url("public.ct_step", lang=lang, case_id=case.id, step_key=key)
+    return {"kind": "ct", "case": case, "domain": domain_of(case.case_type, lang), "type_title": title, "title": title,
+            "label": label, "tone": tone, "percent": None, "docs_have": have, "docs_total": total, "docs_missing": missing, "extra_count": 0,
+            "continue_url": continue_url, "view_url": _url("account.my_case_detail", lang=lang, case_id=case.id), "is_action": is_action, "updated_at": case.updated_at}
+
+
 def _dl_entry(case, lang):
     from app.driver_license import portal as dl_portal
 
@@ -189,6 +212,8 @@ def _normalize_case(case, lang):
         return _safe(_itin_entry, case, lang)
     if case.case_type == "nj_driver_license":
         return _safe(_dl_entry, case, lang)
+    if case.case_type == "consent_travel":
+        return _safe(_ct_entry, case, lang)
     return _safe(case_entry, case, lang)
 
 
@@ -267,7 +292,7 @@ def home_data(student, lang):
     tax_entries = [e for e in entries if e["kind"] in ("tax", "itin")]
     immigration_entries = [e for e in entries if e["kind"] == "case" and e["case"].case_type in _immigration_types()]
     dl_entries = [e for e in entries if e["kind"] == "dl"]
-    other_entries = [e for e in entries if e["kind"] == "case" and e["case"].case_type not in _immigration_types()]
+    other_entries = [e for e in entries if e["kind"] == "ct" or (e["kind"] == "case" and e["case"].case_type not in _immigration_types())]
 
     from app import payments_dashboard
 

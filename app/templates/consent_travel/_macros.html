@@ -1,0 +1,69 @@
+{# Consent to Travel: question and document-card renderers (identical shape to tax/_macros.html). #}
+{% macro field(row, lang, states, today) %}
+{% set q = row.q %}
+{% set en = lang == 'en' %}
+{% set err = row.error %}
+{% if q.kind == 'note' %}
+<p class="rounded-xl bg-mist-50 border border-mist-200 px-4 py-3 text-[14px] text-slate-700 leading-relaxed">{{ row.label }}</p>
+{% elif q.kind == 'docs' or q.kind == 'records' or q.kind == 'person_pick' %}
+{% else %}
+<div>
+    <label for="q-{{ q.key }}" class="block text-[15px] font-semibold text-brand-800 leading-snug">{{ row.label }}{% if q.req is sameas true %} <span class="text-accent-700" aria-hidden="true">*</span>{% endif %}</label>
+    {% if row.help %}<p class="mt-0.5 text-[13px] text-slate-500 leading-snug">{{ row.help }}</p>{% endif %}
+    {% set base = 'mt-2 w-full min-h-[52px] rounded-xl border px-3.5 text-[16px] bg-white ' ~ ('border-red-400' if err else 'border-slate-200') %}
+    {% if q.kind in ('text', 'email', 'phone', 'date', 'count') %}
+    <input id="q-{{ q.key }}" name="{{ q.key }}" value="{{ row.value }}" placeholder="{{ row.ph }}" class="{{ base }}" autocomplete="off"
+           type="{{ {'email': 'email', 'phone': 'tel', 'date': 'date', 'count': 'number'}.get(q.kind, 'text') }}"
+           {% if q.kind == 'date' and q.flag != 'future_ok' %}max="{{ today }}"{% endif %} {% if q.maxlen %}maxlength="{{ q.maxlen }}"{% endif %}>
+    {% elif q.kind == 'textarea' %}
+    <textarea id="q-{{ q.key }}" name="{{ q.key }}" rows="4" class="{{ base }} py-3" maxlength="{{ q.maxlen or 2000 }}" placeholder="{{ row.ph }}">{{ row.value }}</textarea>
+    {% elif q.kind == 'state' %}
+    <select id="q-{{ q.key }}" name="{{ q.key }}" class="{{ base }}"><option value="">—</option>{% for code, name in states %}<option value="{{ code }}" {{ 'selected' if row.value == code else '' }}>{{ name }} ({{ code }})</option>{% endfor %}</select>
+    {% elif q.kind == 'select' %}
+    <select id="q-{{ q.key }}" name="{{ q.key }}" class="{{ base }}"><option value="">—</option>{% for o in row.opts %}<option value="{{ o.value }}" {{ 'selected' if row.value == o.value else '' }}>{{ o.label[0] if en else o.label[1] }}</option>{% endfor %}</select>
+    {% elif q.kind in ('choice', 'yn3') %}
+    <div class="mt-2 grid gap-2 {{ 'grid-cols-3' if q.kind == 'yn3' else 'sm:grid-cols-2' }}" role="radiogroup" aria-label="{{ row.label }}">
+        {% for o in row.opts %}
+        <label class="block cursor-pointer"><input type="radio" name="{{ q.key }}" value="{{ o.value }}" class="peer sr-only" {{ 'checked' if row.value == o.value else '' }}>
+            <span class="flex items-center gap-2.5 min-h-[52px] rounded-xl border-2 px-3.5 py-2.5 text-[15px] font-semibold text-slate-700 bg-white transition {{ 'justify-center text-center' if q.kind == 'yn3' else '' }} border-slate-200 peer-checked:border-accent-600 peer-checked:bg-accent-50 peer-checked:text-brand-800 peer-focus-visible:ring-2 peer-focus-visible:ring-accent-400">
+                {% if o.emoji %}<span aria-hidden="true">{{ o.emoji }}</span>{% endif %}<span class="min-w-0 break-words">{{ o.label[0] if en else o.label[1] }}</span></span></label>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% if err %}<p class="mt-1.5 text-[13px] font-medium text-red-700" role="alert">{{ err }}</p>{% endif %}
+</div>
+{% endif %}
+{% endmacro %}
+
+{% macro doc_cards(cards, lang, ct) %}
+{% set en = lang == 'en' %}
+<ul class="mt-2 space-y-3">
+    {% for card in cards %}
+    {% set r = card.req %}
+    <li class="rounded-xl border border-slate-200 bg-white p-3.5" data-doc="{{ r.id }}" data-upload-url="{{ url_for('public.ct_doc_upload', lang=lang, case_id=ct.case_id, req_id=r.id) }}"
+        data-choice-url="{{ url_for('public.ct_doc_choice', lang=lang, case_id=ct.case_id, req_id=r.id) }}" data-remove-url="{{ url_for('public.ct_doc_remove', lang=lang, case_id=ct.case_id, req_id=r.id) }}">
+        <div class="flex flex-wrap items-start justify-between gap-2">
+            <p class="min-w-0 flex-1 basis-40 text-[15px] font-semibold text-brand-800 break-words">📄 {{ card.title }}</p>
+            <span class="inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold {{ {'needed': 'bg-slate-100 text-slate-600', 'requested': 'bg-slate-100 text-slate-600', 'uploaded': 'bg-amber-50 text-amber-800', 'under_review': 'bg-amber-50 text-amber-800', 'accepted': 'bg-emerald-50 text-emerald-700', 'needs_replacement': 'bg-red-50 text-red-700'}[card.status] }}">{{ card.status_text }}</span>
+        </div>
+        {% if card.review_message %}<p class="mt-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-[13px] text-red-800 break-words">{{ card.review_message }}</p>{% endif %}
+        {% if card.reused %}<p class="mt-1 text-[13px] font-semibold text-emerald-700">✓ {{ 'Already on file' if en else 'Ya lo tenemos' }}</p>{% endif %}
+        {% if card.doc %}<p class="mt-2 text-[13px] text-slate-700 break-all">✓ {{ card.doc.original_filename }}</p>{% endif %}
+        <div class="mt-2 flex flex-wrap items-center gap-2">
+            {% if card.can_upload %}
+            <label class="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl {{ 'border border-slate-200 bg-white text-accent-700' if card.doc else 'bg-accent-600 text-white' }} text-[14px] font-semibold cursor-pointer">
+                {{ ('Replace file' if en else 'Cambiar archivo') if card.doc else ('Upload / Take Photo' if en else 'Subir / Tomar Foto') }}
+                <input type="file" class="sr-only" accept=".pdf,.jpg,.jpeg,.png,.webp" capture="environment" data-file></label>
+            {% endif %}
+            {% if card.can_remove %}<button type="button" data-remove class="inline-flex items-center min-h-[44px] px-4 rounded-xl border border-red-200 bg-white text-[14px] font-semibold text-red-700">{{ 'Remove file' if en else 'Eliminar archivo' }}</button>{% endif %}
+            {% if not card.doc %}{% for k, text in card.choices %}
+            <button type="button" data-choice="{{ k }}" class="inline-flex items-center min-h-[44px] px-3.5 rounded-xl border-2 text-[14px] font-semibold {{ 'border-accent-600 bg-accent-50 text-brand-800' if card.choice == k else 'border-slate-200 bg-white text-slate-600' }}">{{ text }}</button>
+            {% endfor %}{% endif %}
+        </div>
+        <p class="mt-1 text-[12px] text-red-700" data-doc-error role="alert"></p>
+    </li>
+    {% else %}
+    <li class="text-[14px] text-slate-500">{{ 'Nothing to upload here yet.' if en else 'Aquí todavía no hay nada que subir.' }}</li>
+    {% endfor %}
+</ul>
+{% endmacro %}

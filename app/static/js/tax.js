@@ -1,7 +1,7 @@
 /* Tax Smart Intake: autosave, conditional questions, document actions. No dependencies. */
 (function () {
     'use strict';
-    var form = document.getElementById('tax-form') || document.getElementById('dl-form');
+    var form = document.getElementById('tax-form') || document.getElementById('dl-form') || document.getElementById('ct-form');
     var statusEl = document.getElementById('tax-save-status');
     var csrf = window.TAX_CSRF || '';
     var timer = null;

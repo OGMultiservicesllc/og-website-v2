@@ -61,6 +61,16 @@ from app.models.driver_license import (
     DL_STATUS_ES,
     DL_TOPICS,
 )
+from app.models.consent_travel import (
+    ConsentTravelCaseData,
+    ConsentTravelRecord,
+    ConsentTravelPriceRule,
+    ConsentTravelQuote,
+    CT_STATUSES,
+    CT_STATUS_EN,
+    CT_STATUS_ES,
+    LOCATIONS as CT_LOCATIONS,
+)
 from app.models.customer_files import CustomerFile, FILE_CATEGORIES, FILE_CATEGORY_KEYS, category_label
 from app.models.email import EmailVerificationCode, PasswordResetToken, EmailLog, EMAIL_VERIFICATION_PURPOSES, EMAIL_LOG_STATUSES
 from app.models.ratelimit import RateLimitHit
@@ -142,6 +152,7 @@ from app.models.form_builder import (
 __all__ = [
     "TaxCaseData", "TaxRecord", "TaxPriceRule", "TaxPriceQuote", "TermsAcceptance", "TaxBankInfo", "TAX_STATUSES", "TAX_STATUS_EN", "TAX_STATUS_ES",
     "DlCaseData", "DlPriceRule", "DlPriceQuote", "MvcLocation", "DlQuestion", "DlQuestionOption", "DlAttempt", "DlAttemptResponse",
+    "ConsentTravelCaseData", "ConsentTravelRecord", "ConsentTravelPriceRule", "ConsentTravelQuote", "CT_STATUSES", "CT_STATUS_EN", "CT_STATUS_ES", "CT_LOCATIONS",
     "DL_MILESTONES", "DL_MILESTONE_EN", "DL_MILESTONE_ES", "DL_MILESTONE_ORDER", "DL_STATUSES", "DL_STATUS_EN", "DL_STATUS_ES", "DL_TOPICS",
     "CustomerFile",
     "FILE_CATEGORIES",

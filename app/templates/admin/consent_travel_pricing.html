@@ -1,0 +1,26 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Consent to Travel pricing{% endblock %}
+{% block content %}
+<a href="{{ url_for('admin.ct_list') }}" class="text-sm text-slate-500 hover:text-accent-600">&larr; Consent to Travel cases</a>
+<div class="mt-2">
+    <h1 class="text-2xl font-bold text-brand-800">Consent to Travel pricing</h1>
+    <p class="text-sm text-slate-500 mt-1">Base document fee (includes the first child) and the additional-child fee for the same document. Cases already estimated/confirmed keep their own snapshot.</p>
+</div>
+<form method="post" action="{{ url_for('admin.ct_pricing_save') }}" class="mt-5 space-y-6">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <section class="rounded-2xl bg-white border border-slate-100 overflow-hidden">
+        <ul class="divide-y divide-slate-100">
+        {% for r in rules %}
+            <li class="px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                <input type="hidden" name="r{{ r.id }}__present" value="1">
+                <span class="min-w-0 flex-1 basis-64 text-slate-700">{{ r.label_en }}<span class="block text-[11px] text-slate-400">{{ r.label_es }}</span></span>
+                <label class="text-[11px] text-slate-500">USD <input name="r{{ r.id }}__amount" value="{{ '%.2f' % ((r.amount_cents or 0) / 100) }}" inputmode="decimal" class="w-28 rounded border border-slate-200 px-2 py-1.5 text-sm text-slate-800"></label>
+                <label class="text-[12px] text-slate-600 flex items-center gap-1.5"><input type="checkbox" name="r{{ r.id }}__active" {{ 'checked' if r.active else '' }}> Active</label>
+                {% if r.updated_by %}<span class="text-[11px] text-slate-400">edited by {{ r.updated_by }}{% if r.updated_at %} · {{ r.updated_at.strftime('%b %d, %Y') }}{% endif %}</span>{% endif %}
+            </li>
+        {% endfor %}
+        </ul>
+    </section>
+    <button class="rounded-lg bg-accent-600 text-white font-semibold px-5 py-2.5 text-sm hover:bg-accent-700">Save prices</button>
+</form>
+{% endblock %}

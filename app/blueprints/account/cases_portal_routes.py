@@ -79,6 +79,11 @@ def my_case_detail(lang, case_id):
         from app.driver_license import portal as dl_portal
 
         dl_dash = dl_portal.dashboard(case, lang)
+    ct_dash = None
+    if case.case_type == "consent_travel":
+        from app.consent_travel import portal as ct_portal
+
+        ct_dash = ct_portal.dashboard(case, lang)
     applicant_names = {a["submission"].id: a["person"].full_name for a in ((consular_dash or itin_dash) or {}).get("applicants", []) if a["person"] is not None}
     for s in case.applications:
         card = application_cards_single(s, lang)
@@ -104,7 +109,7 @@ def my_case_detail(lang, case_id):
                                          "apps": [a.code for a in r.applications], "track": getattr(r, "itin_track", None),
                                          "confirm_url": _passport_confirm_url(r, lang)} for r in g["requirements"]]})
     return render_template("account/case_detail.html", case=case, type_title=type_title(case.case_type, lang), status_text=case_status_text(case, lang),
-                           apps=apps, groups=groups, actions=len(vault.open_customer_actions(case)), section="cases", consular_dash=consular_dash, add_applicant_url=add_applicant_url, itin_dash=itin_dash, tax_dash=tax_dash, dl_dash=dl_dash, domain=domain_of(case.case_type, lang),
+                           apps=apps, groups=groups, actions=len(vault.open_customer_actions(case)), section="cases", consular_dash=consular_dash, add_applicant_url=add_applicant_url, itin_dash=itin_dash, tax_dash=tax_dash, dl_dash=dl_dash, ct_dash=ct_dash, domain=domain_of(case.case_type, lang),
                            original_states=(ORIGINAL_EN if lang == "en" else ORIGINAL_ES))
 
 

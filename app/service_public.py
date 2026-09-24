@@ -91,6 +91,18 @@ def service_cta(svc, lang):
         if active is not None:
             label = "Continuar Mi Proceso" if lang == "es" else "Continue My Process"
         return {"label": label, "href": url_for("public.dl_start", lang=lang), "external": False, "variant": "primary"}
+    from app.consent_travel.seed import SERVICE_SLUG as CT_SERVICE_SLUG
+
+    if svc.slug == CT_SERVICE_SLUG and svc.cta_mode == "default":
+        from app.consent_travel import service as ct_service
+        from app.student_auth import current_student
+
+        student = current_student()
+        active = student and ct_service.active_case(student)
+        label = svc.cta_label(lang) or ("Comenzar" if lang == "es" else "Get Started")
+        if active is not None:
+            label = "Continuar Mi Solicitud" if lang == "es" else "Continue My Application"
+        return {"label": label, "href": url_for("public.ct_start", lang=lang), "external": False, "variant": "primary"}
     wants_intake = svc.cta_mode == "intake" or (svc.cta_mode == "default" and svc.has_intake)
     if wants_intake and svc.has_intake:
         from app.intake import find_draft

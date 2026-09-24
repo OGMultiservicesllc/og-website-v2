@@ -655,3 +655,20 @@ DOCUMENT_CATEGORIES.update({
 # "+ New Case" action already supports an arbitrary case_type) and attaches a Charge to it — no new architecture.
 CASE_TYPES["general_service"] = {"en": "OG Service", "es": "Servicio de OG"}
 CASE_DOMAINS["general_service"] = {"key": "other", "en": "Other Services", "es": "Otros Servicios"}
+
+# ---------------------------------------------------------------- Consent to Travel Authorization for Minors (2026-09-24), its own
+# dedicated module (app/consent_travel/) on the Case + real-Person architecture, same pattern as Tax/NJ Driver License.
+CASE_TYPES["consent_travel"] = {"en": "Consent to Travel Authorization", "es": "Autorización de Viaje para Menores"}
+CASE_DOMAINS["consent_travel"] = {"key": "other", "en": "Other Services", "es": "Otros Servicios"}
+ROLE_LABELS.update({
+    "traveling_child": {"en": "Traveling child", "es": "Menor que viaja"},
+    "traveling_adult": {"en": "Traveling adult", "es": "Adulto que viaja"},
+    "consenting_mother": {"en": "Consenting mother", "es": "Madre que consiente"},
+    "consenting_father": {"en": "Consenting father", "es": "Padre que consiente"},
+    "accompanying_person": {"en": "Accompanying person", "es": "Persona acompañante"},
+})
+DOCUMENT_CATEGORIES.update({
+    "child_passport": {"en": "Child's passport", "es": "Pasaporte del menor"},
+    "child_birth_certificate": {"en": "Child's birth certificate", "es": "Acta de nacimiento del menor"},
+    "adult_photo_id": {"en": "Photo ID (Driver License, State ID or Passport)", "es": "Identificación con foto (Licencia, ID Estatal o Pasaporte)"},
+})

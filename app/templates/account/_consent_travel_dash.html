@@ -1,0 +1,40 @@
+{# Consent to Travel case dashboard (My Account). Never implies an appointment is confirmed or that payment is due before OG approves. #}
+{% set en = lang == 'en' %}
+<div class="mt-6 rounded-[20px] border border-slate-100 bg-white shadow-card p-5">
+    <span class="inline-flex items-center rounded-full bg-mist-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-accent-700">{{ 'Consent to Travel' if en else 'Autorización de Viaje' }}</span>
+    <p class="mt-2 text-[15px] font-bold text-brand-800">{{ ct_dash.status[0] }}</p>
+    <p class="mt-1 text-[13px] text-slate-500">{{ ('%d child(ren)' % ct_dash.children) if en else ('%d menor(es)' % ct_dash.children) }}</p>
+
+    {% if ct_dash.actions %}
+    <h2 class="mt-4 text-[12px] font-bold uppercase tracking-wide text-amber-800">{{ 'What you need to do now' if en else 'Qué necesitas hacer ahora' }}</h2>
+    <ul class="mt-2 space-y-2">
+        {% for emoji, text in ct_dash.actions %}
+        <li class="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5">
+            <span aria-hidden="true">{{ emoji }}</span>
+            <span class="min-w-0 text-[14px] font-semibold text-amber-900 break-words">{{ text }}</span>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    {% if ct_dash.editable %}
+    <a href="{{ url_for(ct_dash.continue_url[0], **ct_dash.continue_url[1]) }}" class="mt-3 inline-flex items-center min-h-[48px] px-5 rounded-xl bg-accent-600 text-white text-[15px] font-bold hover:bg-accent-700 transition">{{ 'Continue' if en else 'Continuar' }} &rarr;</a>
+    {% endif %}
+</div>
+
+{% if ct_dash.price %}
+<h2 class="mt-6 mb-3 text-lg font-bold text-brand-800">{{ 'OG Services' if en else 'Servicios de OG' }}</h2>
+<div class="rounded-card bg-white border border-slate-100 shadow-card p-4">
+    {% if ct_dash.price.state == 'confirmed' %}
+    <div class="flex items-center justify-between text-[15px] font-bold text-brand-800"><span>{{ 'Confirmed price' if en else 'Precio confirmado' }}</span><span class="tabular-nums">{{ ct_dash.price.final }}</span></div>
+    {% if ct_dash.price.needs_ack %}<a href="{{ url_for('public.ct_price_ack', lang=lang, case_id=ct_dash.ct.case_id) }}" class="mt-3 inline-flex items-center min-h-[44px] px-4 rounded-xl bg-accent-600 text-white text-sm font-semibold hover:bg-accent-700 transition">{{ 'Review updated price' if en else 'Revisar precio actualizado' }} &rarr;</a>{% endif %}
+    {% elif ct_dash.price.lines %}
+    {% for line in ct_dash.price.lines %}
+    <div class="flex items-center justify-between text-[14px] text-slate-700 py-1"><span class="min-w-0 break-words">{{ line.label }}</span><span class="font-semibold text-brand-800 tabular-nums">{{ line.amount or ('Needs review' if en else 'Requiere revisión') }}</span></div>
+    {% endfor %}
+    <div class="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[15px] font-bold text-brand-800"><span>{{ 'Estimated total' if en else 'Total estimado' }}</span><span class="tabular-nums">{{ ct_dash.price.subtotal }}</span></div>
+    <p class="mt-2 text-[12px] text-slate-500">{{ 'OG reviews your case and confirms the final price before any payment is requested.' if en else 'OG revisa tu caso y confirma el precio final antes de solicitar cualquier pago.' }}</p>
+    {% else %}
+    <p class="text-[14px] text-slate-700">{{ 'Add a child to see an estimate.' if en else 'Agrega un menor para ver un estimado.' }}</p>
+    {% endif %}
+</div>
+{% endif %}

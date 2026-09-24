@@ -1,0 +1,22 @@
+{# Price section (customer). `price` = pricing.customer_view(). No amount is ever written here: it all comes from the pricing engine. #}
+<div class="mt-4">
+    {% if price.state == 'confirmed' %}
+    <div class="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-4">
+        <p class="text-[13px] font-bold uppercase tracking-wider text-emerald-700">{{ 'Confirmed price' if en else 'Precio confirmado' }}</p>
+        <p class="mt-1 text-[28px] font-extrabold text-brand-800">{{ price.final }}</p>
+    </div>
+    {% elif price.state == 'estimate' %}
+    <div class="rounded-xl border border-slate-200 bg-white px-4 py-4">
+        <dl class="text-[16px]">
+            {% for l in price.lines %}<div class="flex items-center justify-between gap-3 {{ 'mt-2' if not loop.first else '' }}"><dt class="text-slate-700">{{ l.label }}</dt><dd class="font-semibold text-brand-800">{{ l.amount or ('Needs review' if en else 'Requiere revisión') }}</dd></div>{% endfor %}
+            <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between gap-3"><dt class="font-bold text-brand-800">{{ 'Estimated total' if en else 'Total estimado' }}</dt><dd class="text-[26px] font-extrabold text-brand-800">{{ price.subtotal }}</dd></div>
+        </dl>
+    </div>
+    <p class="mt-3 text-[14px] text-slate-600 leading-relaxed">{{ 'This estimate is based on the information you provided. OG will review your case and documents before confirming the final price.' if en else 'Este estimado se basa en la información que diste. OG revisará tu caso y documentos antes de confirmar el precio final.' }}</p>
+    <p class="mt-1 text-[13px] text-slate-500">{{ 'You are not charged now.' if en else 'No se te cobra ahora.' }}</p>
+    {% else %}
+    <div class="rounded-xl bg-mist-50 border border-mist-200 px-4 py-4">
+        <p class="text-[15px] text-slate-700 leading-relaxed">{{ 'Add at least one child to see a price estimate.' if en else 'Agrega al menos un menor para ver un estimado de precio.' }}</p>
+    </div>
+    {% endif %}
+</div>

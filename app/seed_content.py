@@ -326,6 +326,9 @@ def ensure_seeded():
         from app.driver_license.seed import ensure_all as ensure_dl
 
         seeded = ensure_dl() or seeded
+        from app.consent_travel.seed import ensure_all as ensure_ct
+
+        seeded = ensure_ct() or seeded
         from app.cases import backfill_cases
 
         return bool(backfill_cases()) or seeded

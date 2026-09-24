@@ -11,7 +11,7 @@
         {{ pill(status_text, 'success' if case.status in ('completed', 'closed') else 'accent') }}
     </div>
     <p class="text-sm text-slate-500 mt-1">{{ t('case_number') }} <span class="font-mono">{{ case.case_number }}</span></p>
-    {% if actions and not tax_dash and not dl_dash %}
+    {% if actions and not tax_dash and not dl_dash and not ct_dash %}
     <p class="mt-4 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-900" role="status">{{ t('case_needs_you') % actions }} <a href="#documents" class="font-semibold underline">{{ t('case_documents') }}</a></p>
     {% elif not dl_dash %}
     <p class="mt-4 text-sm text-slate-500">{{ t('case_all_good') }}</p>
@@ -20,6 +20,7 @@
     {% if itin_dash %}{% include "account/_itin_dash.html" %}{% endif %}
     {% if tax_dash %}{% include "account/_tax_dash.html" %}{% endif %}
     {% if dl_dash %}{% include "account/_dl_dash.html" %}{% endif %}
+    {% if ct_dash %}{% include "account/_consent_travel_dash.html" %}{% endif %}
 
     {% if consular_dash %}
     {% set en = lang == 'en' %}
@@ -56,8 +57,8 @@
     {% endif %}
     {% endif %}
 
-    {% if not tax_dash and not dl_dash %}<h2 class="mt-7 mb-3 text-lg font-bold text-brand-800">{{ t('case_applications') }}</h2>{% endif %}
-    {% if tax_dash or dl_dash %}
+    {% if not tax_dash and not dl_dash and not ct_dash %}<h2 class="mt-7 mb-3 text-lg font-bold text-brand-800">{{ t('case_applications') }}</h2>{% endif %}
+    {% if tax_dash or dl_dash or ct_dash %}
     {% elif apps %}
     <ul class="space-y-3">
         {% for a in apps %}
