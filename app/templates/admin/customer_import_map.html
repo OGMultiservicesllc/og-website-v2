@@ -1,47 +1,73 @@
 {% extends "admin/base_admin.html" %}
-{% block title %}Map Columns{% endblock %}
+{% block title %}Map Fields{% endblock %}
 
 {% block content %}
 <div class="mb-6">
     <a href="{{ url_for('admin.customer_import_list') }}" class="text-sm text-accent-700 hover:underline">&larr; Import / Invitations</a>
-    <h1 class="text-2xl font-bold text-slate-900 mt-2">Preview &amp; Map Columns</h1>
-    <p class="text-sm text-slate-500 mt-1 max-w-2xl">{{ batch.original_filename }} &middot; {{ batch.total_rows }} row(s). We guessed a mapping below — adjust any column, then Validate &amp; Import.</p>
+    <h1 class="text-2xl font-bold text-slate-900 mt-2">Map Fields &amp; Preview</h1>
+    <p class="text-sm text-slate-500 mt-1 max-w-2xl">{{ batch.original_filename }} &middot; <strong>{{ total }} contacts detected</strong>. We matched the columns below automatically — adjust any field, then Validate Contacts.</p>
 </div>
 
-<form method="POST" class="space-y-6">
+<form method="GET" action="{{ url_for('admin.customer_import_map', batch_id=batch.id) }}" id="mapping-form" class="space-y-6">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-
-    <div class="rounded-2xl bg-white border border-slate-100 overflow-x-auto">
-        <table class="w-full text-sm">
-            <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-                <tr>
-                    {% for h in headers %}<th class="px-4 py-3 font-semibold whitespace-nowrap">{{ h }}</th>{% endfor %}
-                </tr>
-                <tr class="bg-white border-t border-slate-100">
+    <section class="bg-white border border-slate-100 rounded-2xl p-5 sm:p-6">
+        <h2 class="font-semibold text-slate-900 mb-1">Field Mapping</h2>
+        <p class="text-xs text-slate-500 mb-4">Choose which CSV column fills each customer field. Columns not listed here (tags, subscriber status, activity, etc.) are ignored — nothing in your file is changed.</p>
+        <div class="grid sm:grid-cols-2 gap-x-8 gap-y-3">
+            {% for field, label in mapping_rows %}
+            <div class="flex items-center justify-between gap-3 py-1.5 border-b border-slate-50">
+                <label for="field-{{ field }}" class="text-sm font-medium text-slate-700">{{ label }}{% if field == 'email' %} <span class="text-red-500">*</span>{% endif %}</label>
+                <select id="field-{{ field }}" name="field_{{ field }}" onchange="document.getElementById('mapping-form').submit()"
+                        class="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-accent-500 max-w-[14rem]">
+                    <option value="">— None —</option>
                     {% for h in headers %}
-                    <th class="px-4 py-2.5">
-                        <select name="map_{{ loop.index0 }}" class="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-accent-500">
-                            {% for f in fields %}
-                            <option value="{{ f }}" {{ 'selected' if mapping.get(h) == f else '' }}>{{ f.replace('_', ' ')|title if f != 'ignore' else '— Ignore this column —' }}</option>
-                            {% endfor %}
-                        </select>
-                    </th>
+                    <option value="{{ h }}" {{ 'selected' if mapping.get(field) == h else '' }}>{{ h }}</option>
                     {% endfor %}
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100">
-                {% for row in preview %}
-                <tr>
-                    {% for cell in row %}<td class="px-4 py-2.5 text-slate-600 whitespace-nowrap max-w-[16rem] truncate">{{ cell }}</td>{% endfor %}
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    <p class="text-xs text-slate-400">Showing the first {{ preview|length }} data row(s) of {{ batch.total_rows }}.</p>
+                </select>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="flex items-center justify-between mt-5">
+            <p class="text-xs text-slate-400">Everything else in the file (Email 2, extra phones, secondary address, DOB, company, tags, subscriber status, source, language…) is left unmapped by default.</p>
+            <button type="submit" formaction="{{ url_for('admin.customer_import_validate', batch_id=batch.id) }}" formmethod="POST"
+                    class="shrink-0 rounded-lg bg-accent-600 text-white font-semibold px-6 py-2.5 text-sm hover:bg-accent-700 transition">
+                Validate Contacts
+            </button>
+        </div>
+    </section>
 
-    <button type="submit" class="rounded-lg bg-accent-600 text-white font-semibold px-6 py-2.5 text-sm hover:bg-accent-700 transition">
-        Validate &amp; Import
-    </button>
+    <section class="bg-white border border-slate-100 rounded-2xl overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2">
+            <h2 class="font-semibold text-slate-900">Preview</h2>
+            <p class="text-xs text-slate-500">Previewing {{ ((page - 1) * page_size) + 1 }}–{{ [page * page_size, total]|min }} of {{ total }}</p>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                    <tr><th class="px-4 py-2.5 font-semibold">Name</th><th class="px-4 py-2.5 font-semibold">Last Name</th><th class="px-4 py-2.5 font-semibold">Email</th><th class="px-4 py-2.5 font-semibold">Phone</th><th class="px-4 py-2.5 font-semibold">Address</th></tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for row in rows %}
+                    <tr>
+                        <td class="px-4 py-2.5 text-slate-700">{{ row.first_name }}</td>
+                        <td class="px-4 py-2.5 text-slate-600">{{ row.last_name }}</td>
+                        <td class="px-4 py-2.5 text-slate-600">{{ row.email }}</td>
+                        <td class="px-4 py-2.5 text-slate-600 whitespace-nowrap">{{ row.phone }}</td>
+                        <td class="px-4 py-2.5 text-slate-500 max-w-[20rem] truncate" title="{{ row.address }}">{{ row.address }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="px-5 py-3.5 border-t border-slate-100 flex items-center justify-between text-sm">
+            {% if page > 1 %}
+            <button type="submit" formaction="{{ url_for('admin.customer_import_map', batch_id=batch.id) }}" name="page" value="{{ page - 1 }}" class="text-accent-700 font-semibold hover:underline">&larr; Previous</button>
+            {% else %}<span></span>{% endif %}
+            <span class="text-slate-500">Page {{ page }} of {{ total_pages }}</span>
+            {% if page < total_pages %}
+            <button type="submit" formaction="{{ url_for('admin.customer_import_map', batch_id=batch.id) }}" name="page" value="{{ page + 1 }}" class="text-accent-700 font-semibold hover:underline">Next &rarr;</button>
+            {% else %}<span></span>{% endif %}
+        </div>
+    </section>
 </form>
 {% endblock %}

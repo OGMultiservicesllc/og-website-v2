@@ -5,17 +5,38 @@
 <div class="mb-6">
     <a href="{{ url_for('admin.customer_import_list') }}" class="text-sm text-accent-700 hover:underline">&larr; Import / Invitations</a>
     <h1 class="text-2xl font-bold text-slate-900 mt-2">{{ batch.original_filename or 'Import' }}</h1>
-    <p class="text-sm text-slate-500 mt-1">Uploaded {{ batch.uploaded_at.strftime('%b %d, %Y %I:%M %p') if batch.uploaded_at else '—' }} &middot; {{ batch.total_rows }} row(s)</p>
+    <p class="text-sm text-slate-500 mt-1">
+        {{ batch.total_rows }} contacts analyzed
+        {% if batch.validated_at %} &middot; validated {{ batch.validated_at.strftime('%b %d, %Y %I:%M %p') }}{% endif %}
+        {% if batch.imported_at %} &middot; imported {{ batch.imported_at.strftime('%b %d, %Y %I:%M %p') }}{% endif %}
+    </p>
 </div>
 
-<div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
-    <div class="rounded-xl bg-white border border-slate-100 p-4 text-center"><p class="text-2xl font-bold text-brand-800">{{ batch.imported_count }}</p><p class="text-xs text-slate-500 mt-0.5">Imported</p></div>
-    <div class="rounded-xl bg-white border border-slate-100 p-4 text-center"><p class="text-2xl font-bold text-slate-700">{{ batch.existing_count }}</p><p class="text-xs text-slate-500 mt-0.5">Already existed</p></div>
-    <div class="rounded-xl bg-white border border-slate-100 p-4 text-center"><p class="text-2xl font-bold text-amber-600">{{ batch.invalid_count }}</p><p class="text-xs text-slate-500 mt-0.5">Invalid</p></div>
+<div class="grid grid-cols-2 sm:grid-cols-6 gap-3 mb-6">
+    <div class="rounded-xl bg-white border border-slate-100 p-4 text-center"><p class="text-2xl font-bold text-brand-800">{{ batch.ready_count }}</p><p class="text-xs text-slate-500 mt-0.5">Ready to import</p></div>
+    <div class="rounded-xl bg-white border border-slate-100 p-4 text-center"><p class="text-2xl font-bold text-slate-700">{{ batch.existing_count }}</p><p class="text-xs text-slate-500 mt-0.5">Existing customers</p></div>
     <div class="rounded-xl bg-white border border-slate-100 p-4 text-center"><p class="text-2xl font-bold text-amber-600">{{ batch.missing_email_count }}</p><p class="text-xs text-slate-500 mt-0.5">Missing email</p></div>
-    <div class="rounded-xl bg-white border border-slate-100 p-4 text-center"><p class="text-2xl font-bold text-red-600">{{ batch.error_count }}</p><p class="text-xs text-slate-500 mt-0.5">Errors</p></div>
+    <div class="rounded-xl bg-white border border-slate-100 p-4 text-center"><p class="text-2xl font-bold text-amber-600">{{ batch.invalid_email_count }}</p><p class="text-xs text-slate-500 mt-0.5">Invalid email</p></div>
+    <div class="rounded-xl bg-white border border-slate-100 p-4 text-center"><p class="text-2xl font-bold text-amber-600">{{ batch.duplicate_count }}</p><p class="text-xs text-slate-500 mt-0.5">Duplicate rows in CSV</p></div>
+    <div class="rounded-xl bg-white border border-slate-100 p-4 text-center"><p class="text-2xl font-bold text-red-600">{{ batch.error_count }}</p><p class="text-xs text-slate-500 mt-0.5">Other errors</p></div>
 </div>
 
+{% if batch.status == "validated" %}
+<section class="rounded-2xl bg-white border border-slate-100 p-5 sm:p-6 mb-6 flex flex-wrap items-center justify-between gap-3">
+    <div>
+        <h2 class="font-semibold text-slate-900">Ready to Import</h2>
+        <p class="text-xs text-slate-500 mt-0.5">Nothing has been written to the customer database yet. Review the rows below, then import.</p>
+    </div>
+    <form method="POST" action="{{ url_for('admin.customer_import_commit', batch_id=batch.id) }}" data-confirm="Import {{ batch.ready_count }} customer(s)? This writes new accounts to the database.">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="rounded-lg bg-accent-600 text-white font-semibold px-6 py-2.5 text-sm hover:bg-accent-700 transition" {{ 'disabled' if not batch.ready_count else '' }}>
+            Import {{ batch.ready_count }} Customer{{ 's' if batch.ready_count != 1 else '' }}
+        </button>
+    </form>
+</section>
+{% endif %}
+
+{% if batch.status == "imported" %}
 <section class="rounded-2xl bg-white border border-slate-100 p-5 sm:p-6 mb-6">
     <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div>
@@ -85,11 +106,12 @@
     <p class="text-sm text-slate-400">No new customer accounts were created by this import.</p>
     {% endif %}
 </section>
+{% endif %}
 
 <section class="rounded-2xl bg-white border border-slate-100 overflow-hidden">
     <div class="px-5 py-3.5 border-b border-slate-100 flex flex-wrap items-center gap-2">
         <h2 class="font-semibold text-slate-900 mr-2">All Rows</h2>
-        {% for key, label in [('', 'All'), ('imported', 'Imported'), ('existing', 'Existing'), ('invalid', 'Invalid'), ('missing_email', 'Missing Email'), ('error', 'Error')] %}
+        {% for key, label in [('', 'All'), ('ready', 'Ready'), ('existing', 'Existing'), ('missing_email', 'Missing Email'), ('invalid_email', 'Invalid Email'), ('duplicate_in_csv', 'Duplicate in CSV'), ('error', 'Error')] %}
         <a href="{{ url_for('admin.customer_import_detail', batch_id=batch.id, result=key or none) }}"
            class="rounded-full px-3 py-1 text-xs font-semibold {{ 'bg-brand-800 text-white' if result_filter == key else 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}">{{ label }}</a>
         {% endfor %}
@@ -97,23 +119,27 @@
     <div class="overflow-x-auto">
         <table class="w-full text-sm">
             <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-                <tr><th class="px-4 py-2.5 font-semibold">#</th><th class="px-4 py-2.5 font-semibold">Name</th><th class="px-4 py-2.5 font-semibold">Email</th><th class="px-4 py-2.5 font-semibold">Phone</th><th class="px-4 py-2.5 font-semibold">Result</th><th class="px-4 py-2.5 font-semibold">Note</th></tr>
+                <tr><th class="px-4 py-2.5 font-semibold">#</th><th class="px-4 py-2.5 font-semibold">Name</th><th class="px-4 py-2.5 font-semibold">Last Name</th><th class="px-4 py-2.5 font-semibold">Email</th><th class="px-4 py-2.5 font-semibold">Phone</th><th class="px-4 py-2.5 font-semibold">Address</th><th class="px-4 py-2.5 font-semibold">Result</th><th class="px-4 py-2.5 font-semibold">Note</th></tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
                 {% for r in rows %}
                 <tr>
                     <td class="px-4 py-2 text-slate-400">{{ r.row_number }}</td>
-                    <td class="px-4 py-2 text-slate-700">{{ r.full_name or ((r.first_name or '') ~ ' ' ~ (r.last_name or ''))|trim or '—' }}</td>
+                    <td class="px-4 py-2 text-slate-700">{{ r.first_name or '—' }}</td>
+                    <td class="px-4 py-2 text-slate-600">{{ r.last_name or '—' }}</td>
                     <td class="px-4 py-2 text-slate-600">{{ r.email or '—' }}</td>
-                    <td class="px-4 py-2 text-slate-600">{{ r.phone or '—' }}</td>
+                    <td class="px-4 py-2 text-slate-600 whitespace-nowrap">{{ r.phone or '—' }}</td>
+                    <td class="px-4 py-2 text-slate-500 max-w-[16rem] truncate" title="{{ r.display_address }}">{{ r.display_address or '—' }}</td>
                     <td class="px-4 py-2">
-                        {% set rtone = {'imported': 'bg-emerald-50 text-emerald-700', 'existing': 'bg-slate-100 text-slate-600', 'invalid': 'bg-amber-50 text-amber-700', 'missing_email': 'bg-amber-50 text-amber-700', 'error': 'bg-red-50 text-red-600'} %}
-                        <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ rtone.get(r.result, 'bg-slate-100 text-slate-600') }}">{{ r.result.replace('_', ' ')|title }}</span>
+                        {% set rtone = {'ready': 'bg-emerald-50 text-emerald-700', 'existing': 'bg-slate-100 text-slate-600', 'invalid_email': 'bg-amber-50 text-amber-700', 'missing_email': 'bg-amber-50 text-amber-700', 'duplicate_in_csv': 'bg-purple-50 text-purple-700', 'error': 'bg-red-50 text-red-600'} %}
+                        <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ rtone.get(r.result, 'bg-slate-100 text-slate-600') }}">
+                            {{ 'Imported' if (r.result == 'ready' and r.imported) else r.result.replace('_', ' ')|title }}
+                        </span>
                     </td>
                     <td class="px-4 py-2 text-slate-400 text-xs">{{ r.error_message or '' }}</td>
                 </tr>
                 {% else %}
-                <tr><td colspan="6" class="px-4 py-10 text-center text-slate-400">No rows match this filter.</td></tr>
+                <tr><td colspan="8" class="px-4 py-10 text-center text-slate-400">No rows match this filter.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

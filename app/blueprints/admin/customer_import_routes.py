@@ -27,50 +27,88 @@ def customer_import_upload():
             flash("Choose a CSV file to upload.", "error")
             return render_template("admin/customer_import_upload.html")
         try:
-            filename, raw_text, headers = customer_import.read_upload(file_storage)
+            filename, raw_text, _headers = customer_import.read_upload(file_storage)
         except customer_import.ImportFileError as exc:
             flash(str(exc), "error")
             return render_template("admin/customer_import_upload.html")
-        batch = customer_import.create_batch(filename, raw_text, headers, session.get("admin_user_id"))
+        batch = customer_import.create_batch(filename, raw_text, session.get("admin_user_id"))
         return redirect(url_for("admin.customer_import_map", batch_id=batch.id))
     return render_template("admin/customer_import_upload.html")
 
 
-@admin_bp.route("/customers/import/<int:batch_id>/map", methods=["GET", "POST"])
+def _mapping_from_args(headers, args):
+    """{target_field: csv_header} from either query args (GET preview/pagination) or form fields (POST
+    Validate) — both use the same `field_<target>` naming, so mapping selections survive pagination
+    and carry through to validation unchanged."""
+    mapping = {}
+    for field in customer_import.TARGET_FIELDS:
+        header = args.get(f"field_{field}", "")
+        if header and header in headers:
+            mapping[field] = header
+    return mapping
+
+
+@admin_bp.route("/customers/import/<int:batch_id>/map", methods=["GET"])
 @admin_required
 def customer_import_map(batch_id):
     batch = ImportBatch.query.get_or_404(batch_id)
     if batch.status != "mapping":
         return redirect(url_for("admin.customer_import_detail", batch_id=batch.id))
 
-    import csv as _csv
-    import io as _io
+    headers = customer_import.headers_of(batch)
+    if any(k.startswith("field_") for k in request.args):
+        mapping = _mapping_from_args(headers, request.args)
+    else:
+        mapping = customer_import.guess_mapping(headers)
+    page = request.args.get("page", 1, type=int) or 1
+    rows, total, total_pages, page = customer_import.preview_page(batch, mapping, page)
 
-    headers = next(_csv.reader(_io.StringIO(batch.raw_csv)), [])
-    preview = customer_import.preview_rows(batch.raw_csv)
+    return render_template(
+        "admin/customer_import_map.html", batch=batch, headers=headers, rows=rows, total=total,
+        total_pages=total_pages, page=page, page_size=customer_import.PREVIEW_PAGE_SIZE,
+        mapping=mapping, mapping_rows=customer_import.MAPPING_ROWS,
+    )
 
-    if request.method == "POST":
-        if not validate_csrf(request.form.get("csrf_token")):
-            abort(400)
-        mapping = {h: request.form.get(f"map_{i}", "ignore") for i, h in enumerate(headers)}
-        if "email" not in mapping.values():
-            flash("Map at least one column to Email — an account can't be created without one.", "error")
-            return render_template("admin/customer_import_map.html", batch=batch, headers=headers, preview=preview,
-                                  mapping=customer_import.guess_mapping(headers), fields=customer_import.TARGET_FIELDS)
-        counts = customer_import.run_import(batch, mapping, session.get("admin_user_id"))
-        flash(f"Import complete — {counts['imported']} imported, {counts['existing']} already existed, "
-              f"{counts['invalid']} invalid, {counts['missing_email']} missing email, {counts['error']} errors.", "success")
+
+@admin_bp.route("/customers/import/<int:batch_id>/validate", methods=["POST"])
+@admin_required
+def customer_import_validate(batch_id):
+    if not validate_csrf(request.form.get("csrf_token")):
+        abort(400)
+    batch = ImportBatch.query.get_or_404(batch_id)
+    if batch.status != "mapping":
         return redirect(url_for("admin.customer_import_detail", batch_id=batch.id))
+    headers = customer_import.headers_of(batch)
+    mapping = _mapping_from_args(headers, request.form)
+    if "email" not in mapping:
+        flash("Map a column to Email — an account can't be created without one.", "error")
+        return redirect(url_for("admin.customer_import_map", batch_id=batch.id))
+    customer_import.validate_batch(batch, mapping, session.get("admin_user_id"))
+    return redirect(url_for("admin.customer_import_detail", batch_id=batch.id))
 
-    mapping = customer_import.guess_mapping(headers)
-    return render_template("admin/customer_import_map.html", batch=batch, headers=headers, preview=preview,
-                          mapping=mapping, fields=customer_import.TARGET_FIELDS)
+
+@admin_bp.route("/customers/import/<int:batch_id>/commit", methods=["POST"])
+@admin_required
+def customer_import_commit(batch_id):
+    """"Import X Customers" — the ONLY action that writes Student rows. Idempotent: safe to click again
+    (e.g. after a partial failure) — only rows not yet imported are processed."""
+    if not validate_csrf(request.form.get("csrf_token")):
+        abort(400)
+    batch = ImportBatch.query.get_or_404(batch_id)
+    if batch.status not in ("validated", "imported"):
+        flash("Validate this batch before importing.", "error")
+        return redirect(url_for("admin.customer_import_detail", batch_id=batch.id))
+    imported = customer_import.import_batch(batch, session.get("admin_user_id"))
+    flash(f"Imported {imported} new customer(s). Invitations were NOT sent automatically — use Send Account Invitations below when you're ready.", "success")
+    return redirect(url_for("admin.customer_import_detail", batch_id=batch.id))
 
 
 @admin_bp.route("/customers/import/<int:batch_id>")
 @admin_required
 def customer_import_detail(batch_id):
     batch = ImportBatch.query.get_or_404(batch_id)
+    if batch.status == "mapping":
+        return redirect(url_for("admin.customer_import_map", batch_id=batch.id))
     rows = ImportRow.query.filter_by(batch_id=batch.id).order_by(ImportRow.row_number).all()
     result_filter = request.args.get("result", "")
     if result_filter:

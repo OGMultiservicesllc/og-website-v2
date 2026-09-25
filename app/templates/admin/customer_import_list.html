@@ -22,30 +22,30 @@
                 <th class="px-4 py-3 font-semibold">File</th>
                 <th class="px-4 py-3 font-semibold">Uploaded</th>
                 <th class="px-4 py-3 font-semibold text-center">Rows</th>
-                <th class="px-4 py-3 font-semibold text-center">Imported</th>
+                <th class="px-4 py-3 font-semibold text-center">Ready</th>
                 <th class="px-4 py-3 font-semibold text-center">Existing</th>
-                <th class="px-4 py-3 font-semibold text-center">Invalid</th>
+                <th class="px-4 py-3 font-semibold text-center">Issues</th>
                 <th class="px-4 py-3 font-semibold">Status</th>
                 <th class="px-4 py-3"></th>
             </tr>
         </thead>
         <tbody class="divide-y divide-slate-100">
+            {% set status_label = {'mapping': 'Mapping — not yet validated', 'validated': 'Validated — ready to import', 'imported': 'Imported'} %}
+            {% set status_tone = {'mapping': 'bg-slate-100 text-slate-600', 'validated': 'bg-amber-50 text-amber-700', 'imported': 'bg-emerald-50 text-emerald-700'} %}
             {% for b in batches %}
             <tr class="hover:bg-slate-50/60">
                 <td class="px-4 py-3 font-medium text-slate-800">{{ b.original_filename or '—' }}</td>
                 <td class="px-4 py-3 text-slate-500 whitespace-nowrap">{{ b.uploaded_at.strftime('%b %d, %Y %I:%M %p') if b.uploaded_at else '—' }}</td>
                 <td class="px-4 py-3 text-center text-slate-700">{{ b.total_rows }}</td>
-                <td class="px-4 py-3 text-center text-slate-700">{{ b.imported_count }}</td>
+                <td class="px-4 py-3 text-center text-slate-700">{{ b.imported_count if b.status == 'imported' else b.ready_count }}</td>
                 <td class="px-4 py-3 text-center text-slate-700">{{ b.existing_count }}</td>
-                <td class="px-4 py-3 text-center text-slate-700">{{ b.invalid_count + b.missing_email_count + b.error_count }}</td>
+                <td class="px-4 py-3 text-center text-slate-700">{{ b.invalid_email_count + b.missing_email_count + b.duplicate_count + b.error_count }}</td>
                 <td class="px-4 py-3">
-                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ 'bg-emerald-50 text-emerald-700' if b.status == 'imported' else 'bg-amber-50 text-amber-700' }}">
-                        {{ 'Imported' if b.status == 'imported' else 'Mapping — not yet run' }}
-                    </span>
+                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ status_tone.get(b.status, 'bg-slate-100 text-slate-600') }}">{{ status_label.get(b.status, b.status) }}</span>
                 </td>
                 <td class="px-4 py-3 text-right">
-                    <a href="{{ url_for('admin.customer_import_detail' if b.status == 'imported' else 'admin.customer_import_map', batch_id=b.id) }}" class="text-accent-700 font-semibold hover:underline">
-                        {{ 'View' if b.status == 'imported' else 'Continue' }} &rarr;
+                    <a href="{{ url_for('admin.customer_import_detail' if b.status != 'mapping' else 'admin.customer_import_map', batch_id=b.id) }}" class="text-accent-700 font-semibold hover:underline">
+                        {{ 'View' if b.status != 'mapping' else 'Continue' }} &rarr;
                     </a>
                 </td>
             </tr>

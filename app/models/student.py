@@ -29,9 +29,34 @@ class Student(db.Model):
     needs_activation = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
     import_batch_id = db.Column(db.Integer, db.ForeignKey("import_batches.id"))
 
+    # Structured mailing address (2026-09-25, added for the Wix migration's address columns) — optional
+    # for every account; the customer's own service intakes still collect their own address per-case,
+    # this is just a stable "what we know about this person" record, same spirit as `phone`.
+    address_street = db.Column(db.String(255))
+    address_city = db.Column(db.String(120))
+    address_state = db.Column(db.String(60))
+    address_zip = db.Column(db.String(20))
+    address_country = db.Column(db.String(80))
+
     @property
     def is_email_verified(self):
         return self.email_verified_at is not None
+
+    @property
+    def display_address(self):
+        """"Street, City, State ZIP, Country" from whichever parts are known — never guesses a missing
+        part from another (e.g. a Street that already contains the whole address stays exactly as typed)."""
+        parts = []
+        if self.address_street:
+            parts.append(self.address_street)
+        if self.address_city:
+            parts.append(self.address_city)
+        state_zip = " ".join(p for p in (self.address_state, self.address_zip) if p)
+        if state_zip:
+            parts.append(state_zip)
+        if self.address_country:
+            parts.append(self.address_country)
+        return ", ".join(parts)
 
     @property
     def initials(self):
