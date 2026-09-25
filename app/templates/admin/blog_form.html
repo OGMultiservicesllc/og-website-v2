@@ -4,9 +4,13 @@
 {% block content %}
 <link href="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.snow.min.css" rel="stylesheet">
 <style>
-    .editor-wrap .ql-container { min-height: 260px; font-size: 0.9rem; border-bottom-left-radius: 0.5rem; border-bottom-right-radius: 0.5rem; }
+    /* Quill's own .ql-editor is `height: 100%`, not min-height — a min-height here (the old rule) can render
+       taller than the .ql-container box actually reserves in the page's layout, so the extra height visually
+       spills over the next form row (Category/Author) without pushing it down. Giving the container a real,
+       layout-participating `height` and letting the editor fill it (scrolling internally past that) fixes it. */
+    .editor-wrap .ql-container { height: 260px; font-size: 0.9rem; border-bottom-left-radius: 0.5rem; border-bottom-right-radius: 0.5rem; }
     .editor-wrap .ql-toolbar { border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; background: #f8fafc; }
-    .editor-wrap .ql-editor { min-height: 260px; }
+    .editor-wrap .ql-editor { overflow-y: auto; }
 </style>
 <a href="{{ url_for('admin.blog_list') }}" class="text-sm text-slate-500 hover:text-accent-600">&larr; All posts</a>
 <h1 class="text-2xl font-bold text-brand-800 mt-2 mb-6">{{ 'Edit Post' if post else 'New Post' }}</h1>

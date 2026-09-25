@@ -231,3 +231,20 @@ def my_case_original(lang, case_id, requirement_id):
 
     log_case_event(student.id, "itin_original_choice", case, {"choice": ("mail" if choice == "mail" else "bring in person"), "title": req.title})
     return redirect(url_for("account.my_case_detail", lang=lang, case_id=case.id, _anchor=f"req-{req.id}"))
+
+
+@account_bp.route("/cases/<int:case_id>/itin-price-ack", methods=["POST"])
+@student_required
+def itin_price_ack(lang, case_id):
+    """Same "I saw the new price" acknowledgment already used by Tax/DL (`tax_price_ack`/`dl_price_ack`) — a
+    confirmed price is never silently replaced without the customer seeing the change."""
+    _guard_post()
+    student = current_student()
+    case = case_svc.owned_case(student, case_id)
+    if case is None or case.case_type != "itin_application":
+        abort(404)
+    from app import itin, itin_pricing
+
+    if itin_pricing.acknowledge(case):
+        itin.log_case_event(student.id, "itin_price_acknowledged", case)
+    return redirect(url_for("account.my_case_detail", lang=lang, case_id=case.id))

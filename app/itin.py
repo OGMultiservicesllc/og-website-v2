@@ -221,6 +221,10 @@ def apply_setup(student, submission, data, lang):
         w7_calc.write(form, sub, fields)
         w7_docs.sync(sub)
     db.session.commit()
+    from app import itin_pricing
+
+    itin_pricing.snapshot(case)
+    db.session.commit()
     log_case_event(student.id, "itin_case_started", case, {"applicants": len(subs)})
     return True, None
 
@@ -277,7 +281,7 @@ IRS_OUTCOMES = {"itin_issued": ("ITIN issued", "ITIN emitido"), "irs_notice": ("
 
 
 def dashboard(case, lang="en"):
-    from app import consular, w7_text
+    from app import consular, itin_pricing, w7_text
     from app.w7_docs import passport_state
     from app.w7_views import passport_url
 
@@ -297,7 +301,7 @@ def dashboard(case, lang="en"):
     return {"applicants": apps, "stage": stage_of(case), "stage_label": stage_label(stage_of(case), lang), "tax_year": cd.tax_year if cd else None, "docs_got": got, "docs_total": total,
             "package": package, "outcome": cd.irs_outcome if cd else None, "outcome_label": (IRS_OUTCOMES.get(cd.irs_outcome, ("", ""))[0 if en else 1] if cd and cd.irs_outcome else ""),
             "outcome_note": cd.irs_note if cd else None, "originals": pend, "delivery_html": w7_text.delivery_html(lang, html_escape) if pend else "",
-            "processing_html": w7_text.PROCESSING[0 if en else 1], "disclaimer": w7_text.DISCLAIMER[0 if en else 1]}
+            "processing_html": w7_text.PROCESSING[0 if en else 1], "disclaimer": w7_text.DISCLAIMER[0 if en else 1], "price": itin_pricing.customer_view(case, lang)}
 
 
 def usps_url(tracking):

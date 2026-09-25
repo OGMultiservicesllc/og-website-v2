@@ -31,7 +31,7 @@ from app.models.cases import (
     REQUIREMENT_STATUS_LABELS,
 )
 from app.models.consular import ConsularCaseData, Ds260Application, Ds260CeacOverride, Ds260Source, CEAC_STATUSES, CEAC_STATUS_LABELS
-from app.models.itin import ItinCaseData, ItinDocTrack, PassportExtraction, W7Application, ITIN_STAGES, ORIGINAL_STATES
+from app.models.itin import ItinCaseData, ItinDocTrack, PassportExtraction, W7Application, ITIN_STAGES, ORIGINAL_STATES, ItinPriceRule, ItinPriceQuote
 from app.models.tax import (
     TaxCaseData,
     TaxRecord,
@@ -172,7 +172,7 @@ __all__ = [
     "MANUAL_METHODS",
     "CHECKOUT_MANUAL_METHODS",
     "method_label",
-    "ItinCaseData", "ItinDocTrack", "PassportExtraction", "W7Application", "ITIN_STAGES", "ORIGINAL_STATES",
+    "ItinCaseData", "ItinDocTrack", "PassportExtraction", "W7Application", "ITIN_STAGES", "ORIGINAL_STATES", "ItinPriceRule", "ItinPriceQuote",
     "ConsularCaseData",
     "Ds260Application",
     "Ds260CeacOverride",

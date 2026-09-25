@@ -344,6 +344,9 @@ def ensure_seeded():
 
         seeded = ensure_w7_intake() or seeded
         seeded = ensure_w7_refinements() or seeded
+        from app.itin_pricing import ensure_seed as ensure_itin_pricing
+
+        seeded = bool(ensure_itin_pricing()) or seeded
         from app.tax.seed import ensure_service as ensure_tax_service
         from app.tax.pricing import ensure_seed as ensure_tax_pricing
         from app.tax.registry import CURRENT_YEAR

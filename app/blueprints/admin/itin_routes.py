@@ -61,6 +61,8 @@ def itin_list():
 @admin_bp.route("/itin/<int:case_id>")
 @admin_required
 def itin_case(case_id):
+    from app import itin_pricing
+
     case = _case_or_404(case_id)
     cd = itin.case_data(case, create=True)
     apps = []
@@ -71,10 +73,12 @@ def itin_case(case_id):
         apps.append({**x, "flags": fl, "candidate": cand, "candidate_label": w7_calc.REASON_LABEL.get(cand, ("", ""))[0], "passport": w7_docs.passport_state(s), "coverage": w7_docs.coverage_for(s, planned=True),
                      "reqs": w7_docs.requirements_of(s), "kind_label": itin.kind_label(x["kind"]), "name": x["person"].full_name if x["person"] else s.code})
     ready = itin_admin.readiness(case)
+    est = itin_pricing.estimate(case)
+    confirmed = next((q for q in reversed(cd.quotes) if q.status == "confirmed"), None)
     return render_template("admin/itin_case.html", case=case, cd=cd, apps=apps, ready=ready, stage=itin.stage_of(case), stage_label=itin.stage_label(itin.stage_of(case)),
                            stages=[(k, en) for k, en, _es in ITIN_STAGES if k in itin_admin.STAFF_STAGES], all_stages=ITIN_STAGES, original_states=[(k, en) for k, en, _es in ORIGINAL_STATES if k != "caa_verified"],
                            original_labels={k: en for k, en, _es in ORIGINAL_STATES}, signature_states=itin_admin.SIGNATURE_STATES, reasons=w7_calc.REASONS, outcomes=itin.IRS_OUTCOMES,
-                           usps_url=itin.usps_url(cd.usps_tracking), verified=itin_admin.VERIFIED)
+                           usps_url=itin.usps_url(cd.usps_tracking), verified=itin_admin.VERIFIED, est=est, confirmed=confirmed, quotes=list(reversed(cd.quotes)), fmt=itin_pricing.fmt)
 
 
 @admin_bp.route("/w7/<int:submission_id>")
@@ -86,6 +90,121 @@ def w7_prep(submission_id):
     return render_template("admin/w7_prep.html", submission=sub, data=data, reasons=w7_calc.REASONS, coverage=w7_docs.coverage_for(sub, planned=True), passport=w7_docs.passport_state(sub),
                            person=w7_docs.case_svc.role_person(sub, "itin_applicant"), status_text=w7_map.STATUS_TEXT, w=sub.w7, answers_pp=a.get("pp_status"),
                            signature_states=itin_admin.SIGNATURE_STATES, blockers=itin_admin.app_blockers(sub))
+
+
+def _back(case, anchor=""):
+    return redirect(url_for("admin.itin_case", case_id=case.id) + anchor)
+
+
+# ---------------------------------------------------------------- Admin -> ITIN -> Pricing (Admin-editable, same pattern as Driver License / Tax pricing)
+@admin_bp.route("/itin/pricing")
+@admin_required
+def itin_pricing_page():
+    from app import itin_pricing
+    from app.models import ItinPriceRule
+
+    itin_pricing.ensure_seed()
+    rules = ItinPriceRule.query.order_by(ItinPriceRule.sort_order, ItinPriceRule.id).all()
+    return render_template("admin/itin_pricing.html", rules=rules, fmt=itin_pricing.fmt)
+
+
+@admin_bp.route("/itin/pricing", methods=["POST"])
+@admin_required
+def itin_pricing_save():
+    from app.models import ItinPriceRule
+
+    _csrf()
+    changed = []
+    for rule in ItinPriceRule.query.all():
+        key = f"r{rule.id}"
+        if f"{key}__present" not in request.form:
+            continue
+        before = (rule.amount_cents, rule.active)
+        text = (request.form.get(f"{key}__amount") or "").replace("$", "").replace(",", "").strip()
+        try:
+            cents = int(round(float(text) * 100)) if text else None
+        except ValueError:
+            cents = rule.amount_cents
+        if cents is not None and 0 <= cents <= 10_000_000:
+            rule.amount_cents = cents
+        rule.active = bool(request.form.get(f"{key}__active"))
+        if before != (rule.amount_cents, rule.active):
+            rule.updated_by = _staff()
+            changed.append(rule.label_en)
+    db.session.commit()
+    flash(f"{len(changed)} price setting(s) updated." if changed else "Nothing changed.", "success")
+    return redirect(url_for("admin.itin_pricing_page"))
+
+
+# ---------------------------------------------------------------- pricing / payment (OG Payments, Model C)
+@admin_bp.route("/itin/<int:case_id>/price", methods=["POST"])
+@admin_required
+def itin_price(case_id):
+    """Same estimate -> confirm -> revision-history flow as Tax/DL pricing — the total is always derived from
+    the real applicants in the case (`itin.applicants`), never typed in blind."""
+    from app import itin_pricing
+
+    _csrf()
+    case = _case_or_404(case_id)
+    action = request.form.get("action")
+    if action == "recalc":
+        itin_pricing.snapshot(case, staff=_staff())
+        db.session.commit()
+        flash("Estimate recalculated.", "success")
+        return _back(case, "#price")
+    text = (request.form.get("fee") or "").replace("$", "").replace(",", "").strip()
+    try:
+        cents = int(round(float(text) * 100))
+    except ValueError:
+        flash("Enter the price.", "error")
+        return _back(case, "#price")
+    itin_pricing.snapshot(case)
+    db.session.flush()
+    before = next((q for q in reversed(itin.case_data(case).quotes) if q.status == "confirmed"), None)
+    try:
+        quote = itin_pricing.confirm(case, cents, _staff(), request.form.get("reason"))
+    except ValueError as exc:
+        db.session.rollback()
+        flash(str(exc), "error")
+        return _back(case, "#price")
+    itin.log_case_event(case.customer_id, "itin_price_confirmed", case, {"fee": itin_pricing.fmt(cents), "previous": itin_pricing.fmt(before.final_total_cents) if before else None, "reason": quote.reason}, actor="admin")
+    flash("Price confirmed.", "success")
+    return _back(case, "#price")
+
+
+@admin_bp.route("/itin/<int:case_id>/request-payment", methods=["POST"])
+@admin_required
+def itin_request_payment(case_id):
+    """Model C (OG Payments): the intake's own estimate is never requestable — only a CONFIRMED price, read
+    straight from the SAME `final_total_cents` this module already tracks, syncs into the OG Payments Charge."""
+    from app import itin_pricing
+    from app import payments as pay_svc
+
+    _csrf()
+    case = _case_or_404(case_id)
+    cd = itin.case_data(case)
+    confirmed = next((q for q in reversed(cd.quotes) if q.status == "confirmed"), None) if cd else None
+    if confirmed is None or confirmed.final_total_cents is None:
+        flash("Confirm the price before requesting payment.", "error")
+        return _back(case, "#price")
+    description = "ITIN Application Preparation"
+    charge = next((c for c in case.charges if c.description == description and not c.is_canceled), None)
+    if charge is None:
+        charge = pay_svc.create_charge(case.customer, description=description, case=case,
+                                       total_cents=confirmed.final_total_cents, price_mode="final", admin_id=session.get("admin_user_id"))
+    elif charge.total_cents != confirmed.final_total_cents:
+        pay_svc.set_price(charge, confirmed.final_total_cents, admin_id=session.get("admin_user_id"), mode="final", reason="Synced from the confirmed ITIN price.")
+    bal = pay_svc.balance_cents(charge)
+    if not bal:
+        flash("This charge is already fully paid.", "error")
+        return _back(case, "#price")
+    try:
+        pay_svc.request_payment(charge, bal, admin_id=session.get("admin_user_id"))
+    except ValueError as exc:
+        flash(str(exc), "error")
+        return _back(case, "#price")
+    flash("Payment requested — the customer will see this in My Account > Payments.", "success")
+    return _back(case, "#price")
 
 
 # ---------------------------------------------------------------- case-level actions

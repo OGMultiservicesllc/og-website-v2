@@ -8,6 +8,7 @@
   PassportExtraction  what was read from an uploaded passport/visa page (by a machine, by staff, or typed by the customer) and whether the customer confirmed it.
 """
 
+import json
 from datetime import datetime
 
 from app.extensions import db
@@ -69,10 +70,17 @@ class ItinCaseData(db.Model):
     irs_outcome = db.Column(db.String(20))  # itin_issued | irs_notice | other (recorded by staff; never inferred)
     irs_outcome_at = db.Column(db.Date)
     irs_note = db.Column(db.Text)
+    price_status = db.Column(db.String(12), nullable=False, default="none", server_default="none")  # none | estimated | confirmed
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     case = db.relationship("Case", backref=db.backref("itin_data", uselist=False, cascade="all, delete-orphan"))
+    quotes = db.relationship("ItinPriceQuote", backref="itin", order_by="ItinPriceQuote.revision", cascade="all, delete-orphan")
+
+    @property
+    def current_quote(self):
+        live = [q for q in self.quotes if q.status != "superseded"]
+        return live[-1] if live else (self.quotes[-1] if self.quotes else None)
 
 
 class W7Application(db.Model):
@@ -138,3 +146,50 @@ class PassportExtraction(db.Model):
     confirmed_by = db.Column(db.String(20))  # customer
 
     submission = db.relationship("FormSubmission", backref=db.backref("extractions", cascade="all, delete-orphan"))
+
+
+class ItinPriceRule(db.Model):
+    """The 3 flat per-applicant fees (Admin -> ITIN -> Pricing) — Primary / Spouse / Dependent — never
+    hardcoded in a template or route, same convention as `DlPriceRule`/`TaxPriceRule`."""
+
+    __tablename__ = "itin_price_rules"
+    __table_args__ = (db.UniqueConstraint("code", name="uq_itin_price_rule"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(20), nullable=False)  # primary | spouse | dependent
+    label_en = db.Column(db.String(160), nullable=False)
+    label_es = db.Column(db.String(160), nullable=False)
+    amount_cents = db.Column(db.Integer, nullable=False)
+    active = db.Column(db.Boolean, nullable=False, default=True, server_default="1")
+    sort_order = db.Column(db.Integer, nullable=False, default=0)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_by = db.Column(db.String(120))
+
+
+class ItinPriceQuote(db.Model):
+    """One row per price computation/revision for an ITIN case, same estimate -> confirm -> revision-history
+    shape as `DlPriceQuote`/`TaxPriceQuote` (a confirmed price is never silently replaced by a new estimate)."""
+
+    __tablename__ = "itin_price_quotes"
+
+    id = db.Column(db.Integer, primary_key=True)
+    itin_case_id = db.Column(db.Integer, db.ForeignKey("itin_case_data.id"), nullable=False, index=True)
+    revision = db.Column(db.Integer, nullable=False, default=1)
+    source = db.Column(db.String(8), nullable=False, default="system")  # system | admin
+    lines_json = db.Column(db.Text)  # [{code, kind, role_en, role_es, person_name, amount_cents}]
+    system_estimate_cents = db.Column(db.Integer)
+    final_total_cents = db.Column(db.Integer)  # OG's confirmed total once staff set it
+    previous_total_cents = db.Column(db.Integer)
+    status = db.Column(db.String(12), nullable=False, default="estimated")  # estimated | confirmed | revised | superseded
+    reason = db.Column(db.String(400))
+    staff = db.Column(db.String(120))
+    needs_ack = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
+    acknowledged_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    @property
+    def lines(self):
+        try:
+            return json.loads(self.lines_json) if self.lines_json else []
+        except ValueError:
+            return []

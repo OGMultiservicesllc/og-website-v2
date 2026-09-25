@@ -105,16 +105,37 @@ def logout():
 @admin_bp.route("/")
 @admin_required
 def dashboard():
+    from app.case_types import type_title
+    from app.models import MANUAL_METHODS, Case, Inquiry, Payment
+
     course_count = Course.query.count()
     published_count = Course.query.filter_by(is_published=True).count()
     student_count = Student.query.count()
     enrollment_count = Enrollment.query.count()
+
+    open_cases = Case.query.filter(Case.status.in_(("open", "in_review", "waiting_client"))).count()
+    pending_manual_payments = Payment.query.filter(Payment.status == "pending", Payment.method.in_(MANUAL_METHODS)).count()
+    open_inquiries = Inquiry.query.filter_by(status="new").count()
+
+    recent_cases = [
+        {"case": c, "type_title": type_title(c.case_type, "en")}
+        for c in Case.query.order_by(Case.created_at.desc()).limit(6).all()
+    ]
+    recent_customers = Student.query.order_by(Student.created_at.desc()).limit(6).all()
+    recent_enrollments = Enrollment.query.order_by(Enrollment.enrolled_at.desc()).limit(6).all()
+
     return render_template(
         "admin/dashboard.html",
         course_count=course_count,
         published_count=published_count,
         student_count=student_count,
         enrollment_count=enrollment_count,
+        open_cases=open_cases,
+        pending_manual_payments=pending_manual_payments,
+        open_inquiries=open_inquiries,
+        recent_cases=recent_cases,
+        recent_customers=recent_customers,
+        recent_enrollments=recent_enrollments,
     )
 
 

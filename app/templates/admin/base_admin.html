@@ -27,90 +27,105 @@
     <div id="admin-menu-overlay" class="hidden md:hidden fixed inset-0 z-40 bg-black/40"></div>
 
     <aside id="admin-sidebar"
-           class="fixed md:static inset-y-0 left-0 z-50 w-60 shrink-0 bg-brand-800 text-slate-300 flex flex-col transform -translate-x-full md:translate-x-0 transition-transform duration-200">
-        <a href="{{ url_for('admin.dashboard') }}" class="hidden md:flex items-center gap-2 px-5 h-16 border-b border-white/10">
+           class="fixed md:static inset-y-0 left-0 z-50 w-64 shrink-0 bg-brand-800 text-slate-300 flex flex-col transform -translate-x-full md:translate-x-0 transition-transform duration-200">
+        <a href="{{ url_for('admin.dashboard') }}" class="hidden md:flex items-center gap-2 px-5 h-16 border-b border-white/10 shrink-0">
             <img src="{{ url_for('static', filename='img/logo.png') }}" alt="OG" class="h-7 w-auto">
             <span class="font-bold text-white text-sm">OG Admin</span>
         </a>
+        {% from "partials/icons.html" import icon %}
         {% set ep = request.endpoint or '' %}
-        {% macro nav_link(href, label, active, badge=0) -%}
-        <a href="{{ href }}" class="flex items-center justify-between px-3 py-2 rounded-lg text-[13.5px] hover:bg-white/10 hover:text-white transition {{ 'bg-white/10 text-white font-medium' if active else '' }}" {% if active %}aria-current="page"{% endif %}>
-            <span>{{ label }}</span>
-            {% if badge %}<span class="text-[10px] font-bold bg-academy-500 text-white rounded-full min-w-[1.25rem] h-5 px-1 flex items-center justify-center">{{ badge }}</span>{% endif %}
+        {% macro nav_link(href, label, active, badge=0, ic=none) -%}
+        <a href="{{ href }}" class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13.5px] hover:bg-white/10 hover:text-white transition {{ 'bg-white/10 text-white font-medium' if active else '' }}" {% if active %}aria-current="page"{% endif %}>
+            {% if ic %}<span class="shrink-0 {{ 'text-white' if active else 'text-slate-500' }}">{{ icon(ic, 'w-4 h-4') }}</span>{% endif %}
+            <span class="min-w-0 flex-1 truncate">{{ label }}</span>
+            {% if badge %}<span class="shrink-0 text-[10px] font-bold bg-academy-500 text-white rounded-full min-w-[1.25rem] h-5 px-1 flex items-center justify-center">{{ badge }}</span>{% endif %}
         </a>
         {%- endmacro %}
-        {% macro nav_group(label, open) -%}
-        <details class="group" open>
-            <summary class="list-none cursor-pointer flex items-center justify-between px-3 pt-4 pb-1.5 text-[10.5px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-300 marker:content-['']">
-                {{ label }}
-                <svg class="w-3 h-3 transition group-open:rotate-90" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+        {% macro nav_group(label, open, ic=none) -%}
+        <details class="group" {{ 'open' if open else '' }}>
+            <summary class="list-none cursor-pointer flex items-center gap-2 px-3 pt-4 pb-1.5 text-[10.5px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-300 marker:content-['']">
+                {% if ic %}<span class="shrink-0">{{ icon(ic, 'w-3.5 h-3.5') }}</span>{% endif %}
+                <span class="flex-1">{{ label }}</span>
+                <svg class="w-3 h-3 shrink-0 transition group-open:rotate-90" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
             </summary>
-            <div class="space-y-0.5">{{ caller() }}</div>
+            <div class="space-y-0.5 pb-1">{{ caller() }}</div>
         </details>
         {%- endmacro %}
 
-        {% set in_website = ep.startswith(('admin.site_page', 'admin.website', 'admin.service', 'admin.page', 'admin.media', 'admin.navigation')) %}
-        {% set in_clients = ep.startswith(('admin.form', 'admin.inquir', 'admin.customer', 'admin.application', 'admin.ocase', 'admin.person', 'admin.itin', 'admin.w7', 'admin.tax', 'admin.dl_')) %}
-        {% set in_academy = ep.startswith(('admin.course', 'admin.lesson', 'admin.section', 'admin.quiz', 'admin.case', 'admin.students', 'admin.certificate')) %}
+        {% set in_clients = ep.startswith(('admin.customer', 'admin.application', 'admin.ocase', 'admin.person', 'admin.inquir')) %}
+        {% set in_itin = ep.startswith(('admin.itin', 'admin.w7')) %}
+        {% set in_tax = ep.startswith('admin.tax') %}
+        {% set in_dl = ep.startswith('admin.dl_') %}
+        {% set in_ct = ep.startswith('admin.ct_') %}
+        {% set in_content = ep.startswith(('admin.site_page', 'admin.website', 'admin.service', 'admin.page', 'admin.media', 'admin.blog', 'admin.form', 'admin.navigation')) %}
+        {% set in_payments = ep.startswith(('admin.charge', 'admin.payment', 'admin.manual_payments')) %}
+        {% set in_academy = ep.startswith(('admin.course', 'admin.lesson', 'admin.section', 'admin.quiz', 'admin.case', 'admin.students', 'admin.certificate', 'admin.reports')) %}
+        {% set in_comms = ep.startswith('admin.email') %}
+        {% set in_system = ep == 'admin.settings' %}
 
         <nav class="flex-1 px-3 py-3 text-sm mt-14 md:mt-0 overflow-y-auto" aria-label="Admin">
-            {{ nav_link(url_for('admin.dashboard'), 'Dashboard', ep == 'admin.dashboard') }}
-
-            {% call nav_group('Website', in_website) %}
-                {{ nav_link(url_for('admin.site_page_edit', page_key='home'), 'Home', ep.startswith(('admin.site_page', 'admin.website'))) }}
-                {{ nav_link(url_for('admin.services_list'), 'Services', ep.startswith('admin.service')) }}
-                {{ nav_link(url_for('admin.pages_list'), 'Custom Pages', ep.startswith('admin.page')) }}
-                {{ nav_link(url_for('admin.media_library'), 'Media Library', ep.startswith('admin.media')) }}
-                {{ nav_link(url_for('admin.navigation_list'), 'Navigation', ep.startswith('admin.navigation')) }}
+            {% call nav_group('Overview', ep == 'admin.dashboard', 'grid') %}
+                {{ nav_link(url_for('admin.dashboard'), 'Dashboard', ep == 'admin.dashboard') }}
             {% endcall %}
 
-            {% call nav_group('Clients', in_clients) %}
-                {{ nav_link(url_for('admin.customers_list'), 'Customers', ep.startswith('admin.customer')) }}
-                {{ nav_link(url_for('admin.applications_list'), 'Applications', ep.startswith('admin.application')) }}
-                {{ nav_link(url_for('admin.ocase_list'), 'Cases', ep.startswith('admin.ocase')) }}
-                {{ nav_link(url_for('admin.itin_list'), 'ITIN cases', ep.startswith(('admin.itin', 'admin.w7'))) }}
-                {{ nav_link(url_for('admin.tax_list'), 'Tax cases', ep.startswith('admin.tax') and not ep.startswith('admin.tax_pricing')) }}
-                {{ nav_link(url_for('admin.tax_pricing'), 'Tax pricing', ep.startswith('admin.tax_pricing')) }}
-                {{ nav_link(url_for('admin.dl_list'), 'Driver License cases', ep in ('admin.dl_list', 'admin.dl_case')) }}
-                {{ nav_link(url_for('admin.dl_pricing'), 'Driver License pricing', ep.startswith('admin.dl_pricing')) }}
-                {{ nav_link(url_for('admin.dl_locations'), 'MVC locations', ep.startswith('admin.dl_location')) }}
-                {{ nav_link(url_for('admin.dl_questions'), 'Knowledge Test questions', ep.startswith('admin.dl_question')) }}
-                {{ nav_link(url_for('admin.person_list'), 'People', ep.startswith('admin.person')) }}
-                {{ nav_link(url_for('admin.inquiries_list'), 'Inquiries', ep.startswith('admin.inquir'), new_inquiry_count) }}
-                {{ nav_link(url_for('admin.forms_list'), 'Forms', ep.startswith('admin.form')) }}
+            {% call nav_group('Clients & Cases', in_clients or in_itin or in_tax or in_dl or in_ct, 'briefcase') %}
+                {{ nav_link(url_for('admin.customers_list'), 'Customers', ep.startswith('admin.customer'), ic='user') }}
+                {{ nav_link(url_for('admin.applications_list'), 'Applications', ep.startswith('admin.application'), ic='documents') }}
+                {{ nav_link(url_for('admin.ocase_list'), 'Cases', ep.startswith('admin.ocase'), ic='folder') }}
+                {{ nav_link(url_for('admin.itin_list'), 'ITIN Cases', ep.startswith(('admin.itin', 'admin.w7')) and not ep.startswith('admin.itin_pricing'), ic='taxes') }}
+                {{ nav_link(url_for('admin.itin_pricing_page'), 'ITIN Pricing', ep.startswith('admin.itin_pricing'), ic='card') }}
+                {{ nav_link(url_for('admin.tax_list'), 'Tax Cases', ep.startswith('admin.tax') and not ep.startswith('admin.tax_pricing'), ic='taxes') }}
+                {{ nav_link(url_for('admin.tax_pricing'), 'Tax Pricing', ep.startswith('admin.tax_pricing'), ic='card') }}
+                {{ nav_link(url_for('admin.dl_list'), 'Driver License Cases', ep in ('admin.dl_list', 'admin.dl_case'), ic='license') }}
+                {{ nav_link(url_for('admin.dl_pricing'), 'Driver License Pricing', ep.startswith('admin.dl_pricing'), ic='card') }}
+                {{ nav_link(url_for('admin.dl_locations'), 'MVC Locations', ep.startswith('admin.dl_location'), ic='pin') }}
+                {{ nav_link(url_for('admin.dl_questions'), 'Knowledge Test Questions', ep.startswith('admin.dl_question'), ic='check') }}
+                {{ nav_link(url_for('admin.ct_list'), 'Consent to Travel Cases', ep in ('admin.ct_list', 'admin.ct_case'), ic='globe') }}
+                {{ nav_link(url_for('admin.ct_pricing'), 'Consent to Travel Pricing', ep.startswith('admin.ct_pricing'), ic='card') }}
+                {{ nav_link(url_for('admin.person_list'), 'People', ep.startswith('admin.person'), ic='user') }}
+                {{ nav_link(url_for('admin.inquiries_list'), 'Inquiries', ep.startswith('admin.inquir'), new_inquiry_count, ic='chat') }}
             {% endcall %}
 
-            {% call nav_group('OG Academy', in_academy) %}
-                {{ nav_link(url_for('admin.courses_list'), 'Courses', ep.startswith(('admin.course', 'admin.lesson', 'admin.section', 'admin.quiz', 'admin.case'))) }}
-                {{ nav_link(url_for('admin.students_list'), 'Students', ep.startswith('admin.students')) }}
-                {{ nav_link(url_for('admin.certificates_list'), 'Certificates', ep.startswith('admin.certificate')) }}
-                {{ nav_link(url_for('admin.manual_payments_list'), 'Pending Payments', ep == 'admin.manual_payments_list') }}
+            {% call nav_group('Services & Content', in_content, 'edit') %}
+                {{ nav_link(url_for('admin.site_page_edit', page_key='home'), 'Home', ep.startswith(('admin.site_page', 'admin.website')), ic='globe') }}
+                {{ nav_link(url_for('admin.services_list'), 'Services', ep.startswith('admin.service'), ic='briefcase') }}
+                {{ nav_link(url_for('admin.pages_list'), 'Custom Pages', ep.startswith('admin.page'), ic='documents') }}
+                {{ nav_link(url_for('admin.media_library'), 'Media Library', ep.startswith('admin.media'), ic='image') }}
+                {{ nav_link(url_for('admin.blog_list'), 'Blog', ep.startswith('admin.blog'), ic='blog') }}
+                {{ nav_link(url_for('admin.forms_list'), 'Forms', ep.startswith('admin.form'), ic='documents') }}
+                {{ nav_link(url_for('admin.navigation_list'), 'Navigation', ep.startswith('admin.navigation'), ic='menu') }}
             {% endcall %}
 
-            {% call nav_group('Content', ep.startswith('admin.blog')) %}
-                {{ nav_link(url_for('admin.blog_list'), 'Blog', ep.startswith('admin.blog')) }}
+            {% call nav_group('Payments', in_payments, 'card') %}
+                {{ nav_link(url_for('admin.manual_payments_list'), 'Payments', in_payments, ic='card') }}
             {% endcall %}
 
-            {% call nav_group('Analytics', ep == 'admin.reports') %}
-                {{ nav_link(url_for('admin.reports'), 'Reports', ep == 'admin.reports') }}
+            {% call nav_group('OG Academy', in_academy, 'academy') %}
+                {{ nav_link(url_for('admin.courses_list'), 'Courses', ep.startswith(('admin.course', 'admin.lesson', 'admin.section', 'admin.quiz', 'admin.case')), ic='academy') }}
+                {{ nav_link(url_for('admin.students_list'), 'Students', ep.startswith('admin.students'), ic='user') }}
+                {{ nav_link(url_for('admin.certificates_list'), 'Certificates', ep.startswith('admin.certificate'), ic='star') }}
+                {{ nav_link(url_for('admin.reports'), 'Reports', ep == 'admin.reports', ic='documents') }}
             {% endcall %}
 
-            {% call nav_group('System', ep == 'admin.settings' or ep.startswith('admin.email')) %}
-                {{ nav_link(url_for('admin.settings'), 'Settings', ep == 'admin.settings') }}
-                {{ nav_link(url_for('admin.emails_list'), 'Emails', ep == 'admin.emails_list') }}
-                {{ nav_link(url_for('admin.email_test'), 'Test Email', ep == 'admin.email_test') }}
+            {% call nav_group('Communication', in_comms, 'mail') %}
+                {{ nav_link(url_for('admin.emails_list'), 'Emails', ep == 'admin.emails_list', ic='mail') }}
+                {{ nav_link(url_for('admin.email_test'), 'Test Email', ep == 'admin.email_test', ic='mail') }}
+            {% endcall %}
+
+            {% call nav_group('System', in_system, 'settings') %}
+                {{ nav_link(url_for('admin.settings'), 'Settings', ep == 'admin.settings', ic='settings') }}
             {% endcall %}
         </nav>
-        <div class="px-3 py-4 border-t border-white/10 text-sm">
+        <div class="px-3 py-4 border-t border-white/10 text-sm shrink-0">
             <p class="px-3 text-xs text-slate-400 truncate mb-2">{{ session.get('admin_name', '') }}{% if session.get('admin_name') %} · {% endif %}{{ session.get('admin_email', '') }}</p>
-            <a href="{{ url_for('admin.logout') }}" class="block px-3 py-2 rounded-lg hover:bg-white/10 hover:text-white transition">
-                Log Out
+            <a href="{{ url_for('admin.logout') }}" class="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-white/10 hover:text-white transition">
+                <span class="shrink-0 text-slate-500">{{ icon('logout', 'w-4 h-4') }}</span> Log Out
             </a>
         </div>
     </aside>
 
     <div class="flex-1 min-w-0">
-        <main class="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+        <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                 <div class="mb-6 space-y-2">
