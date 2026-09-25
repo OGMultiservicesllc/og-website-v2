@@ -102,41 +102,113 @@ def logout():
     return redirect(url_for("admin.login"))
 
 
+# Case type -> the service group it's shown under, both in the sidebar and the Dashboard's "Cases by
+# Service" chart. Real values only (app/itin.py, app/tax/service.py, app/consular.py, app/case_types.py,
+# app/consent_travel/service.py, app/driver_license/service.py) — never invented.
+SERVICE_GROUPS = {
+    "itin_application": "Taxes & ITIN", "tax_return": "Taxes & ITIN",
+    "green_card_renewal": "Immigration", "naturalization": "Immigration", "family_petition": "Immigration",
+    "adjustment_of_status": "Immigration", "employment_authorization": "Immigration",
+    "removal_of_conditions": "Immigration", "consular_processing": "Immigration",
+    "consent_travel": "Notary Public",
+    "nj_driver_license": "NJ Driver License",
+    "general_service": "Other Services",
+}
+SERVICE_GROUP_COLORS = {
+    "Taxes & ITIN": "#0d9488", "Immigration": "#dc2626", "Notary Public": "#d97706",
+    "NJ Driver License": "#2563eb", "Other Services": "#7c3aed", "Other": "#64748b",
+}
+
+
 @admin_bp.route("/")
 @admin_required
 def dashboard():
+    from datetime import timedelta
+
+    from app.activity import describe
     from app.case_types import type_title
-    from app.models import MANUAL_METHODS, Case, Inquiry, Payment
+    from app.models import ActivityEvent, MANUAL_METHODS, Case, Inquiry, Payment
 
     course_count = Course.query.count()
     published_count = Course.query.filter_by(is_published=True).count()
     student_count = Student.query.count()
     enrollment_count = Enrollment.query.count()
+    week_ago = datetime.utcnow() - timedelta(days=7)
+    new_students_week = Student.query.filter(Student.created_at >= week_ago).count()
+    new_enrollments_week = Enrollment.query.filter(Enrollment.enrolled_at >= week_ago).count()
 
-    open_cases = Case.query.filter(Case.status.in_(("open", "in_review", "waiting_client"))).count()
+    open_case_rows = Case.query.filter(Case.status.in_(("open", "in_review", "waiting_client"))).order_by(Case.created_at.desc()).all()
+    open_cases = len(open_case_rows)
+    new_cases_today = sum(1 for c in open_case_rows if c.created_at and c.created_at.date() == datetime.utcnow().date())
     pending_manual_payments = Payment.query.filter(Payment.status == "pending", Payment.method.in_(MANUAL_METHODS)).count()
+    pending_by_method = {}
+    for p in Payment.query.filter(Payment.status == "pending", Payment.method.in_(MANUAL_METHODS)).all():
+        pending_by_method[p.method] = pending_by_method.get(p.method, 0) + 1
     open_inquiries = Inquiry.query.filter_by(status="new").count()
 
+    by_service = {}
+    for c in open_case_rows:
+        label = SERVICE_GROUPS.get(c.case_type, "Other")
+        by_service[label] = by_service.get(label, 0) + 1
+    cases_by_service = sorted(by_service.items(), key=lambda x: -x[1])
+
     recent_cases = [
-        {"case": c, "type_title": type_title(c.case_type, "en")}
-        for c in Case.query.order_by(Case.created_at.desc()).limit(6).all()
+        {"case": c, "type_title": type_title(c.case_type, "en"), "service": SERVICE_GROUPS.get(c.case_type, "Other")}
+        for c in Case.query.order_by(Case.updated_at.desc()).limit(6).all()
     ]
-    recent_customers = Student.query.order_by(Student.created_at.desc()).limit(6).all()
-    recent_enrollments = Enrollment.query.order_by(Enrollment.enrolled_at.desc()).limit(6).all()
+    recent_customers = Student.query.order_by(Student.created_at.desc()).limit(5).all()
+    recent_enrollments = Enrollment.query.order_by(Enrollment.enrolled_at.desc()).limit(4).all()
+    recent_payments = Payment.query.filter(Payment.status.in_(("completed", "pending"))).order_by(Payment.created_at.desc()).limit(5).all()
+
+    notifications = []
+    for e in ActivityEvent.query.order_by(ActivityEvent.created_at.desc()).limit(8).all():
+        group, sentence = describe(e)
+        notifications.append({"event": e, "group": group, "sentence": sentence, "customer": e.customer})
 
     return render_template(
         "admin/dashboard.html",
+        today=datetime.utcnow(),
         course_count=course_count,
         published_count=published_count,
         student_count=student_count,
         enrollment_count=enrollment_count,
+        new_students_week=new_students_week,
+        new_enrollments_week=new_enrollments_week,
         open_cases=open_cases,
+        new_cases_today=new_cases_today,
         pending_manual_payments=pending_manual_payments,
+        pending_by_method=pending_by_method,
         open_inquiries=open_inquiries,
+        cases_by_service=cases_by_service,
+        service_colors=SERVICE_GROUP_COLORS,
         recent_cases=recent_cases,
         recent_customers=recent_customers,
         recent_enrollments=recent_enrollments,
+        recent_payments=recent_payments,
+        notifications=notifications,
     )
+
+
+@admin_bp.route("/search")
+@admin_required
+def global_search():
+    """A real, simple search across the few things staff actually look up by name/number — no external
+    search engine, no new dependency, just the existing tables' own columns."""
+    from app.models import Case, Payment
+
+    q = (request.args.get("q") or "").strip()
+    results = {"customers": [], "cases": [], "payments": [], "courses": []}
+    if q:
+        like = f"%{q}%"
+        results["customers"] = Student.query.filter(db.or_(Student.name.ilike(like), Student.email.ilike(like))).order_by(Student.name).limit(10).all()
+        results["cases"] = (Case.query.join(Student, Student.id == Case.customer_id)
+                            .filter(db.or_(Case.case_number.ilike(like), Case.title.ilike(like), Student.name.ilike(like), Student.email.ilike(like)))
+                            .order_by(Case.updated_at.desc()).limit(10).all())
+        results["payments"] = Payment.query.filter(Payment.receipt_number.ilike(like)).order_by(Payment.created_at.desc()).limit(10).all()
+        results["courses"] = Course.query.filter(db.or_(Course.title_en.ilike(like), Course.title_es.ilike(like))).order_by(Course.title_en).limit(10).all()
+    from app.case_types import type_title as _tt
+
+    return render_template("admin/search_results.html", q=q, results=results, type_title=_tt)
 
 
 # ---------------------------------------------------------------- courses

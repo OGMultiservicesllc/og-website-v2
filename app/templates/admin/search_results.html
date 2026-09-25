@@ -1,0 +1,68 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Search{% endblock %}
+{% block content %}
+{% from "partials/icons.html" import icon %}
+<h1 class="text-2xl font-bold text-brand-800">Search results{% if q %} for "<span class="text-accent-700">{{ q }}</span>"{% endif %}</h1>
+<p class="text-sm text-slate-500 mt-1 mb-6">Customers, cases, payments and courses matching your search.</p>
+
+{% if not q %}
+<div class="rounded-2xl border-2 border-dashed border-slate-200 p-16 text-center text-slate-400">Type something in the search bar above.</div>
+{% elif not (results.customers or results.cases or results.payments or results.courses) %}
+<div class="rounded-2xl border-2 border-dashed border-slate-200 p-16 text-center text-slate-400">No matches for "{{ q }}".</div>
+{% else %}
+<div class="space-y-5">
+    {% if results.customers %}
+    <section class="rounded-2xl border border-slate-100 bg-white overflow-hidden">
+        <h2 class="px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-400 border-b border-slate-100 flex items-center gap-2">{{ icon('user', 'w-4 h-4') }} Customers</h2>
+        <ul class="divide-y divide-slate-50">
+            {% for s in results.customers %}
+            <li><a href="{{ url_for('admin.customer_detail', student_id=s.id) }}" class="flex items-center justify-between px-5 py-3 hover:bg-slate-50">
+                <span><span class="block text-sm font-semibold text-brand-800">{{ s.name }}</span><span class="block text-[12px] text-slate-400">{{ s.email }}</span></span>
+                {{ icon('chevron-right', 'w-4 h-4 text-slate-300') }}
+            </a></li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+    {% if results.cases %}
+    <section class="rounded-2xl border border-slate-100 bg-white overflow-hidden">
+        <h2 class="px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-400 border-b border-slate-100 flex items-center gap-2">{{ icon('briefcase', 'w-4 h-4') }} Cases</h2>
+        <ul class="divide-y divide-slate-50">
+            {% for c in results.cases %}
+            <li><a href="{{ url_for('admin.ocase_detail', case_id=c.id) }}" class="flex items-center justify-between px-5 py-3 hover:bg-slate-50">
+                <span><span class="block text-sm font-semibold text-brand-800 font-mono">{{ c.case_number }}</span><span class="block text-[12px] text-slate-400">{{ c.customer.name if c.customer else '—' }} &middot; {{ type_title(c.case_type, 'en') }}</span></span>
+                {{ icon('chevron-right', 'w-4 h-4 text-slate-300') }}
+            </a></li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+    {% if results.payments %}
+    <section class="rounded-2xl border border-slate-100 bg-white overflow-hidden">
+        <h2 class="px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-400 border-b border-slate-100 flex items-center gap-2">{{ icon('card', 'w-4 h-4') }} Payments</h2>
+        <ul class="divide-y divide-slate-50">
+            {% for p in results.payments %}
+            <li><a href="{{ url_for('admin.customer_detail', student_id=p.customer_id, tab='payments') }}" class="flex items-center justify-between px-5 py-3 hover:bg-slate-50">
+                <span><span class="block text-sm font-semibold text-brand-800 font-mono">{{ p.receipt_number }}</span><span class="block text-[12px] text-slate-400">{{ p.customer.name if p.customer else '—' }} &middot; ${{ '%.2f' % ((p.amount_cents or 0) / 100) }}</span></span>
+                {{ icon('chevron-right', 'w-4 h-4 text-slate-300') }}
+            </a></li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+    {% if results.courses %}
+    <section class="rounded-2xl border border-slate-100 bg-white overflow-hidden">
+        <h2 class="px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-400 border-b border-slate-100 flex items-center gap-2">{{ icon('academy', 'w-4 h-4') }} Courses</h2>
+        <ul class="divide-y divide-slate-50">
+            {% for course in results.courses %}
+            <li><a href="{{ url_for('admin.course_edit', course_id=course.id) }}" class="flex items-center justify-between px-5 py-3 hover:bg-slate-50">
+                <span class="block text-sm font-semibold text-brand-800">{{ course.title_en }}</span>
+                {{ icon('chevron-right', 'w-4 h-4 text-slate-300') }}
+            </a></li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

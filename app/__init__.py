@@ -212,10 +212,13 @@ def create_app(config_class=Config):
 
         admin_active = is_admin_logged_in()
         new_inquiry_count = 0
+        admin_alert_count = 0
         if admin_active:
-            from app.models import Inquiry
+            from app.models import MANUAL_METHODS, Inquiry, Payment
 
             new_inquiry_count = Inquiry.query.filter_by(status="new").count()
+            pending_payments = Payment.query.filter(Payment.status == "pending", Payment.method.in_(MANUAL_METHODS)).count()
+            admin_alert_count = new_inquiry_count + pending_payments
 
         from app.models import SiteSettings
 
@@ -261,6 +264,7 @@ def create_app(config_class=Config):
             "t": t,
             "st": st,
             "account_action_count": account_action_count,
+            "admin_alert_count": admin_alert_count,
             "site_asset": site_asset,
             "site_focus": site_focus,
             "media_url": media_url,

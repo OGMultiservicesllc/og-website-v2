@@ -3,124 +3,250 @@
 
 {% block content %}
 {% from "partials/icons.html" import icon %}
-<h1 class="text-2xl font-bold text-brand-800">Dashboard</h1>
-<p class="text-sm text-slate-500 mt-1 mb-6">A quick look at what needs attention across every service, plus recent activity.</p>
+{% set group_icon = {'account': 'user', 'admin': 'shield', 'applications': 'documents', 'cases': 'briefcase', 'documents': 'folder', 'payments': 'card', 'academy': 'academy'} %}
+{% set group_color = {'account': '#64748b', 'admin': '#64748b', 'applications': '#2563eb', 'cases': '#2563eb', 'documents': '#d97706', 'payments': '#059669', 'academy': '#7c3aed'} %}
+{% set status_tone = {'open': 'bg-blue-50 text-blue-700', 'in_review': 'bg-amber-50 text-amber-700', 'waiting_client': 'bg-purple-50 text-purple-700', 'completed': 'bg-emerald-50 text-emerald-700', 'closed': 'bg-slate-100 text-slate-500'} %}
 
-<h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Needs attention</h2>
-<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-    <a href="{{ url_for('admin.ocase_list') }}" class="rounded-2xl border border-slate-100 bg-white p-5 hover:border-accent-300 transition flex items-center gap-4">
-        <span class="shrink-0 w-11 h-11 rounded-xl bg-mist-100 text-accent-700 flex items-center justify-center">{{ icon('briefcase', 'w-5 h-5') }}</span>
-        <span><span class="block text-2xl font-bold text-brand-800">{{ open_cases }}</span><span class="block text-[13px] text-slate-500">Open cases</span></span>
-    </a>
-    <a href="{{ url_for('admin.manual_payments_list') }}" class="rounded-2xl border border-slate-100 bg-white p-5 hover:border-accent-300 transition flex items-center gap-4">
-        <span class="shrink-0 w-11 h-11 rounded-xl {{ 'bg-amber-50 text-amber-700' if pending_manual_payments else 'bg-mist-100 text-accent-700' }} flex items-center justify-center">{{ icon('card', 'w-5 h-5') }}</span>
-        <span><span class="block text-2xl font-bold text-brand-800">{{ pending_manual_payments }}</span><span class="block text-[13px] text-slate-500">Payments to confirm</span></span>
-    </a>
-    <a href="{{ url_for('admin.inquiries_list') }}" class="rounded-2xl border border-slate-100 bg-white p-5 hover:border-accent-300 transition flex items-center gap-4">
-        <span class="shrink-0 w-11 h-11 rounded-xl {{ 'bg-amber-50 text-amber-700' if open_inquiries else 'bg-mist-100 text-accent-700' }} flex items-center justify-center">{{ icon('chat', 'w-5 h-5') }}</span>
-        <span><span class="block text-2xl font-bold text-brand-800">{{ open_inquiries }}</span><span class="block text-[13px] text-slate-500">New inquiries</span></span>
-    </a>
+<div class="flex flex-wrap items-start justify-between gap-3 mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-brand-800">Dashboard</h1>
+        <p class="text-sm text-slate-500 mt-1">Welcome back{{ ', ' ~ session.get('admin_name').split(' ')[0] if session.get('admin_name') else '' }}. Here's what's happening with OG Multiservices today.</p>
+    </div>
+    <div class="text-right">
+        <p class="text-sm font-semibold text-slate-700">{{ today.strftime('%A, %b %d, %Y') }}</p>
+        <p class="text-xs text-slate-400 mt-0.5">Paterson, NJ &middot; Spring, TX</p>
+    </div>
 </div>
 
-<h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">OG Academy</h2>
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-    <div class="rounded-2xl border border-slate-100 bg-white p-6">
-        <p class="text-sm text-slate-500">Total Courses</p>
-        <p class="text-3xl font-bold text-brand-800 mt-1">{{ course_count }}</p>
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+    <div class="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+        <div class="flex items-center gap-3">
+            <span class="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">{{ icon('user', 'w-5 h-5') }}</span>
+            <div class="min-w-0"><p class="text-[13px] text-slate-500">Total Customers</p><p class="text-2xl font-bold text-brand-800">{{ student_count }}</p></div>
+        </div>
+        {% if new_students_week %}<p class="mt-2 text-[12px] font-semibold text-emerald-600">&#8593; {{ new_students_week }} new this week</p>{% endif %}
     </div>
-    <div class="rounded-2xl border border-slate-100 bg-white p-6">
-        <p class="text-sm text-slate-500">Published</p>
-        <p class="text-3xl font-bold text-accent-600 mt-1">{{ published_count }}</p>
+    <div class="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+        <div class="flex items-center gap-3">
+            <span class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">{{ icon('briefcase', 'w-5 h-5') }}</span>
+            <div class="min-w-0"><p class="text-[13px] text-slate-500">Open Cases</p><p class="text-2xl font-bold text-brand-800">{{ open_cases }}</p></div>
+        </div>
+        {% if new_cases_today %}<p class="mt-2 text-[12px] font-semibold text-emerald-600">&#8593; {{ new_cases_today }} new today</p>{% endif %}
     </div>
-    <div class="rounded-2xl border border-slate-100 bg-white p-6">
-        <p class="text-sm text-slate-500">Students</p>
-        <p class="text-3xl font-bold text-brand-800 mt-1">{{ student_count }}</p>
+    <div class="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+        <div class="flex items-center gap-3">
+            <span class="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">{{ icon('card', 'w-5 h-5') }}</span>
+            <div class="min-w-0"><p class="text-[13px] text-slate-500">Payments to Confirm</p><p class="text-2xl font-bold text-brand-800">{{ pending_manual_payments }}</p></div>
+        </div>
+        {% if pending_by_method %}<p class="mt-2 text-[12px] text-slate-500">{% for m, n in pending_by_method.items() %}{{ n }} {{ m.replace('_',' ')|title }}{% if not loop.last %} &middot; {% endif %}{% endfor %}</p>{% endif %}
     </div>
-    <div class="rounded-2xl border border-slate-100 bg-white p-6">
-        <p class="text-sm text-slate-500">Enrollments</p>
-        <p class="text-3xl font-bold text-academy-600 mt-1">{{ enrollment_count }}</p>
+    <div class="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+        <div class="flex items-center gap-3">
+            <span class="w-11 h-11 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">{{ icon('academy', 'w-5 h-5') }}</span>
+            <div class="min-w-0"><p class="text-[13px] text-slate-500">Academy Enrollments</p><p class="text-2xl font-bold text-brand-800">{{ enrollment_count }}</p></div>
+        </div>
+        {% if new_enrollments_week %}<p class="mt-2 text-[12px] font-semibold text-emerald-600">&#8593; {{ new_enrollments_week }} this week</p>{% endif %}
     </div>
-</div>
-<div class="flex flex-wrap gap-3 mb-10">
-    <a href="{{ url_for('admin.courses_list') }}"
-       class="inline-flex items-center rounded-lg bg-accent-600 text-white font-semibold px-5 py-2.5 text-sm hover:bg-accent-700 transition">
-        Go to OG Academy Courses →
-    </a>
-    <a href="{{ url_for('admin.students_list') }}"
-       class="inline-flex items-center rounded-lg border border-slate-200 text-slate-700 font-semibold px-5 py-2.5 text-sm hover:border-accent-300 transition">
-        Manage Students →
-    </a>
 </div>
 
-<div class="grid lg:grid-cols-2 gap-4">
-    <section class="rounded-2xl border border-slate-100 bg-white overflow-hidden">
-        <div class="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
-            <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400">Recent cases</h2>
-            <a href="{{ url_for('admin.ocase_list') }}" class="text-xs font-semibold text-accent-700 hover:underline">View all →</a>
+<div class="grid lg:grid-cols-3 gap-4 mb-4">
+    <section class="lg:col-span-2 rounded-2xl border border-slate-100 bg-white overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+            <h2 class="text-sm font-bold text-brand-800">Recent Cases</h2>
+            <a href="{{ url_for('admin.ocase_list') }}" class="text-xs font-semibold text-accent-700 hover:underline">View all &rarr;</a>
         </div>
         {% if recent_cases %}
-        <ul class="divide-y divide-slate-100">
+        <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead><tr class="text-left text-[11px] uppercase tracking-wide text-slate-400 border-b border-slate-100">
+                <th class="px-5 py-2.5 font-semibold">Case #</th><th class="px-3 py-2.5 font-semibold">Customer</th><th class="px-3 py-2.5 font-semibold">Service</th>
+                <th class="px-3 py-2.5 font-semibold">Type</th><th class="px-3 py-2.5 font-semibold">Status</th><th class="px-3 py-2.5 font-semibold">Updated</th><th class="px-3 py-2.5"></th>
+            </tr></thead>
+            <tbody>
             {% for row in recent_cases %}
-            <li class="px-5 py-3">
-                <a href="{{ url_for('admin.ocase_detail', case_id=row.case.id) }}" class="flex items-center justify-between gap-3 hover:text-accent-700">
-                    <span class="min-w-0">
-                        <span class="block text-sm font-semibold text-brand-800 font-mono">{{ row.case.case_number }}</span>
-                        <span class="block text-[12px] text-slate-500 truncate">{{ row.case.customer.name if row.case.customer else '—' }} · {{ row.type_title }}</span>
-                    </span>
-                    <span class="shrink-0 text-[11px] font-bold uppercase tracking-wide text-slate-400">{{ row.case.status.replace('_', ' ') }}</span>
-                </a>
-            </li>
+            <tr class="border-b border-slate-50 last:border-0 hover:bg-slate-50/70 transition">
+                <td class="px-5 py-3 font-mono text-[12.5px] font-semibold text-accent-700"><a href="{{ url_for('admin.ocase_detail', case_id=row.case.id) }}" class="hover:underline">{{ row.case.case_number }}</a></td>
+                <td class="px-3 py-3 text-slate-700 truncate max-w-[9rem]">{{ row.case.customer.name if row.case.customer else '—' }}</td>
+                <td class="px-3 py-3 text-slate-500">{{ row.service }}</td>
+                <td class="px-3 py-3 text-slate-500 truncate max-w-[8rem]">{{ row.type_title }}</td>
+                <td class="px-3 py-3"><span class="inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold {{ status_tone.get(row.case.status, 'bg-slate-100 text-slate-500') }}">{{ row.case.status.replace('_', ' ')|title }}</span></td>
+                <td class="px-3 py-3 text-[12.5px] text-slate-400 whitespace-nowrap">{{ row.case.updated_at.strftime('%b %d, %Y') if row.case.updated_at else '—' }}</td>
+                <td class="px-3 py-3 text-right"><a href="{{ url_for('admin.ocase_detail', case_id=row.case.id) }}" class="text-slate-300 hover:text-accent-700">{{ icon('chevron-right', 'w-4 h-4') }}</a></td>
+            </tr>
             {% endfor %}
-        </ul>
+            </tbody>
+        </table>
+        </div>
         {% else %}
-        <p class="px-5 py-8 text-center text-sm text-slate-400">No cases yet.</p>
+        <p class="px-5 py-10 text-center text-sm text-slate-400">No cases yet.</p>
         {% endif %}
     </section>
 
-    <section class="rounded-2xl border border-slate-100 bg-white overflow-hidden">
-        <div class="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
-            <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400">Recent customers</h2>
-            <a href="{{ url_for('admin.customers_list') }}" class="text-xs font-semibold text-accent-700 hover:underline">View all →</a>
+    <section id="notifications" class="rounded-2xl border border-slate-100 bg-white overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+            <h2 class="text-sm font-bold text-brand-800">Notifications</h2>
+            <a href="{{ url_for('admin.applications_list') }}" class="text-xs font-semibold text-accent-700 hover:underline">View all &rarr;</a>
         </div>
-        {% if recent_customers %}
-        <ul class="divide-y divide-slate-100">
-            {% for s in recent_customers %}
-            <li class="px-5 py-3">
-                <a href="{{ url_for('admin.customer_detail', student_id=s.id) }}" class="flex items-center justify-between gap-3 hover:text-accent-700">
-                    <span class="min-w-0">
-                        <span class="block text-sm font-semibold text-brand-800 truncate">{{ s.name }}</span>
-                        <span class="block text-[12px] text-slate-500 truncate">{{ s.email }}</span>
-                    </span>
-                    <span class="shrink-0 text-[11px] text-slate-400">{{ s.created_at.strftime('%b %d, %Y') if s.created_at else '' }}</span>
-                </a>
+        {% if notifications %}
+        <ul class="divide-y divide-slate-50 max-h-[420px] overflow-y-auto">
+            {% for n in notifications %}
+            <li class="px-5 py-3 flex items-start gap-3">
+                <span class="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center mt-0.5" style="background:{{ group_color.get(n.group, '#64748b') }}1a; color:{{ group_color.get(n.group, '#64748b') }};">{{ icon(group_icon.get(n.group, 'info'), 'w-4 h-4') }}</span>
+                <span class="min-w-0 flex-1">
+                    <span class="block text-[13px] text-slate-700 leading-snug">{{ n.sentence }}</span>
+                    <span class="block text-[11px] text-slate-400 mt-0.5">{{ n.customer.name if n.customer else '' }}{% if n.customer %} &middot; {% endif %}{{ n.event.created_at.strftime('%b %d, %I:%M %p') }}</span>
+                </span>
             </li>
             {% endfor %}
         </ul>
         {% else %}
-        <p class="px-5 py-8 text-center text-sm text-slate-400">No customers yet.</p>
+        <p class="px-5 py-10 text-center text-sm text-slate-400">Nothing new.</p>
         {% endif %}
     </section>
 </div>
 
-{% if recent_enrollments %}
-<section class="mt-4 rounded-2xl border border-slate-100 bg-white overflow-hidden">
-    <div class="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
-        <h2 class="text-xs font-bold uppercase tracking-wide text-slate-400">Recent OG Academy activity</h2>
-        <a href="{{ url_for('admin.students_list') }}" class="text-xs font-semibold text-accent-700 hover:underline">View all →</a>
-    </div>
-    <ul class="divide-y divide-slate-100">
-        {% for e in recent_enrollments %}
-        <li class="px-5 py-3">
-            <a href="{{ url_for('admin.customer_detail', student_id=e.student_id, tab='courses') }}" class="flex items-center justify-between gap-3 hover:text-accent-700">
-                <span class="min-w-0">
-                    <span class="block text-sm font-semibold text-brand-800 truncate">{{ e.student.name if e.student else '—' }}</span>
-                    <span class="block text-[12px] text-slate-500 truncate">{{ e.course.title_en if e.course else '—' }}</span>
-                </span>
-                <span class="shrink-0 text-[11px] text-slate-400">{{ e.enrolled_at.strftime('%b %d, %Y') if e.enrolled_at else '' }}</span>
+<div class="grid lg:grid-cols-3 gap-4 mb-4">
+    <section class="lg:col-span-2 rounded-2xl border border-slate-100 bg-white overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+            <h2 class="text-sm font-bold text-brand-800">Recent Payments</h2>
+            <a href="{{ url_for('admin.manual_payments_list') }}" class="text-xs font-semibold text-accent-700 hover:underline">View all &rarr;</a>
+        </div>
+        {% if recent_payments %}
+        <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead><tr class="text-left text-[11px] uppercase tracking-wide text-slate-400 border-b border-slate-100">
+                <th class="px-5 py-2.5 font-semibold">Date</th><th class="px-3 py-2.5 font-semibold">Customer</th><th class="px-3 py-2.5 font-semibold">Description</th>
+                <th class="px-3 py-2.5 font-semibold">Amount</th><th class="px-3 py-2.5 font-semibold">Method</th><th class="px-3 py-2.5 font-semibold">Status</th>
+            </tr></thead>
+            <tbody>
+            {% for p in recent_payments %}
+            <tr class="border-b border-slate-50 last:border-0 hover:bg-slate-50/70 transition">
+                <td class="px-5 py-3 text-[12.5px] text-slate-500 whitespace-nowrap">{{ p.created_at.strftime('%b %d, %Y') }}</td>
+                <td class="px-3 py-3 text-slate-700 truncate max-w-[9rem]">{{ p.charge.customer.name if p.charge and p.charge.customer else '—' }}</td>
+                <td class="px-3 py-3 text-slate-500 truncate max-w-[10rem]">{{ p.charge.display_title('en') if p.charge else '—' }}</td>
+                <td class="px-3 py-3 font-semibold text-brand-800 tabular-nums">${{ '%.2f' % ((p.amount_cents or 0) / 100) }}</td>
+                <td class="px-3 py-3 text-slate-500">{{ p.method.replace('_', ' ')|title }}</td>
+                <td class="px-3 py-3"><span class="inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold {{ 'bg-emerald-50 text-emerald-700' if p.status == 'completed' else ('bg-amber-50 text-amber-700' if p.status == 'pending' else 'bg-slate-100 text-slate-500') }}">{{ p.status|title }}</span></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% else %}
+        <p class="px-5 py-10 text-center text-sm text-slate-400">No payments yet.</p>
+        {% endif %}
+    </section>
+
+    <section class="rounded-2xl border border-slate-100 bg-white overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+            <h2 class="text-sm font-bold text-brand-800">Recent Customers</h2>
+            <a href="{{ url_for('admin.customers_list') }}" class="text-xs font-semibold text-accent-700 hover:underline">View all &rarr;</a>
+        </div>
+        {% if recent_customers %}
+        <ul class="divide-y divide-slate-50">
+            {% for s in recent_customers %}
+            <li class="px-5 py-3">
+                <a href="{{ url_for('admin.customer_detail', student_id=s.id) }}" class="flex items-center gap-3 hover:text-accent-700">
+                    <span class="w-8 h-8 rounded-full bg-mist-100 text-accent-700 text-[12px] font-bold flex items-center justify-center shrink-0">{{ (s.name or '?')[:1]|upper }}{{ (s.name.split(' ')[1][:1] if s.name and s.name.split(' ')|length > 1 else '')|upper }}</span>
+                    <span class="min-w-0 flex-1">
+                        <span class="block text-[13px] font-semibold text-brand-800 truncate">{{ s.name }}</span>
+                        <span class="block text-[11.5px] text-slate-400 truncate">{{ s.email }}</span>
+                    </span>
+                    <span class="shrink-0 text-[11px] text-slate-400 whitespace-nowrap">{{ s.created_at.strftime('%b %d') if s.created_at else '' }}</span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="px-5 py-10 text-center text-sm text-slate-400">No customers yet.</p>
+        {% endif %}
+    </section>
+</div>
+
+<div class="grid lg:grid-cols-3 gap-4">
+    <section class="rounded-2xl border border-slate-100 bg-white overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+            <h2 class="text-sm font-bold text-brand-800">OG Academy Activity</h2>
+            <a href="{{ url_for('admin.students_list') }}" class="text-xs font-semibold text-accent-700 hover:underline">View all &rarr;</a>
+        </div>
+        {% if recent_enrollments %}
+        <ul class="divide-y divide-slate-50">
+            {% for e in recent_enrollments %}
+            <li class="px-5 py-3">
+                <a href="{{ url_for('admin.customer_detail', student_id=e.student_id, tab='courses') }}" class="flex items-start gap-3 hover:text-accent-700">
+                    <span class="shrink-0 w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center mt-0.5">{{ icon('academy', 'w-4 h-4') }}</span>
+                    <span class="min-w-0 flex-1">
+                        <span class="block text-[13px] text-slate-700 leading-snug"><strong class="text-brand-800">{{ e.student.name if e.student else '—' }}</strong> enrolled {{ e.course.title_en if e.course else '' }}</span>
+                        <span class="block text-[11px] text-slate-400 mt-0.5">{{ e.enrolled_at.strftime('%b %d, %Y') if e.enrolled_at else '' }}</span>
+                    </span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="px-5 py-10 text-center text-sm text-slate-400">No enrollments yet.</p>
+        {% endif %}
+    </section>
+
+    <section class="rounded-2xl border border-slate-100 bg-white p-5">
+        <h2 class="text-sm font-bold text-brand-800 mb-4">Cases by Service</h2>
+        {% if cases_by_service %}
+        {% set total = cases_by_service|sum(attribute=1) %}
+        <div class="flex flex-col items-center">
+            <svg viewBox="0 0 120 120" class="w-40 h-40">
+                {% set offset = 0 %}
+                {% for label, count in cases_by_service %}
+                {% set pct = (count / total * 100) if total else 0 %}
+                <circle cx="60" cy="60" r="46" fill="none" stroke="{{ service_colors.get(label, '#94a3b8') }}" stroke-width="16"
+                        stroke-dasharray="{{ '%.2f'|format(pct * 2.89) }} {{ '%.2f'|format(289 - pct * 2.89) }}" stroke-dashoffset="{{ '%.2f'|format(-offset * 2.89) }}"
+                        transform="rotate(-90 60 60)"/>
+                {% set offset = offset + pct %}
+                {% endfor %}
+                <text x="60" y="56" text-anchor="middle" class="fill-brand-800" style="font-size:22px; font-weight:800;">{{ total }}</text>
+                <text x="60" y="72" text-anchor="middle" class="fill-slate-400" style="font-size:9px;">Open Cases</text>
+            </svg>
+            <ul class="mt-4 w-full space-y-1.5">
+                {% for label, count in cases_by_service %}
+                <li class="flex items-center justify-between text-[12.5px]">
+                    <span class="flex items-center gap-2 text-slate-600"><span class="w-2.5 h-2.5 rounded-full shrink-0" style="background:{{ service_colors.get(label, '#94a3b8') }};"></span>{{ label }}</span>
+                    <span class="font-semibold text-slate-700">{{ count }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% else %}
+        <p class="py-10 text-center text-sm text-slate-400">No open cases yet.</p>
+        {% endif %}
+    </section>
+
+    <section class="rounded-2xl border border-slate-100 bg-white p-5">
+        <h2 class="text-sm font-bold text-brand-800 mb-4">Quick Actions</h2>
+        <div class="grid grid-cols-2 gap-2.5">
+            <a href="{{ url_for('admin.customers_list') }}" class="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-slate-100 bg-slate-50 hover:bg-mist-50 hover:border-accent-200 transition p-3.5 text-center">
+                <span class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">{{ icon('user', 'w-4 h-4') }}</span>
+                <span class="text-[12px] font-semibold text-slate-700">Customers</span>
             </a>
-        </li>
-        {% endfor %}
-    </ul>
-</section>
-{% endif %}
+            <a href="{{ url_for('admin.ocase_list') }}" class="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-slate-100 bg-slate-50 hover:bg-mist-50 hover:border-accent-200 transition p-3.5 text-center">
+                <span class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">{{ icon('briefcase', 'w-4 h-4') }}</span>
+                <span class="text-[12px] font-semibold text-slate-700">Cases</span>
+            </a>
+            <a href="{{ url_for('admin.manual_payments_list') }}" class="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-slate-100 bg-slate-50 hover:bg-mist-50 hover:border-accent-200 transition p-3.5 text-center">
+                <span class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">{{ icon('card', 'w-4 h-4') }}</span>
+                <span class="text-[12px] font-semibold text-slate-700">Payments</span>
+            </a>
+            <a href="{{ url_for('admin.blog_new') }}" class="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-slate-100 bg-slate-50 hover:bg-mist-50 hover:border-accent-200 transition p-3.5 text-center">
+                <span class="w-8 h-8 rounded-lg bg-pink-50 text-pink-600 flex items-center justify-center">{{ icon('blog', 'w-4 h-4') }}</span>
+                <span class="text-[12px] font-semibold text-slate-700">Add Blog Post</span>
+            </a>
+            <a href="{{ url_for('admin.courses_list') }}" class="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-slate-100 bg-slate-50 hover:bg-mist-50 hover:border-accent-200 transition p-3.5 text-center">
+                <span class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">{{ icon('academy', 'w-4 h-4') }}</span>
+                <span class="text-[12px] font-semibold text-slate-700">Manage Courses</span>
+            </a>
+            <a href="{{ url_for('admin.email_test') }}" class="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-slate-100 bg-slate-50 hover:bg-mist-50 hover:border-accent-200 transition p-3.5 text-center">
+                <span class="w-8 h-8 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center">{{ icon('mail', 'w-4 h-4') }}</span>
+                <span class="text-[12px] font-semibold text-slate-700">Test Email</span>
+            </a>
+        </div>
+    </section>
+</div>
 {% endblock %}
