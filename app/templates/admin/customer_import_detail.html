@@ -27,7 +27,11 @@
         <h2 class="font-semibold text-slate-900">Ready to Import</h2>
         <p class="text-xs text-slate-500 mt-0.5">Nothing has been written to the customer database yet. Review the rows below, then import.</p>
     </div>
-    <form method="POST" action="{{ url_for('admin.customer_import_commit', batch_id=batch.id) }}" data-confirm="Import {{ batch.ready_count }} customer(s)? This writes new accounts to the database.">
+    <form method="POST" action="{{ url_for('admin.customer_import_commit', batch_id=batch.id) }}"
+          data-confirm="This will create {{ batch.ready_count }} customer records in the OG database. No account invitation emails will be sent at this time."
+          data-confirm-title="Import {{ batch.ready_count }} Customers?"
+          data-confirm-label="Import {{ batch.ready_count }} Customers"
+          data-confirm-style="primary">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <button type="submit" class="rounded-lg bg-accent-600 text-white font-semibold px-6 py-2.5 text-sm hover:bg-accent-700 transition" {{ 'disabled' if not batch.ready_count else '' }}>
             Import {{ batch.ready_count }} Customer{{ 's' if batch.ready_count != 1 else '' }}
@@ -37,7 +41,11 @@
 {% endif %}
 
 {% if batch.status == "imported" %}
-<section class="rounded-2xl bg-white border border-slate-100 p-5 sm:p-6 mb-6">
+<div class="rounded-2xl bg-emerald-50 border border-emerald-100 p-4 mb-6 flex flex-wrap items-center justify-between gap-3">
+    <p class="text-sm font-medium text-emerald-800">{{ batch.imported_count }} customer{{ 's' if batch.imported_count != 1 else '' }} imported successfully.</p>
+    <a href="#account-invitations" class="text-sm font-semibold text-emerald-700 hover:underline whitespace-nowrap">Go to Account Invitations &rarr;</a>
+</div>
+<section id="account-invitations" class="rounded-2xl bg-white border border-slate-100 p-5 sm:p-6 mb-6">
     <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div>
             <h2 class="font-semibold text-slate-900">Account Invitations</h2>

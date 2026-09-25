@@ -241,9 +241,14 @@
 
 {% include "admin/_media_modal.html" %}
 
-<!-- Custom confirm dialog (replaces native window.confirm, which some browsers/extensions silently block) -->
+<!-- Custom confirm dialog (replaces native window.confirm, which some browsers/extensions silently block).
+     Defaults to the destructive red "Delete" look (unchanged, every existing data-confirm="..." form
+     keeps that exact appearance) — a form can opt into a non-destructive look with data-confirm-title /
+     data-confirm-label / data-confirm-style="primary" (blue/cyan, OG's normal primary action style) for
+     actions like "Import Customers" that are confirmable but not destructive. -->
 <div id="admin-confirm-overlay" class="hidden fixed inset-0 z-[100] bg-black/40 flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+        <h3 id="admin-confirm-title" class="hidden font-semibold text-slate-900 mb-1.5"></h3>
         <p id="admin-confirm-message" class="text-sm text-slate-700"></p>
         <div class="mt-5 flex justify-end gap-2">
             <button type="button" id="admin-confirm-cancel" class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium hover:bg-slate-50 transition">Cancel</button>
@@ -254,9 +259,12 @@
 <script>
     (function () {
         const overlay = document.getElementById('admin-confirm-overlay');
+        const titleEl = document.getElementById('admin-confirm-title');
         const messageEl = document.getElementById('admin-confirm-message');
         const okBtn = document.getElementById('admin-confirm-ok');
         const cancelBtn = document.getElementById('admin-confirm-cancel');
+        const PRIMARY_CLASSES = 'rounded-lg bg-accent-600 text-white px-4 py-2 text-sm font-semibold hover:bg-accent-700 transition';
+        const DESTRUCTIVE_CLASSES = 'rounded-lg bg-red-600 text-white px-4 py-2 text-sm font-semibold hover:bg-red-700 transition';
         let pendingForm = null;
 
         document.addEventListener('submit', function (e) {
@@ -266,11 +274,24 @@
             if (!message || form.dataset.confirmed === 'true') return;
             e.preventDefault();
             pendingForm = form;
+            const title = form.getAttribute('data-confirm-title');
+            if (title) {
+                titleEl.textContent = title;
+                titleEl.classList.remove('hidden');
+            } else {
+                titleEl.classList.add('hidden');
+            }
             messageEl.textContent = message;
+            const isPrimary = form.getAttribute('data-confirm-style') === 'primary';
+            okBtn.className = isPrimary ? PRIMARY_CLASSES : DESTRUCTIVE_CLASSES;
+            okBtn.textContent = form.getAttribute('data-confirm-label') || 'Delete';
+            okBtn.disabled = false;
             overlay.classList.remove('hidden');
         }, true);
 
         okBtn.addEventListener('click', function () {
+            if (okBtn.disabled) return;  // guards a rapid double-click from double-submitting the form
+            okBtn.disabled = true;
             overlay.classList.add('hidden');
             if (pendingForm) {
                 pendingForm.dataset.confirmed = 'true';
