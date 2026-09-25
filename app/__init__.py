@@ -71,6 +71,7 @@ def create_app(config_class=Config):
     from app.blueprints.admin import email_routes as admin_email_routes  # noqa: F401  (transactional email visibility + SMTP test tool)
     from app.blueprints.admin import notifications_routes as admin_notifications_routes  # noqa: F401  (Notification Center)
     from app.blueprints.admin import customer_import_routes  # noqa: F401  (Wix customer CSV import + invitations)
+    from app.blueprints.admin import case_summary_routes  # noqa: F401  (Case Summary PDF downloads)
     from app.blueprints.public import intake_routes  # noqa: F401  (registers routes onto public_bp)
     from app.blueprints.public import tax_routes  # noqa: F401  (Tax Smart Intake)
     from app.blueprints.public import dl_routes  # noqa: F401  (NJ Driver License Assistance)

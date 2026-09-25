@@ -7,6 +7,7 @@ Pillow>=10.0,<13
 qrcode>=7.4,<8
 cryptography>=42,<47
 squareup>=38,<47
+reportlab>=4.0,<5
 
 # Production deployment (Linux VPS: Nginx + Gunicorn + PostgreSQL) — not used in local SQLite development.
 gunicorn>=21.2,<25

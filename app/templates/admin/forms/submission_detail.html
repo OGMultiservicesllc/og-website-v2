@@ -2,6 +2,7 @@
 {% block title %}{{ submission.code }} — {{ form.name_admin }}{% endblock %}
 
 {% from "partials/ui.html" import context_chip %}
+{% from "partials/icons.html" import icon %}
 {% macro status_pill(key, label) %}
 {% set tone = {'draft': 'bg-slate-100 text-slate-600', 'new': 'bg-accent-50 text-accent-700', 'in_review': 'bg-amber-50 text-amber-800', 'waiting_client': 'bg-orange-50 text-orange-800', 'completed': 'bg-emerald-50 text-emerald-700', 'ready_for_ceac': 'bg-emerald-50 text-emerald-700', 'archived': 'bg-slate-100 text-slate-500'}.get(key, 'bg-slate-100 text-slate-600') %}
 <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold {{ tone }}">{{ label }}</span>
@@ -31,6 +32,9 @@
         </p>
     </div>
     <div class="flex items-center gap-2 flex-wrap">
+        <a href="{{ url_for('admin.case_summary_application', submission_id=submission.id) }}" class="rounded-lg bg-accent-600 text-white font-semibold px-4 py-2 text-sm hover:bg-accent-700 transition inline-flex items-center gap-1.5">
+            {{ icon('download', 'w-4 h-4') }} Download Case Summary PDF
+        </a>
         <button onclick="window.print()" class="rounded-lg border border-slate-200 text-slate-600 font-semibold px-4 py-2 text-sm hover:border-accent-300 transition">Print</button>
         {% if submission.is_complete and form.is_service_intake %}
         <button type="button" id="reopen-btn" class="rounded-lg border border-amber-300 bg-amber-50 text-amber-900 font-semibold px-4 py-2 text-sm hover:bg-amber-100 transition">Reopen for Customer Editing</button>

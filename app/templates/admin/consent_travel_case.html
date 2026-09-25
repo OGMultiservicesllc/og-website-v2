@@ -1,6 +1,7 @@
 {% extends "admin/base_admin.html" %}
 {% block title %}Consent to Travel {{ case.case_number }}{% endblock %}
 
+{% from "partials/icons.html" import icon %}
 {% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token }}">{% endmacro %}
 {% macro h(text) %}<h2 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">{{ text }}</h2>{% endmacro %}
 
@@ -12,7 +13,9 @@
         <p class="text-sm text-slate-600 mt-1"><a href="{{ url_for('admin.customer_detail', student_id=case.customer_id, tab='cases') }}" class="text-accent-700 hover:underline">{{ case.customer.name }}</a> &middot; {{ case.customer.email }}
             &middot; <a href="{{ url_for('admin.ocase_detail', case_id=case.id, tab='documents') }}" class="text-accent-700 hover:underline">Document vault</a> &middot; <a href="{{ url_for('admin.ocase_detail', case_id=case.id, tab='people') }}" class="text-accent-700 hover:underline">People</a></p>
     </div>
-    <div class="text-right"><p class="text-[11px] uppercase font-bold tracking-wide text-slate-400">Status</p><p class="text-lg font-bold text-brand-800">{{ status_label }}</p>
+    <div class="text-right">
+        <a href="{{ url_for('admin.case_summary_ct', ct_id=ct.id) }}" class="inline-flex items-center gap-1.5 rounded-lg bg-accent-600 text-white font-semibold px-4 py-2 text-sm hover:bg-accent-700 transition mb-2">{{ icon('download', 'w-4 h-4') }} Download Case Summary PDF</a>
+        <p class="text-[11px] uppercase font-bold tracking-wide text-slate-400">Status</p><p class="text-lg font-bold text-brand-800">{{ status_label }}</p>
         {% if ct.submitted_at %}<p class="text-[11px] text-slate-500">Sent to OG {{ ct.submitted_at.strftime('%b %d, %Y %H:%M') }}{% if ct.resubmit_count %} &middot; sent again {{ ct.resubmit_count }}x{% endif %}</p>{% endif %}
         {% if ct.approved_at %}<p class="text-[11px] text-emerald-700 font-semibold">Approved {{ ct.approved_at.strftime('%b %d, %Y %H:%M') }}</p>{% endif %}</div>
 </div>
