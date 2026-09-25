@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}{{ t('activate_title') }}{% endblock %}
+
+{% block content %}
+<section class="bg-gradient-to-b from-mist-100 to-white">
+<div class="max-w-md mx-auto px-4 sm:px-6 py-8 sm:py-14">
+    <div class="text-center mb-6">
+        <img src="{{ logo_url() }}" alt="OG Multiservices" class="h-10 w-auto mx-auto mb-3">
+        <h1 class="text-2xl font-extrabold tracking-tight text-brand-800">{{ t('activate_title') }}</h1>
+    </div>
+
+    {% if invalid %}
+    <div class="bg-white border border-slate-100 shadow-card rounded-panel p-5 sm:p-6 text-center">
+        <p class="text-[15px] text-slate-700 leading-relaxed">{{ t('activate_invalid') }}</p>
+        <a href="mailto:{{ biz.EMAIL }}" class="mt-5 inline-flex items-center justify-center min-h-[48px] px-6 rounded-xl bg-accent-600 text-white font-semibold hover:bg-accent-700 transition">
+            {{ biz.EMAIL }}
+        </a>
+    </div>
+    {% else %}
+    <p class="text-[15px] text-slate-600 leading-relaxed text-center mb-5">{{ t('activate_intro').format(name=student.name) }}</p>
+    <form method="POST" class="bg-white border border-slate-100 shadow-card rounded-panel p-5 sm:p-6 space-y-4">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div>
+            <label for="activate-password" class="block text-sm font-semibold text-brand-800 mb-1.5">{{ t('activate_new_password') }}</label>
+            <input id="activate-password" type="password" name="password" required minlength="8" autocomplete="new-password"
+                   class="w-full min-h-[48px] rounded-xl border border-slate-200 px-3.5 text-base focus:outline-none focus:ring-2 focus:ring-accent-500">
+            <p class="mt-1 text-xs text-slate-400">{{ t('acct_password_hint') }}</p>
+        </div>
+        <div>
+            <label for="activate-confirm" class="block text-sm font-semibold text-brand-800 mb-1.5">{{ t('activate_confirm_password') }}</label>
+            <input id="activate-confirm" type="password" name="confirm_password" required minlength="8" autocomplete="new-password"
+                   class="w-full min-h-[48px] rounded-xl border border-slate-200 px-3.5 text-base focus:outline-none focus:ring-2 focus:ring-accent-500">
+        </div>
+        <button type="submit" class="w-full min-h-[52px] rounded-xl bg-accent-600 text-white font-semibold hover:bg-accent-700 transition shadow-sm shadow-accent-600/25">
+            {{ t('activate_cta') }}
+        </button>
+    </form>
+    {% endif %}
+</div>
+</section>
+{% endblock %}

@@ -1780,3 +1780,25 @@ TRANSLATIONS["es"].update({
     "home_founder_cta": "Conoce a Marcos y a OG",
     "about_hero_image_alt": "La oficina y el entorno de trabajo de OG Multiservices",
 })
+
+# Account activation (Wix customer migration, 2026-09-25)
+TRANSLATIONS["en"].update({
+    "activate_title": "Activate Your Account",
+    "activate_intro": "OG Multiservices set up an account for you. Create a password to finish activating {name}'s account and access My Account.",
+    "activate_invalid": "This activation link is invalid or has expired. Contact OG Multiservices for a new invitation.",
+    "activate_new_password": "Create a password",
+    "activate_confirm_password": "Confirm password",
+    "activate_cta": "Activate My Account",
+    "activate_mismatch": "Passwords don't match.",
+    "activate_success": "Your account is now active. Welcome to OG Multiservices!",
+})
+TRANSLATIONS["es"].update({
+    "activate_title": "Activa Tu Cuenta",
+    "activate_intro": "OG Multiservices creó una cuenta para ti. Crea una contraseña para terminar de activar la cuenta de {name} y acceder a Mi Cuenta.",
+    "activate_invalid": "Este enlace de activación no es válido o venció. Comunícate con OG Multiservices para una nueva invitación.",
+    "activate_new_password": "Crea una contraseña",
+    "activate_confirm_password": "Confirma la contraseña",
+    "activate_cta": "Activar Mi Cuenta",
+    "activate_mismatch": "Las contraseñas no coinciden.",
+    "activate_success": "Tu cuenta ya está activa. ¡Bienvenido/a a OG Multiservices!",
+})

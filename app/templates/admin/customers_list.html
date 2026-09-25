@@ -48,7 +48,10 @@
                 <td class="px-4 py-3 text-center text-slate-700">{{ r.docs or '—' }}</td>
                 <td class="px-4 py-3 text-center text-slate-700">{{ r.courses or '—' }}</td>
                 <td class="px-4 py-3 text-slate-500 whitespace-nowrap">{{ r.last_activity.strftime('%b %d, %Y') if r.last_activity else '—' }}</td>
-                <td class="px-4 py-3"><span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ 'bg-emerald-50 text-emerald-700' if c.is_active else 'bg-red-50 text-red-600' }}">{{ 'Active' if c.is_active else 'Inactive' }}</span></td>
+                <td class="px-4 py-3">
+                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ 'bg-emerald-50 text-emerald-700' if c.is_active else 'bg-red-50 text-red-600' }}">{{ 'Active' if c.is_active else 'Inactive' }}</span>
+                    {% if c.needs_activation %}<span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold bg-amber-50 text-amber-700 ml-1">Needs Activation</span>{% endif %}
+                </td>
             </tr>
             {% else %}
             <tr><td colspan="8" class="px-4 py-10 text-center text-slate-500">No customers match.</td></tr>

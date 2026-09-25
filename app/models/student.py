@@ -22,6 +22,13 @@ class Student(db.Model):
     # code flow and app/student_auth.py for where this is enforced (student_required).
     email_verified_at = db.Column(db.DateTime)
 
+    # Wix customer migration (2026-09-25): True only for an account CREATED by the CSV import with a
+    # random, unusable placeholder password (never emailed) — cleared the moment the customer completes
+    # Activate My Account and sets a real password. False for every normal self-registered account,
+    # by default, so this never affects the existing registration/login flow.
+    needs_activation = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
+    import_batch_id = db.Column(db.Integer, db.ForeignKey("import_batches.id"))
+
     @property
     def is_email_verified(self):
         return self.email_verified_at is not None

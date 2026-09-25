@@ -22,6 +22,7 @@ CUSTOMER_FILTERS = (
     ("documents", "Has documents"),
     ("active", "Active"),
     ("inactive", "Inactive"),
+    ("needs_activation", "Needs Activation (imported)"),
 )
 
 
@@ -68,6 +69,8 @@ def customers_list():
         query = query.filter(Student.is_active.is_(True))
     elif flt == "inactive":
         query = query.filter(Student.is_active.is_(False))
+    elif flt == "needs_activation":
+        query = query.filter(Student.needs_activation.is_(True))
     people = query.order_by(Student.created_at.desc()).all()
     if flt == "applications":
         people = [p for p in people if apps.get(p.id)]

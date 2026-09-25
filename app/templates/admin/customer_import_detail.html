@@ -1,0 +1,122 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Import Results{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="{{ url_for('admin.customer_import_list') }}" class="text-sm text-accent-700 hover:underline">&larr; Import / Invitations</a>
+    <h1 class="text-2xl font-bold text-slate-900 mt-2">{{ batch.original_filename or 'Import' }}</h1>
+    <p class="text-sm text-slate-500 mt-1">Uploaded {{ batch.uploaded_at.strftime('%b %d, %Y %I:%M %p') if batch.uploaded_at else '—' }} &middot; {{ batch.total_rows }} row(s)</p>
+</div>
+
+<div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+    <div class="rounded-xl bg-white border border-slate-100 p-4 text-center"><p class="text-2xl font-bold text-brand-800">{{ batch.imported_count }}</p><p class="text-xs text-slate-500 mt-0.5">Imported</p></div>
+    <div class="rounded-xl bg-white border border-slate-100 p-4 text-center"><p class="text-2xl font-bold text-slate-700">{{ batch.existing_count }}</p><p class="text-xs text-slate-500 mt-0.5">Already existed</p></div>
+    <div class="rounded-xl bg-white border border-slate-100 p-4 text-center"><p class="text-2xl font-bold text-amber-600">{{ batch.invalid_count }}</p><p class="text-xs text-slate-500 mt-0.5">Invalid</p></div>
+    <div class="rounded-xl bg-white border border-slate-100 p-4 text-center"><p class="text-2xl font-bold text-amber-600">{{ batch.missing_email_count }}</p><p class="text-xs text-slate-500 mt-0.5">Missing email</p></div>
+    <div class="rounded-xl bg-white border border-slate-100 p-4 text-center"><p class="text-2xl font-bold text-red-600">{{ batch.error_count }}</p><p class="text-xs text-slate-500 mt-0.5">Errors</p></div>
+</div>
+
+<section class="rounded-2xl bg-white border border-slate-100 p-5 sm:p-6 mb-6">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+            <h2 class="font-semibold text-slate-900">Account Invitations</h2>
+            <p class="text-xs text-slate-500 mt-0.5">{{ progress.imported }} Imported &middot; {{ progress.invited }} Invited &middot; {{ progress.activated }} Activated
+                {% if progress.failed %}&middot; {{ progress.failed }} Failed{% endif %}
+                {% if progress.queued %}&middot; {{ progress.queued }} Queued (not yet sent){% endif %}</p>
+        </div>
+        {% if progress.queued %}
+        <form method="POST" action="{{ url_for('admin.customer_import_process_queue', batch_id=batch.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium hover:bg-slate-50 transition">Send Next Batch ({{ [progress.queued, 20]|min }})</button>
+        </form>
+        {% endif %}
+    </div>
+
+    {% if invite_rows %}
+    <form method="POST" action="{{ url_for('admin.customer_import_invite', batch_id=batch.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="flex items-center justify-between mb-2">
+            <label class="flex items-center gap-2 text-xs font-medium text-slate-600">
+                <input type="checkbox" id="invite-select-all"> Select all eligible
+            </label>
+            <button type="submit" class="rounded-lg bg-accent-600 text-white font-semibold px-4 py-2 text-sm hover:bg-accent-700 transition">Send Account Invitations</button>
+        </div>
+        <div class="rounded-xl border border-slate-100 overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                    <tr>
+                        <th class="px-3 py-2.5"></th>
+                        <th class="px-3 py-2.5 font-semibold">Customer</th>
+                        <th class="px-3 py-2.5 font-semibold">Status</th>
+                        <th class="px-3 py-2.5"></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for r in invite_rows %}
+                    <tr>
+                        <td class="px-3 py-2.5">
+                            {% if r.eligible %}<input type="checkbox" name="student_ids" value="{{ r.student.id }}" class="invite-checkbox">{% endif %}
+                        </td>
+                        <td class="px-3 py-2.5"><span class="font-medium text-slate-800">{{ r.student.name }}</span><span class="block text-xs text-slate-400">{{ r.student.email }}</span></td>
+                        <td class="px-3 py-2.5">
+                            {% set tone = {'not_invited': 'bg-slate-100 text-slate-600', 'queued': 'bg-amber-50 text-amber-700', 'sent': 'bg-blue-50 text-blue-700', 'activated': 'bg-emerald-50 text-emerald-700', 'failed': 'bg-red-50 text-red-600'} %}
+                            <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ tone.get(r.status, 'bg-slate-100 text-slate-600') }}">{{ r.status.replace('_', ' ')|title }}</span>
+                        </td>
+                        <td class="px-3 py-2.5 text-right">
+                            {% if r.status in ('sent', 'failed') %}
+                            <form method="POST" action="{{ url_for('admin.customer_resend_invite', student_id=r.student.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                <button type="submit" class="text-xs font-medium text-accent-600 hover:underline">Resend Invitation</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </form>
+    <script>
+        document.getElementById('invite-select-all').addEventListener('change', function (e) {
+            document.querySelectorAll('.invite-checkbox').forEach(function (cb) { cb.checked = e.target.checked; });
+        });
+    </script>
+    {% else %}
+    <p class="text-sm text-slate-400">No new customer accounts were created by this import.</p>
+    {% endif %}
+</section>
+
+<section class="rounded-2xl bg-white border border-slate-100 overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-slate-100 flex flex-wrap items-center gap-2">
+        <h2 class="font-semibold text-slate-900 mr-2">All Rows</h2>
+        {% for key, label in [('', 'All'), ('imported', 'Imported'), ('existing', 'Existing'), ('invalid', 'Invalid'), ('missing_email', 'Missing Email'), ('error', 'Error')] %}
+        <a href="{{ url_for('admin.customer_import_detail', batch_id=batch.id, result=key or none) }}"
+           class="rounded-full px-3 py-1 text-xs font-semibold {{ 'bg-brand-800 text-white' if result_filter == key else 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}">{{ label }}</a>
+        {% endfor %}
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                <tr><th class="px-4 py-2.5 font-semibold">#</th><th class="px-4 py-2.5 font-semibold">Name</th><th class="px-4 py-2.5 font-semibold">Email</th><th class="px-4 py-2.5 font-semibold">Phone</th><th class="px-4 py-2.5 font-semibold">Result</th><th class="px-4 py-2.5 font-semibold">Note</th></tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                {% for r in rows %}
+                <tr>
+                    <td class="px-4 py-2 text-slate-400">{{ r.row_number }}</td>
+                    <td class="px-4 py-2 text-slate-700">{{ r.full_name or ((r.first_name or '') ~ ' ' ~ (r.last_name or ''))|trim or '—' }}</td>
+                    <td class="px-4 py-2 text-slate-600">{{ r.email or '—' }}</td>
+                    <td class="px-4 py-2 text-slate-600">{{ r.phone or '—' }}</td>
+                    <td class="px-4 py-2">
+                        {% set rtone = {'imported': 'bg-emerald-50 text-emerald-700', 'existing': 'bg-slate-100 text-slate-600', 'invalid': 'bg-amber-50 text-amber-700', 'missing_email': 'bg-amber-50 text-amber-700', 'error': 'bg-red-50 text-red-600'} %}
+                        <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ rtone.get(r.result, 'bg-slate-100 text-slate-600') }}">{{ r.result.replace('_', ' ')|title }}</span>
+                    </td>
+                    <td class="px-4 py-2 text-slate-400 text-xs">{{ r.error_message or '' }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" class="px-4 py-10 text-center text-slate-400">No rows match this filter.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

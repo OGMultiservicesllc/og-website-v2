@@ -98,6 +98,7 @@ from app.models.inquiry import Inquiry
 from app.models.content_block import PageBlock
 from app.models.settings import SiteSettings
 from app.models.notifications import AdminNotification, NotificationSetting, NOTIFICATION_EVENTS, NOTIFICATION_GROUPS
+from app.models.customer_import import ImportBatch, ImportRow, AccountInvitation, IMPORT_RESULTS, INVITATION_STATUSES
 from app.models.site_content import (
     MediaAsset,
     NavItem,

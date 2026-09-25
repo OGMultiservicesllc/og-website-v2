@@ -253,10 +253,11 @@
     </main>
 
     {% if not _is_acct_shell %}
+    {% from "partials/icons.html" import icon %}
     <footer class="bg-brand-800 text-slate-300 mt-10 sm:mt-16">
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            <div class="grid grid-cols-1 md:grid-cols-5 gap-8">
-                <div class="md:col-span-1">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-3 md:gap-8">
+                <div class="md:col-span-1 pb-4 md:pb-0">
                     <div class="flex items-center gap-2 mb-3">
                         <img src="{{ logo_url() }}" alt="OG Multiservices" class="h-8 w-auto">
                         <span class="font-bold text-white">OG Multiservices</span>
@@ -282,9 +283,14 @@
                     </div>
                     {% endif %}
                 </div>
-                <div>
-                    <h4 class="text-white font-semibold mb-3 text-sm uppercase tracking-wide">{{ t('footer_services') }}</h4>
-                    <ul class="space-y-2 text-sm text-slate-400">
+                <div class="footer-accordion border-t border-slate-700/60 md:border-0">
+                    <h4 class="mb-0 md:mb-3">
+                        <button type="button" class="footer-accordion-btn" aria-expanded="false" aria-controls="footer-panel-services">
+                            <span>{{ t('footer_services') }}</span>
+                            {{ icon('chevron-down', 'w-4 h-4 footer-accordion-chevron md:hidden') }}
+                        </button>
+                    </h4>
+                    <ul id="footer-panel-services" class="footer-accordion-panel space-y-2 text-sm text-slate-400">
                         <li><a href="{{ url_for('public.translations', lang=lang) }}" class="hover:text-white transition">{{ t('nav_translations') }}</a></li>
                         <li><a href="{{ url_for('public.taxes_itin', lang=lang) }}" class="hover:text-white transition">{{ t('nav_taxes_itin') }}</a></li>
                         <li><a href="{{ url_for('public.notary', lang=lang) }}" class="hover:text-white transition">{{ t('nav_services_notary') }}</a></li>
@@ -296,9 +302,14 @@
                         <li><a href="{{ url_for('public.courses', lang=lang) }}" class="hover:text-white transition">{{ t('nav_courses') }}</a></li>
                     </ul>
                 </div>
-                <div>
-                    <h4 class="text-white font-semibold mb-3 text-sm uppercase tracking-wide">{{ t('footer_company') }}</h4>
-                    <ul class="space-y-2 text-sm text-slate-400">
+                <div class="footer-accordion border-t border-slate-700/60 md:border-0">
+                    <h4 class="mb-0 md:mb-3">
+                        <button type="button" class="footer-accordion-btn" aria-expanded="false" aria-controls="footer-panel-company">
+                            <span>{{ t('footer_company') }}</span>
+                            {{ icon('chevron-down', 'w-4 h-4 footer-accordion-chevron md:hidden') }}
+                        </button>
+                    </h4>
+                    <ul id="footer-panel-company" class="footer-accordion-panel space-y-2 text-sm text-slate-400">
                         <li><a href="{{ url_for('public.about', lang=lang) }}" class="hover:text-white transition">{{ t('nav_about') }}</a></li>
                         <li><a href="{{ url_for('public.locations_hub', lang=lang) }}" class="hover:text-white transition">{{ t('nav_locations') }}</a></li>
                         <li><a href="{{ url_for('public.blog', lang=lang) }}" class="hover:text-white transition">{{ t('nav_blog') }}</a></li>
@@ -307,9 +318,14 @@
                         {% endfor %}
                     </ul>
                 </div>
-                <div>
-                    <h4 class="text-white font-semibold mb-3 text-sm uppercase tracking-wide">{{ t('footer_contact') }}</h4>
-                    <ul class="space-y-2 text-sm text-slate-400">
+                <div class="footer-accordion border-t border-slate-700/60 md:border-0">
+                    <h4 class="mb-0 md:mb-3">
+                        <button type="button" class="footer-accordion-btn" aria-expanded="false" aria-controls="footer-panel-contact">
+                            <span>{{ t('footer_contact') }}</span>
+                            {{ icon('chevron-down', 'w-4 h-4 footer-accordion-chevron md:hidden') }}
+                        </button>
+                    </h4>
+                    <ul id="footer-panel-contact" class="footer-accordion-panel space-y-2 text-sm text-slate-400">
                         <li>{{ biz.ADDRESS_LINE1 }}</li>
                         <li>{{ biz.ADDRESS_LINE2 }}</li>
                         <li><a href="tel:{{ biz.PHONE_TEL }}" class="hover:text-white transition">{{ biz.PHONE_DISPLAY }}</a></li>
@@ -317,17 +333,36 @@
                         <li><a href="mailto:{{ biz.EMAIL }}" class="hover:text-white transition">{{ biz.EMAIL }}</a></li>
                     </ul>
                 </div>
-                <div>
-                    <h4 class="text-white font-semibold mb-3 text-sm uppercase tracking-wide">{{ t('footer_hours') }}</h4>
-                    <p class="text-sm text-slate-400">{{ t('footer_hours_value') }}</p>
-                    <p class="text-sm text-slate-500">{{ t('footer_hours_closed') }}</p>
+                <div class="footer-accordion border-t border-b md:border-0 border-slate-700/60">
+                    <h4 class="mb-0 md:mb-3">
+                        <button type="button" class="footer-accordion-btn" aria-expanded="false" aria-controls="footer-panel-hours">
+                            <span>{{ t('footer_hours') }}</span>
+                            {{ icon('chevron-down', 'w-4 h-4 footer-accordion-chevron md:hidden') }}
+                        </button>
+                    </h4>
+                    <div id="footer-panel-hours" class="footer-accordion-panel">
+                        <p class="text-sm text-slate-400">{{ t('footer_hours_value') }}</p>
+                        <p class="text-sm text-slate-500">{{ t('footer_hours_closed') }}</p>
+                    </div>
                 </div>
             </div>
-            <div class="border-t border-slate-700/60 mt-10 pt-6 text-sm text-slate-500">
+            <div class="border-t border-slate-700/60 mt-6 sm:mt-10 pt-4 sm:pt-6 text-xs sm:text-sm text-slate-500">
                 &copy; 2026 OG Multiservices LLC. {{ t('footer_rights') }}
             </div>
         </div>
     </footer>
+    <script>
+        (function () {
+            document.querySelectorAll('.footer-accordion-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var expanded = btn.getAttribute('aria-expanded') === 'true';
+                    btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+                    var panel = document.getElementById(btn.getAttribute('aria-controls'));
+                    if (panel) panel.classList.toggle('is-open', !expanded);
+                });
+            });
+        })();
+    </script>
 
     <!-- Floating WhatsApp button (desktop / tablet) — pulses on service pages, where
          messaging us is the main call to action. -->

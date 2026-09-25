@@ -119,3 +119,56 @@ html {
     outline: 2px solid var(--form-accent, #0aa3cf);
     outline-offset: 1px;
 }
+
+/* Mobile footer accordion (2026-09-25): Services/Company/Contact/Hours collapse into tap-to-expand
+   sections on small screens to cut footer height; at md+ the SAME markup renders as the plain
+   multi-column footer it always was — no separate desktop/mobile DOM, so nothing is ever removed
+   from the page for SEO/crawlers, only visually collapsed. */
+.footer-accordion-btn {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.875rem 0;
+    color: #ffffff;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+}
+.footer-accordion-chevron {
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+}
+.footer-accordion-btn[aria-expanded="true"] .footer-accordion-chevron {
+    transform: rotate(180deg);
+}
+.footer-accordion-btn:focus-visible {
+    outline: 2px solid #38bdf8;
+    outline-offset: 2px;
+    border-radius: 6px;
+}
+.footer-accordion-panel {
+    display: none;
+    padding-bottom: 1rem;
+}
+.footer-accordion-panel.is-open {
+    display: block;
+}
+@media (min-width: 768px) {
+    .footer-accordion-btn {
+        padding: 0;
+        cursor: default;
+        pointer-events: none;
+    }
+    .footer-accordion-panel,
+    .footer-accordion-panel.is-open {
+        display: block;
+        padding-bottom: 0;
+    }
+}

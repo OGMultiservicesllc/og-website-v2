@@ -89,7 +89,8 @@
             {{ nav_link(url_for('admin.dashboard'), 'Dashboard', ep == 'admin.dashboard') }}
 
             {{ section_label('Clients') }}
-            {{ nav_link(url_for('admin.customers_list'), 'Customers', ep.startswith('admin.customer')) }}
+            {{ nav_link(url_for('admin.customers_list'), 'Customers', ep.startswith('admin.customer') and not ep.startswith('admin.customer_import')) }}
+            {{ nav_link(url_for('admin.customer_import_list'), 'Import / Invitations', ep.startswith('admin.customer_import') or ep.startswith('admin.customer_invite')) }}
             {{ nav_link(url_for('admin.person_list'), 'People', ep.startswith('admin.person')) }}
             {{ nav_link(url_for('admin.inquiries_list'), 'Inquiries', ep.startswith('admin.inquir'), new_inquiry_count) }}
 

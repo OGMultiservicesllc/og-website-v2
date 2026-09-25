@@ -176,6 +176,24 @@ def build_email_changed(lang, new_email):
     )
 
 
+def build_account_invitation(activate_url, name):
+    """Account invitations go to migrated Wix customers whose language preference is unknown — always
+    bilingual (EN then ES) rather than guessing, per the migration spec's explicit instruction."""
+    return EmailContent(
+        subject="Activate Your OG Multiservices Account / Activa tu cuenta de OG Multiservices",
+        heading=f"Welcome, {name} / Bienvenido/a, {name}",
+        paragraphs=[
+            "OG Multiservices has set up an account for you on our new website. Click the button below "
+            "to create a password and access your account — your services and information are waiting for you.",
+            "OG Multiservices creó una cuenta para ti en nuestro nuevo sitio web. Haz clic en el botón de "
+            "abajo para crear una contraseña y acceder a tu cuenta — tus servicios e información te esperan.",
+        ],
+        cta_label="Activate My Account / Activar Mi Cuenta",
+        cta_url=activate_url,
+        footnote="This link expires in 7 days and can only be used once. / Este enlace vence en 7 días y solo se puede usar una vez.",
+    )
+
+
 # ------------------------------------------------------------------ REGISTRY templates (ref-based, retryable)
 
 def _service_title_and_url(lang, kind, obj_id):
@@ -399,4 +417,4 @@ TEMPLATES = {
 
 # Direct templates are intentionally NOT in TEMPLATES — see the module docstring. Admin's retry action
 # checks against this set to show "request a new one" instead of an unsafe generic content replay.
-DIRECT_TEMPLATE_KEYS = ("email_verification", "password_reset", "email_changed")
+DIRECT_TEMPLATE_KEYS = ("email_verification", "password_reset", "email_changed", "account_invitation")

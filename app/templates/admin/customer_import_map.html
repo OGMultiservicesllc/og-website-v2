@@ -1,0 +1,47 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Map Columns{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="{{ url_for('admin.customer_import_list') }}" class="text-sm text-accent-700 hover:underline">&larr; Import / Invitations</a>
+    <h1 class="text-2xl font-bold text-slate-900 mt-2">Preview &amp; Map Columns</h1>
+    <p class="text-sm text-slate-500 mt-1 max-w-2xl">{{ batch.original_filename }} &middot; {{ batch.total_rows }} row(s). We guessed a mapping below — adjust any column, then Validate &amp; Import.</p>
+</div>
+
+<form method="POST" class="space-y-6">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+    <div class="rounded-2xl bg-white border border-slate-100 overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                <tr>
+                    {% for h in headers %}<th class="px-4 py-3 font-semibold whitespace-nowrap">{{ h }}</th>{% endfor %}
+                </tr>
+                <tr class="bg-white border-t border-slate-100">
+                    {% for h in headers %}
+                    <th class="px-4 py-2.5">
+                        <select name="map_{{ loop.index0 }}" class="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-accent-500">
+                            {% for f in fields %}
+                            <option value="{{ f }}" {{ 'selected' if mapping.get(h) == f else '' }}>{{ f.replace('_', ' ')|title if f != 'ignore' else '— Ignore this column —' }}</option>
+                            {% endfor %}
+                        </select>
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                {% for row in preview %}
+                <tr>
+                    {% for cell in row %}<td class="px-4 py-2.5 text-slate-600 whitespace-nowrap max-w-[16rem] truncate">{{ cell }}</td>{% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p class="text-xs text-slate-400">Showing the first {{ preview|length }} data row(s) of {{ batch.total_rows }}.</p>
+
+    <button type="submit" class="rounded-lg bg-accent-600 text-white font-semibold px-6 py-2.5 text-sm hover:bg-accent-700 transition">
+        Validate &amp; Import
+    </button>
+</form>
+{% endblock %}
