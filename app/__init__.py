@@ -268,11 +268,14 @@ def create_app(config_class=Config):
 
             return action_count(student, lang)
 
+        from app.admin_case_nav import admin_case_url
+
         return {
             "lang": lang,
             "t": t,
             "st": st,
             "account_action_count": account_action_count,
+            "admin_case_url": admin_case_url,
             "admin_alert_count": admin_alert_count,
             "admin_recent_notifications": admin_recent_notifications,
             "site_asset": site_asset,

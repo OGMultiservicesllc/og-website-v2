@@ -65,7 +65,7 @@
                 <div><dt class="text-xs text-slate-400">Account created</dt><dd class="text-slate-800">{{ student.created_at.strftime('%b %d, %Y') }}</dd></div>
                 <div><dt class="text-xs text-slate-400">Last activity</dt><dd class="text-slate-800">{{ last_activity.strftime('%b %d, %Y %H:%M') if last_activity else '—' }}</dd></div>
                 <div><dt class="text-xs text-slate-400">Last login</dt><dd class="text-slate-800">{{ student.last_login_at.strftime('%b %d, %Y %H:%M') if student.last_login_at else '—' }}</dd></div>
-                <div><dt class="text-xs text-slate-400">Account status</dt><dd class="text-slate-800">{{ 'Active' if student.is_active else 'Deactivated' }}</dd></div>
+                <div><dt class="text-xs text-slate-400">Account status</dt><dd class="text-slate-800">{{ 'Inactive' if not student.is_active else ('Needs Activation' if student.needs_activation else 'Activated') }}</dd></div>
             </dl>
         </div>
         <div class="bg-white border border-slate-100 rounded-2xl p-5">
@@ -132,7 +132,7 @@
 {% elif tab == 'cases' %}
 <div class="space-y-3">
     {% for x in cases %}
-    <a href="{{ url_for('admin.ocase_detail', case_id=x.c.id) }}" class="block bg-white border border-slate-100 rounded-2xl p-4 hover:border-accent-300 transition">
+    <a href="{{ admin_case_url(x.c) }}" class="block bg-white border border-slate-100 rounded-2xl p-4 hover:border-accent-300 transition">
         <div class="flex flex-wrap items-center justify-between gap-2">
             <span class="font-semibold text-slate-900">{{ x.c.title }}</span>
             <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold bg-accent-50 text-accent-700">{{ x.c.status_label }}</span>

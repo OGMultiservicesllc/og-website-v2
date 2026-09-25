@@ -1,14 +1,15 @@
 {% extends "admin/base_admin.html" %}
-{% block title %}Cases{% endblock %}
+{% block title %}{{ (service ~ ' Cases') if service else 'Cases' }}{% endblock %}
 {% block content %}
 <div class="flex items-start justify-between flex-wrap gap-3 mb-5">
     <div>
-        <h1 class="text-2xl font-bold text-brand-800">Cases</h1>
-        <p class="text-sm text-slate-500 mt-0.5">A case is the customer's overall matter. It groups people, applications, shared data and documents.</p>
+        <h1 class="text-2xl font-bold text-brand-800">{{ (service ~ ' Cases') if service else 'Cases' }}</h1>
+        <p class="text-sm text-slate-500 mt-0.5">A case is the customer's overall matter. It groups people, applications, shared data and documents.{% if service %} Showing {{ service }} cases only.{% endif %}</p>
     </div>
 </div>
 
 <form method="GET" class="flex flex-wrap gap-2 mb-4">
+    {% if service %}<input type="hidden" name="service" value="{{ service }}">{% endif %}
     <input type="search" name="q" value="{{ q }}" placeholder="Search case, customer or email" class="flex-1 min-w-[12rem] rounded-lg border border-slate-200 px-3 py-2 text-sm">
     <select name="status" aria-label="Status" class="rounded-lg border border-slate-200 px-3 py-2 text-sm"><option value="">All statuses</option>{% for k, l in statuses %}<option value="{{ k }}" {{ 'selected' if status == k else '' }}>{{ l }}</option>{% endfor %}</select>
     <select name="type" aria-label="Type" class="rounded-lg border border-slate-200 px-3 py-2 text-sm"><option value="">All types</option>{% for k, v in types.items() %}<option value="{{ k }}" {{ 'selected' if ctype == k else '' }}>{{ v.en }}</option>{% endfor %}</select>
@@ -24,7 +25,7 @@
             {% for r in rows %}
             {% set c = r.c %}
             <tr class="hover:bg-slate-50/60">
-                <td class="px-4 py-3"><a href="{{ url_for('admin.ocase_detail', case_id=c.id) }}" class="font-semibold text-slate-800 hover:text-accent-700">{{ c.title }}</a><span class="block text-xs font-mono text-slate-400">{{ c.case_number }} · {{ types.get(c.case_type, types['other']).en }}</span></td>
+                <td class="px-4 py-3"><a href="{{ admin_case_url(c) }}" class="font-semibold text-slate-800 hover:text-accent-700">{{ c.title }}</a><span class="block text-xs font-mono text-slate-400">{{ c.case_number }} · {{ types.get(c.case_type, types['other']).en }}</span></td>
                 <td class="px-4 py-3"><a href="{{ url_for('admin.customer_detail', student_id=c.customer_id) }}" class="text-slate-700 hover:text-accent-700">{{ c.customer.name }}</a><span class="block text-xs text-slate-400 break-all">{{ c.customer.email }}</span></td>
                 <td class="px-4 py-3"><span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold bg-accent-50 text-accent-700">{{ c.status_label }}</span></td>
                 <td class="px-4 py-3 text-slate-600">{{ r.apps }}</td>

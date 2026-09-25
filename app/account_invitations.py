@@ -131,6 +131,12 @@ def find_active_token(token):
 
 
 def activate(inv, new_password):
+    """The ONE place `Student.needs_activation` ever flips True -> False for an imported account — the
+    exact transition `account_status()` uses to decide "Activated" and the ONLY place the
+    `imported_account_activated` admin notification/email fires (2026-09-25). Fired here, not on
+    login/password-reset/resend, so it can only ever happen once per account: a consumed token can never
+    reach this function again (find_active_token() already refuses it), and resend_invitation() refuses
+    an account that no longer needs_activation."""
     student = inv.student
     now = datetime.utcnow()
     student.password_hash = generate_password_hash(new_password)
@@ -144,7 +150,32 @@ def activate(inv, new_password):
     inv.activated_at = now
     db.session.commit()
     log_event(student.id, "account_activated")
+
+    from app import notifications as notif
+
+    notif.notify(
+        "imported_account_activated", title=f"Customer Account Activated — {student.name}",
+        body=f"{student.name} ({student.email}) has activated their OG Multiservices account. Activated {now.strftime('%b %d, %Y %I:%M %p UTC')}.",
+        entity_type="student", entity_id=student.id, customer_id=student.id,
+        link_url=notif.safe_url("admin.customer_detail", student_id=student.id),
+        dedupe_key=f"imported_account_activated:{student.id}",
+    )
     return student
+
+
+def account_status(student):
+    """The single source of truth for "has this customer actually activated their account" — used by
+    BOTH the Admin Customers list/filters AND (via `activate()` above) the notification that must fire
+    exactly on this same transition, so the UI and the Notification Center can never disagree.
+
+    Deliberately NOT inferred from last_login/recent activity — `is_active` (an admin enable/disable
+    flag, unrelated to activation) and `needs_activation` (set only by the CSV import, cleared only by
+    `activate()` above) are the actual stored account-activation state."""
+    if not student.is_active:
+        return "inactive"
+    if student.needs_activation:
+        return "needs_activation"
+    return "activated"
 
 
 def status_of(student):

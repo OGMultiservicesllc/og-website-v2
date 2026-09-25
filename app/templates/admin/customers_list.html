@@ -49,8 +49,9 @@
                 <td class="px-4 py-3 text-center text-slate-700">{{ r.courses or '—' }}</td>
                 <td class="px-4 py-3 text-slate-500 whitespace-nowrap">{{ r.last_activity.strftime('%b %d, %Y') if r.last_activity else '—' }}</td>
                 <td class="px-4 py-3">
-                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ 'bg-emerald-50 text-emerald-700' if c.is_active else 'bg-red-50 text-red-600' }}">{{ 'Active' if c.is_active else 'Inactive' }}</span>
-                    {% if c.needs_activation %}<span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold bg-amber-50 text-amber-700 ml-1">Needs Activation</span>{% endif %}
+                    {% set astatus_tone = {'activated': 'bg-emerald-50 text-emerald-700', 'needs_activation': 'bg-amber-50 text-amber-700', 'inactive': 'bg-red-50 text-red-600'} %}
+                    {% set astatus_label = {'activated': 'Activated', 'needs_activation': 'Needs Activation', 'inactive': 'Inactive'} %}
+                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ astatus_tone[r.account_status] }}">{{ astatus_label[r.account_status] }}</span>
                 </td>
             </tr>
             {% else %}

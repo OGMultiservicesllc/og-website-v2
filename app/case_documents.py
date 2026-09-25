@@ -293,6 +293,7 @@ def _notify_admin_upload(req):
     from datetime import date
 
     from app import notifications as notif
+    from app.admin_case_nav import admin_case_url
 
     case = req.case
     customer = case.customer
@@ -300,7 +301,7 @@ def _notify_admin_upload(req):
         "documents_uploaded", title=f"Documents uploaded — {customer.name}",
         body=f"{customer.name} uploaded document(s) for case {case.case_number}.",
         entity_type="case", entity_id=case.id, case_id=case.id, customer_id=customer.id,
-        link_url=notif.safe_url("admin.ocase_detail", case_id=case.id),
+        link_url=admin_case_url(case),
         dedupe_key=f"documents_uploaded:{case.id}:{date.today().isoformat()}",
     )
 

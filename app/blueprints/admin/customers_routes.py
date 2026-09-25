@@ -20,9 +20,9 @@ CUSTOMER_FILTERS = (
     ("applications", "Has applications"),
     ("courses", "Has courses"),
     ("documents", "Has documents"),
-    ("active", "Active"),
+    ("activated", "Activated Accounts"),
+    ("needs_activation", "Needs Activation (Imported)"),
     ("inactive", "Inactive"),
-    ("needs_activation", "Needs Activation (imported)"),
 )
 
 
@@ -65,8 +65,8 @@ def customers_list():
     if q:
         like = f"%{q}%"
         query = query.filter(db.or_(Student.name.ilike(like), Student.email.ilike(like), Student.phone.ilike(like)))
-    if flt == "active":
-        query = query.filter(Student.is_active.is_(True))
+    if flt == "activated":
+        query = query.filter(Student.is_active.is_(True), Student.needs_activation.is_(False))
     elif flt == "inactive":
         query = query.filter(Student.is_active.is_(False))
     elif flt == "needs_activation":
@@ -79,12 +79,15 @@ def customers_list():
     elif flt == "documents":
         people = [p for p in people if docs.get(p.id)]
 
+    from app import account_invitations
+
     rows = []
     for p in people:
         seen = [d for d in (last_event.get(p.id), p.last_login_at, p.created_at) if d]
         rows.append({
             "p": p, "apps": apps.get(p.id, 0), "open": open_apps.get(p.id, 0), "docs": docs.get(p.id, 0),
             "courses": courses.get(p.id, 0), "last_activity": max(seen) if seen else None,
+            "account_status": account_invitations.account_status(p),
         })
     return render_template("admin/customers_list.html", rows=rows, q=q, flt=flt, filters=CUSTOMER_FILTERS, total=Student.query.count())
 

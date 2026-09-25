@@ -20,6 +20,7 @@ from app.extensions import db
 # ensure_seed(), same idempotent-seed convention as every other seeder in this project).
 NOTIFICATION_EVENTS = {
     "new_account": ("New customer account created", "customers", True, False),
+    "imported_account_activated": ("Imported Account Activated", "customers", True, True),
     "case_submitted": ("New case / intake submitted", "cases", True, True),
     "case_needs_review": ("Case requires OG review", "cases", True, True),
     "documents_uploaded": ("Client uploads documents", "documents", True, True),

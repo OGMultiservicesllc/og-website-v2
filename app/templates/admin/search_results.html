@@ -29,7 +29,7 @@
         <h2 class="px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-400 border-b border-slate-100 flex items-center gap-2">{{ icon('briefcase', 'w-4 h-4') }} Cases</h2>
         <ul class="divide-y divide-slate-50">
             {% for c in results.cases %}
-            <li><a href="{{ url_for('admin.ocase_detail', case_id=c.id) }}" class="flex items-center justify-between px-5 py-3 hover:bg-slate-50">
+            <li><a href="{{ admin_case_url(c) }}" class="flex items-center justify-between px-5 py-3 hover:bg-slate-50">
                 <span><span class="block text-sm font-semibold text-brand-800 font-mono">{{ c.case_number }}</span><span class="block text-[12px] text-slate-400">{{ c.customer.name if c.customer else '—' }} &middot; {{ type_title(c.case_type, 'en') }}</span></span>
                 {{ icon('chevron-right', 'w-4 h-4 text-slate-300') }}
             </a></li>

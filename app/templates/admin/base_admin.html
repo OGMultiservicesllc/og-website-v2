@@ -103,7 +103,7 @@
             {% endcall %}
             {% call nav_group('Immigration', in_immigration, 'immigration', '#dc2626') %}
                 {{ nav_link(url_for('admin.applications_list'), 'Applications', ep.startswith('admin.application')) }}
-                {{ nav_link(url_for('admin.ocase_list'), 'Cases', ep.startswith('admin.ocase')) }}
+                {{ nav_link(url_for('admin.ocase_list', service='Immigration'), 'Cases', ep.startswith('admin.ocase') and request.args.get('service') == 'Immigration') }}
                 {{ nav_link(url_for('admin.forms_list'), 'Forms', ep.startswith('admin.form') and not ep.startswith('admin.form_submission')) }}
                 {{ nav_link(url_for('admin.ds260_snapshots'), 'DS-260 Snapshots', ep.startswith('admin.ds260')) }}
             {% endcall %}

@@ -91,13 +91,13 @@
             <tbody>
             {% for row in recent_cases %}
             <tr class="border-b border-slate-50 last:border-0 hover:bg-slate-50/70 transition">
-                <td class="px-5 py-3 font-mono text-[12.5px] font-semibold text-accent-700"><a href="{{ url_for('admin.ocase_detail', case_id=row.case.id) }}" class="hover:underline">{{ row.case.case_number }}</a></td>
+                <td class="px-5 py-3 font-mono text-[12.5px] font-semibold text-accent-700"><a href="{{ admin_case_url(row.case) }}" class="hover:underline">{{ row.case.case_number }}</a></td>
                 <td class="px-3 py-3 text-slate-700 truncate max-w-[9rem]">{{ row.case.customer.name if row.case.customer else '—' }}</td>
                 <td class="px-3 py-3 text-slate-500">{{ row.service }}</td>
                 <td class="px-3 py-3 text-slate-500 truncate max-w-[8rem]">{{ row.type_title }}</td>
                 <td class="px-3 py-3"><span class="inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold {{ status_tone.get(row.case.status, 'bg-slate-100 text-slate-500') }}">{{ row.case.status.replace('_', ' ')|title }}</span></td>
                 <td class="px-3 py-3 text-[12.5px] text-slate-400 whitespace-nowrap">{{ row.case.updated_at.strftime('%b %d, %Y') if row.case.updated_at else '—' }}</td>
-                <td class="px-3 py-3 text-right"><a href="{{ url_for('admin.ocase_detail', case_id=row.case.id) }}" class="text-slate-300 hover:text-accent-700">{{ icon('chevron-right', 'w-4 h-4') }}</a></td>
+                <td class="px-3 py-3 text-right"><a href="{{ admin_case_url(row.case) }}" class="text-slate-300 hover:text-accent-700">{{ icon('chevron-right', 'w-4 h-4') }}</a></td>
             </tr>
             {% endfor %}
             </tbody>
