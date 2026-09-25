@@ -4,8 +4,18 @@ from werkzeug.security import generate_password_hash
 from app.auth import admin_required, validate_csrf
 from app.blueprints.admin.routes import admin_bp
 from app.extensions import db
-from app.models import AdminUser, SiteSettings
+from app.models import AdminUser, NOTIFICATION_EVENTS, NotificationSetting, SiteSettings
 from app.uploads import delete_course_media, save_course_media
+
+
+def _notification_settings_rows():
+    """Every event's setting row, seeded already by app.notifications.ensure_seed() at startup — this
+    just orders them for display, so a fresh-install DB (seed not yet run) never 500s on Settings."""
+    from app import notifications as notif
+
+    notif.ensure_seed()
+    rows = {s.event_key: s for s in NotificationSetting.query.all()}
+    return [(key, label, group, rows.get(key)) for key, (label, group, _ad, _em) in NOTIFICATION_EVENTS.items()]
 
 
 @admin_bp.route("/settings", methods=["GET", "POST"])
@@ -33,7 +43,8 @@ def settings():
                 new_logo = save_course_media(logo, "image")
             except ValueError as exc:
                 flash(str(exc), "error")
-                return render_template("admin/settings.html", settings=settings, admin_users=AdminUser.query.order_by(AdminUser.created_at).all())
+                return render_template("admin/settings.html", settings=settings, admin_users=AdminUser.query.order_by(AdminUser.created_at).all(),
+                                      notification_rows=_notification_settings_rows())
             if settings.logo_filename:
                 delete_course_media(settings.logo_filename)
             settings.logo_filename = new_logo
@@ -42,7 +53,30 @@ def settings():
         flash("Settings saved.", "success")
         return redirect(url_for("admin.settings"))
 
-    return render_template("admin/settings.html", settings=settings, admin_users=AdminUser.query.order_by(AdminUser.created_at).all())
+    return render_template("admin/settings.html", settings=settings, admin_users=AdminUser.query.order_by(AdminUser.created_at).all(),
+                          notification_rows=_notification_settings_rows())
+
+
+@admin_bp.route("/settings/notifications", methods=["POST"])
+@admin_required
+def notification_settings():
+    if not validate_csrf(request.form.get("csrf_token")):
+        abort(400)
+
+    settings = SiteSettings.get()
+    settings.notification_recipient_email = request.form.get("notification_recipient_email", "").strip() or None
+
+    rows = {s.event_key: s for s in NotificationSetting.query.all()}
+    for key in NOTIFICATION_EVENTS:
+        row = rows.get(key)
+        if row is None:
+            continue
+        row.admin_enabled = request.form.get(f"admin_{key}") == "on"
+        row.email_enabled = request.form.get(f"email_{key}") == "on"
+
+    db.session.commit()
+    flash("Notification settings saved.", "success")
+    return redirect(url_for("admin.settings"))
 
 
 @admin_bp.route("/settings/logo/remove", methods=["POST"])

@@ -360,6 +360,9 @@ def ensure_seeded():
 
         seeded = ensure_ct() or seeded
         seeded = ensure_blog_categories() or seeded
+        from app import notifications as notif
+
+        notif.ensure_seed()
         from app.cases import backfill_cases
 
         return bool(backfill_cases()) or seeded

@@ -81,7 +81,7 @@
         {% set in_content = ep.startswith(('admin.site_page', 'admin.website', 'admin.service', 'admin.page', 'admin.media', 'admin.blog', 'admin.form', 'admin.navigation')) and not ep.startswith('admin.forms') %}
         {% set in_payments = ep.startswith(('admin.charge', 'admin.payment', 'admin.manual_payments')) %}
         {% set in_academy = ep.startswith(('admin.course', 'admin.lesson', 'admin.section', 'admin.quiz', 'admin.case', 'admin.students', 'admin.certificate', 'admin.reports')) %}
-        {% set in_comms = ep.startswith('admin.email') %}
+        {% set in_comms = ep.startswith('admin.email') or ep.startswith('admin.notification') %}
         {% set in_system = ep == 'admin.settings' %}
 
         <nav class="flex-1 py-3 text-sm mt-14 lg:mt-0 overflow-y-auto overflow-x-hidden" aria-label="Admin">
@@ -140,6 +140,7 @@
 
             {{ section_label('Communication') }}
             {% call nav_group('Communication', in_comms, 'mail', '#0284c7') %}
+                {{ nav_link(url_for('admin.notifications_center'), 'Notifications', ep.startswith('admin.notification')) }}
                 {{ nav_link(url_for('admin.emails_list'), 'Emails', ep == 'admin.emails_list') }}
                 {{ nav_link(url_for('admin.email_test'), 'Test Email', ep == 'admin.email_test') }}
             {% endcall %}
@@ -161,10 +162,43 @@
                 </label>
             </form>
             <div class="flex-1"></div>
-            <a href="{{ url_for('admin.dashboard') }}#notifications" class="relative w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition" aria-label="Notifications" title="Notifications">
-                {{ icon('bell', 'w-5 h-5') }}
-                {% if admin_alert_count %}<span class="absolute -top-0.5 -right-0.5 min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{{ admin_alert_count }}</span>{% endif %}
-            </a>
+            <div class="relative" id="admin-notif-menu">
+                <button type="button" id="admin-notif-btn" class="relative w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition" aria-label="Notifications" aria-haspopup="true" aria-expanded="false" title="Notifications">
+                    {{ icon('bell', 'w-5 h-5') }}
+                    {% if admin_alert_count %}<span class="absolute -top-0.5 -right-0.5 min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{{ admin_alert_count }}</span>{% endif %}
+                </button>
+                <div id="admin-notif-dropdown" class="hidden absolute right-0 mt-2 w-80 max-w-[90vw] rounded-xl bg-white border border-slate-200 shadow-lg py-2 z-40">
+                    <div class="flex items-center justify-between px-3.5 pb-2 border-b border-slate-100 mb-1">
+                        <p class="text-[13px] font-semibold text-slate-800">Notifications</p>
+                        {% if admin_alert_count %}
+                        <form method="POST" action="{{ url_for('admin.notifications_mark_all_read') }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <input type="hidden" name="next" value="{{ request.path }}">
+                            <button type="submit" class="text-[11px] font-medium text-accent-600 hover:underline">Mark all as read</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% if admin_recent_notifications %}
+                    <div class="max-h-96 overflow-y-auto divide-y divide-slate-50">
+                        {% for n in admin_recent_notifications %}
+                        <a href="{{ n.link_url or url_for('admin.notifications_center') }}" class="flex items-start gap-2.5 px-3.5 py-2.5 hover:bg-slate-50 {{ 'bg-accent-50/40' if n.is_unread else '' }}">
+                            <span class="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 {{ 'bg-accent-500' if n.is_unread else 'bg-transparent' }}"></span>
+                            <span class="min-w-0">
+                                <span class="block text-[12.5px] font-medium text-slate-800 leading-snug">{{ n.title }}</span>
+                                {% if n.body %}<span class="block text-[11.5px] text-slate-500 leading-snug truncate">{{ n.body }}</span>{% endif %}
+                                <span class="block text-[10.5px] text-slate-400 mt-0.5">{{ n.created_at.strftime('%b %d, %I:%M %p') }}</span>
+                            </span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="px-3.5 py-6 text-center text-[12.5px] text-slate-400">No notifications yet.</p>
+                    {% endif %}
+                    <div class="px-3.5 pt-2 mt-1 border-t border-slate-100">
+                        <a href="{{ url_for('admin.notifications_center') }}" class="block text-center text-[12.5px] font-medium text-accent-600 hover:underline">View all notifications</a>
+                    </div>
+                </div>
+            </div>
             <a href="mailto:{{ biz.EMAIL }}" class="w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition" aria-label="Help" title="Contact support">
                 {{ icon('help', 'w-5 h-5') }}
             </a>
@@ -286,6 +320,21 @@
                 if (collapsed) shell.removeAttribute('data-collapsed');
                 else shell.setAttribute('data-collapsed', 'true');
                 try { localStorage.setItem('og_admin_sidebar_collapsed', collapsed ? '0' : '1'); } catch (e) {}
+            });
+        }
+
+        // Notifications dropdown
+        const notifBtn = document.getElementById('admin-notif-btn');
+        const notifDropdown = document.getElementById('admin-notif-dropdown');
+        if (notifBtn) {
+            notifBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                const open = !notifDropdown.classList.contains('hidden');
+                notifDropdown.classList.toggle('hidden', open);
+                notifBtn.setAttribute('aria-expanded', open ? 'false' : 'true');
+            });
+            document.addEventListener('click', function (e) {
+                if (!document.getElementById('admin-notif-menu').contains(e.target)) notifDropdown.classList.add('hidden');
             });
         }
 

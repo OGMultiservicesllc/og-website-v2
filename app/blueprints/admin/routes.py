@@ -140,7 +140,12 @@ def dashboard():
     open_case_rows = Case.query.filter(Case.status.in_(("open", "in_review", "waiting_client"))).order_by(Case.created_at.desc()).all()
     open_cases = len(open_case_rows)
     new_cases_today = sum(1 for c in open_case_rows if c.created_at and c.created_at.date() == datetime.utcnow().date())
-    pending_manual_payments = Payment.query.filter(Payment.status == "pending", Payment.method.in_(MANUAL_METHODS)).count()
+    # Shared with the Notification Center (app/notifications.py needs_attention_counts) so Dashboard and
+    # Notifications can never independently disagree about what needs OG's attention.
+    from app import notifications as notif
+
+    attention = notif.needs_attention_counts()
+    pending_manual_payments = attention["pending_manual_payments"]
     pending_by_method = {}
     for p in Payment.query.filter(Payment.status == "pending", Payment.method.in_(MANUAL_METHODS)).all():
         pending_by_method[p.method] = pending_by_method.get(p.method, 0) + 1
@@ -186,6 +191,7 @@ def dashboard():
         recent_enrollments=recent_enrollments,
         recent_payments=recent_payments,
         notifications=notifications,
+        attention=attention,
     )
 
 

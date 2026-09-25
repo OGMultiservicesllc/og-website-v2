@@ -233,7 +233,33 @@ def submit(dl, student, lang, certified, terms_ok, meta):
     if created:
         log(dl, "dl_price_calculated", {"mode": quote.status})
     _notify(dl, "service_submitted", lang)
+    _notify_admin(dl, student)
+    if a.get("flags"):
+        _notify_admin_review(dl, student)
     return True, None
+
+
+def _notify_admin(dl, student):
+    from app import notifications as notif
+
+    notif.notify(
+        "case_submitted", title=f"New NJ Driver License case submitted — {student.name}", body=f"{student.name} ({student.email})",
+        entity_type="dl_case", entity_id=dl.id, case_id=dl.case_id, customer_id=student.id,
+        link_url=notif.safe_url("admin.dl_case", case_id=dl.id),
+        dedupe_key=f"case_submitted:dl:{dl.id}:{dl.submitted_at.isoformat() if dl.submitted_at else ''}",
+    )
+
+
+def _notify_admin_review(dl, student):
+    from app import notifications as notif
+
+    notif.notify(
+        "case_needs_review", title=f"NJ Driver License case needs OG review — {student.name}",
+        body="Document/eligibility flags raised during the intake — OG review needed.",
+        entity_type="dl_case", entity_id=dl.id, case_id=dl.case_id, customer_id=student.id,
+        link_url=notif.safe_url("admin.dl_case", case_id=dl.id),
+        dedupe_key=f"case_needs_review:dl:{dl.id}:{dl.submitted_at.isoformat() if dl.submitted_at else ''}",
+    )
 
 
 # ------------------------------------------------------------------ workflow (staff)

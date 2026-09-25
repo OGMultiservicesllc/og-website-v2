@@ -162,12 +162,26 @@ def queue_form_notifications(form, submission):
     """
     import logging
 
+    from app import notifications as notif
+
     logger = logging.getLogger("og_forms")
     if form.notify_admin_enabled and form.notify_admin_email_list:
         logger.info(
             "[forms] would notify admin(s) %s of submission %s for form %r",
             form.notify_admin_email_list, submission.code, form.name_admin,
         )
+    student = submission.student
+    notif.notify(
+        "case_submitted", title=f"New {form.name_admin} submitted",
+        body=f"{student.name} ({student.email})" if student else submission.code,
+        entity_type="form_submission", entity_id=submission.id, case_id=submission.case_id,
+        customer_id=submission.student_id,
+        link_url=notif.safe_url("admin.form_submission_detail", submission_id=submission.id),
+        # `updated_at` (not `submitted_at`, which a reopened resubmit deliberately keeps unchanged — see
+        # intake_routes.py) changes on every genuine submit/resubmit, so a resubmission after Admin reopens
+        # the case gets its own fresh notification, while a same-request duplicate call cannot.
+        dedupe_key=f"case_submitted:form_submission:{submission.id}:{submission.updated_at.isoformat() if submission.updated_at else ''}",
+    )
     if form.notify_client_enabled and submission.student_id:
         try:
             from app.email_service import send_transactional_email

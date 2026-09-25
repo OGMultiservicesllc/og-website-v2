@@ -32,6 +32,21 @@ def _notify(student, template_key, **kw):
         logger.exception("[payments] transactional email %r failed to queue", template_key)
 
 
+def _notify_admin_payment(event_key, payment, *, title, body):
+    """Skipped for a course purchase (`charge.course_id` set) — that becomes ONE `course_purchased`
+    notification from `_fulfill_charge_context` instead of a redundant separate `payment_received`
+    (task's explicit non-duplication requirement)."""
+    if payment.charge.course_id:
+        return
+    from app import notifications as notif
+
+    notif.notify(
+        event_key, title=title, body=body, entity_type="payment", entity_id=payment.id, case_id=payment.charge.case_id,
+        customer_id=payment.customer_id, link_url=notif.safe_url("admin.customer_detail", student_id=payment.customer_id, tab="payments"),
+        dedupe_key=f"{event_key}:{payment.id}",
+    )
+
+
 # ------------------------------------------------------------------ money
 def format_cents(cents, currency="USD"):
     if cents is None:
@@ -221,6 +236,26 @@ def _fulfill_charge_context(charge, payment):
         db.session.commit()
         log_event(charge.customer_id, "course_activated_from_payment", actor="system", entity=("enrollment", enrollment.id), case_id=charge.case_id,
                   meta={"course": course.title_en, "amount": format_cents(payment.amount_cents)})
+        _notify_course_purchased(student, course, payment, enrollment)
+
+
+def _notify_course_purchased(student, course, payment, enrollment):
+    """ONE sale notification/email per purchase (task's explicit "IMPORTANT" non-duplication rule) —
+    called exactly once, from the SAME choke point that grants the enrollment (`_fulfill_charge_context`,
+    itself only reached once per completed payment). Never fires for an Admin-side Grant Course Access
+    (Wix migration, complimentary grant, etc.) — those call `academy_access.grant_access` directly with
+    `actor="admin"`, bypassing this function entirely, since they are not a real purchase."""
+    from app import notifications as notif
+    from app.models import method_label
+
+    notif.notify(
+        "course_purchased",
+        title=f"New Course Purchase — {student.name} purchased {course.title_en} — {format_cents(payment.amount_cents)} — {method_label(payment.method, 'en')} — Paid — Enrollment/access granted",
+        body=f"{student.name} ({student.email}) · {course.title_en} · {format_cents(payment.amount_cents)} · {method_label(payment.method, 'en')} · Paid · Enrollment/access granted.",
+        entity_type="enrollment", entity_id=enrollment.id, customer_id=student.id,
+        link_url=notif.safe_url("admin.customer_detail", student_id=student.id, tab="courses"),
+        dedupe_key=f"course_purchased:{payment.id}",
+    )
 
 
 # ------------------------------------------------------------------ Manual payments (Admin only, Phase 6 — customers can never create these)
@@ -244,6 +279,8 @@ def record_manual_payment(charge, *, amount_cents, method, payment_date, admin_i
     _fulfill_charge_context(charge, p)
     _notify(charge.customer, "payment_received", ref={"payment_id": p.id}, related_type="payment", related_id=p.id,
             dedupe_key=f"payment_received:{p.id}")
+    _notify_admin_payment("payment_received", p, title=f"Payment received — {charge.customer.name}",
+                          body=f"{charge.customer.name} · {charge.description} · {format_cents(p.amount_cents)} · {method} (manual)")
     return p
 
 
@@ -285,6 +322,8 @@ def start_manual_payment(charge, payment_request, *, method, student):
     db.session.commit()
     log_event(student.id, "manual_payment_requested", actor="customer", entity=("payment", p.id), case_id=charge.case_id,
               meta={"service": charge.description, "amount": format_cents(p.amount_cents), "method": method})
+    _notify_admin_payment("payment_pending", p, title=f"Manual payment awaiting confirmation — {student.name}",
+                          body=f"{student.name} reported a {method} payment of {format_cents(p.amount_cents)} for {charge.description} — needs OG confirmation.")
     return p
 
 
@@ -324,6 +363,8 @@ def confirm_manual_payment(payment, *, admin_id):
     _fulfill_charge_context(payment.charge, payment)
     _notify(payment.customer, "payment_received", ref={"payment_id": payment.id}, related_type="payment", related_id=payment.id,
             dedupe_key=f"payment_received:{payment.id}")
+    _notify_admin_payment("payment_received", payment, title=f"Payment received — {payment.customer.name}",
+                          body=f"{payment.customer.name} · {payment.charge.description} · {format_cents(payment.amount_cents)} · {payment.method} (manual)")
     return payment
 
 
@@ -394,6 +435,8 @@ def confirm_square_payment(payment, *, source_id, buyer_email=None):
         db.session.commit()
         log_event(payment.customer_id, "payment_failed", actor="customer", entity=("payment", payment.id), case_id=payment.charge.case_id,
                   meta={"service": payment.charge.description, "amount": format_cents(payment.amount_cents)})
+        _notify_admin_payment("payment_error", payment, title=f"Payment failed — {payment.customer.name}",
+                              body=f"{payment.customer.name} · {payment.charge.description} · {format_cents(payment.amount_cents)} · Square: {str(exc)[:150]}")
         return payment
     _apply_square_payment(payment, sq_payment)
     return payment
@@ -441,6 +484,8 @@ def _apply_square_payment(payment, sq_payment):
             db.session.commit()
             log_event(payment.customer_id, "payment_failed", actor="customer", entity=("payment", payment.id), case_id=payment.charge.case_id,
                       meta={"service": payment.charge.description, "amount": format_cents(payment.amount_cents)})
+            _notify_admin_payment("payment_error", payment, title=f"Payment failed — {payment.customer.name}",
+                                  body=f"{payment.customer.name} · {payment.charge.description} · {format_cents(payment.amount_cents)} · Square status: {sq_status}")
     else:
         db.session.commit()  # APPROVED/PENDING — stays "pending" on our side (Phase 12: never treat pending as paid)
 

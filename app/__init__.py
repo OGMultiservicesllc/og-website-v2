@@ -69,6 +69,7 @@ def create_app(config_class=Config):
     from app.blueprints.admin import payments_routes as admin_payments_routes  # noqa: F401  (OG Payments admin actions)
     from app.blueprints.admin import persons_routes  # noqa: F401  (real-person view)
     from app.blueprints.admin import email_routes as admin_email_routes  # noqa: F401  (transactional email visibility + SMTP test tool)
+    from app.blueprints.admin import notifications_routes as admin_notifications_routes  # noqa: F401  (Notification Center)
     from app.blueprints.public import intake_routes  # noqa: F401  (registers routes onto public_bp)
     from app.blueprints.public import tax_routes  # noqa: F401  (Tax Smart Intake)
     from app.blueprints.public import dl_routes  # noqa: F401  (NJ Driver License Assistance)
@@ -213,12 +214,17 @@ def create_app(config_class=Config):
         admin_active = is_admin_logged_in()
         new_inquiry_count = 0
         admin_alert_count = 0
+        admin_recent_notifications = []
         if admin_active:
-            from app.models import MANUAL_METHODS, Inquiry, Payment
+            from app.models import Inquiry
 
             new_inquiry_count = Inquiry.query.filter_by(status="new").count()
-            pending_payments = Payment.query.filter(Payment.status == "pending", Payment.method.in_(MANUAL_METHODS)).count()
-            admin_alert_count = new_inquiry_count + pending_payments
+            # Admin bell count / dropdown reuse the SAME Notification Center query the full page uses
+            # (app/notifications.py) — never a second, independently-derived notion of "what's unread".
+            from app import notifications as notif
+
+            admin_alert_count = notif.unread_count()
+            admin_recent_notifications = notif.recent(limit=6)
 
         from app.models import SiteSettings
 
@@ -265,6 +271,7 @@ def create_app(config_class=Config):
             "st": st,
             "account_action_count": account_action_count,
             "admin_alert_count": admin_alert_count,
+            "admin_recent_notifications": admin_recent_notifications,
             "site_asset": site_asset,
             "site_focus": site_focus,
             "media_url": media_url,

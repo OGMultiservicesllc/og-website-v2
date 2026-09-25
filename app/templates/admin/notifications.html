@@ -1,0 +1,55 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Notifications{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-brand-800">Notifications</h1>
+        <p class="text-sm text-slate-500 mt-1">Every important event across the website, in one place.</p>
+    </div>
+    {% if unread_count %}
+    <form method="POST" action="{{ url_for('admin.notifications_mark_all_read') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="next" value="{{ url_for('admin.notifications_center', group=group, filter=('unread' if unread_only else none)) }}">
+        <button type="submit" class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">Mark all as read</button>
+    </form>
+    {% endif %}
+</div>
+
+<div class="flex flex-wrap items-center gap-2 mb-5">
+    <a href="{{ url_for('admin.notifications_center', group=group) }}"
+       class="rounded-full px-3.5 py-1.5 text-xs font-semibold transition {{ 'bg-brand-800 text-white' if not unread_only else 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50' }}">All</a>
+    <a href="{{ url_for('admin.notifications_center', group=group, filter='unread') }}"
+       class="rounded-full px-3.5 py-1.5 text-xs font-semibold transition {{ 'bg-brand-800 text-white' if unread_only else 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50' }}">Unread</a>
+    <span class="w-px h-4 bg-slate-200 mx-1"></span>
+    <a href="{{ url_for('admin.notifications_center', filter=('unread' if unread_only else none)) }}"
+       class="rounded-full px-3.5 py-1.5 text-xs font-semibold transition {{ 'bg-brand-800 text-white' if not group else 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50' }}">All groups</a>
+    {% for g in groups %}
+    <a href="{{ url_for('admin.notifications_center', group=g, filter=('unread' if unread_only else none)) }}"
+       class="rounded-full px-3.5 py-1.5 text-xs font-semibold transition {{ 'bg-brand-800 text-white' if group == g else 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50' }}">{{ g|capitalize }}</a>
+    {% endfor %}
+</div>
+
+{% if not items %}
+<div class="rounded-2xl border-2 border-dashed border-slate-200 p-16 text-center text-slate-400">Nothing here yet.</div>
+{% else %}
+<div class="rounded-2xl border border-slate-100 bg-white overflow-hidden divide-y divide-slate-50">
+    {% for n in items %}
+    <div class="flex items-start gap-3 px-5 py-4 {{ 'bg-accent-50/30' if n.is_unread else '' }}">
+        <span class="w-2 h-2 rounded-full mt-2 shrink-0 {{ 'bg-accent-500' if n.is_unread else 'bg-slate-200' }}"></span>
+        <div class="min-w-0 flex-1">
+            <a href="{{ n.link_url or '#' }}" class="block text-sm font-semibold text-brand-800 hover:underline">{{ n.title }}</a>
+            {% if n.body %}<p class="text-[13px] text-slate-500 mt-0.5">{{ n.body }}</p>{% endif %}
+            <p class="text-[11.5px] text-slate-400 mt-1">{{ n.group_key|capitalize }} &middot; {{ n.created_at.strftime('%b %d, %Y %I:%M %p') }}</p>
+        </div>
+        {% if n.is_unread %}
+        <form method="POST" action="{{ url_for('admin.notification_mark_read', notification_id=n.id) }}" class="shrink-0">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="next" value="{{ url_for('admin.notifications_center', group=group, filter=('unread' if unread_only else none)) }}">
+            <button type="submit" class="text-xs font-medium text-accent-600 hover:underline whitespace-nowrap">Mark as read</button>
+        </form>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

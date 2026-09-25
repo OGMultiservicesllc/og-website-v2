@@ -97,6 +97,7 @@ from app.models.blog import BlogPost, BlogMedia, BLOG_CATEGORIES
 from app.models.inquiry import Inquiry
 from app.models.content_block import PageBlock
 from app.models.settings import SiteSettings
+from app.models.notifications import AdminNotification, NotificationSetting, NOTIFICATION_EVENTS, NOTIFICATION_GROUPS
 from app.models.site_content import (
     MediaAsset,
     NavItem,

@@ -370,6 +370,14 @@ def submit(ct, student, lang, certified, terms_ok, meta):
     db.session.commit()
     log(ct, "consent_travel_resubmitted" if was_reopened else "consent_travel_submitted")
     _notify(ct, "service_submitted", lang)
+    from app import notifications as notif
+
+    notif.notify(
+        "case_submitted", title=f"New Consent to Travel case submitted — {student.name}", body=f"{student.name} ({student.email})",
+        entity_type="consent_travel_case", entity_id=ct.id, case_id=ct.case_id, customer_id=student.id,
+        link_url=notif.safe_url("admin.ct_case", case_id=ct.id),
+        dedupe_key=f"case_submitted:ct:{ct.id}:{ct.submitted_at.isoformat() if ct.submitted_at else ''}",
+    )
     return True, None
 
 

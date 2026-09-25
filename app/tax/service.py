@@ -396,11 +396,37 @@ def submit(tax, student, lang, certified, terms_ok, meta):
     db.session.commit()
     log(tax, "tax_resubmitted" if was_reopened else "tax_submitted")
     _notify(tax, "service_submitted", lang)
+    _notify_admin(tax, student)
     if created:
         log(tax, "tax_price_calculated", {"mode": quote.mode, "revision": quote.revision})
         if quote.discount_cents:
             log(tax, "tax_discount_applied", {"percent": quote.discount_percent})
+        if quote.mode == "manual":
+            _notify_admin_review(tax, student)
     return True, None
+
+
+def _notify_admin(tax, student):
+    from app import notifications as notif
+
+    notif.notify(
+        "case_submitted", title=f"New Tax Return submitted — {student.name}", body=f"{student.name} ({student.email})",
+        entity_type="tax_case", entity_id=tax.id, case_id=tax.case_id, customer_id=student.id,
+        link_url=notif.safe_url("admin.tax_case", case_id=tax.id),
+        dedupe_key=f"case_submitted:tax:{tax.id}:{tax.submitted_at.isoformat() if tax.submitted_at else ''}",
+    )
+
+
+def _notify_admin_review(tax, student):
+    from app import notifications as notif
+
+    notif.notify(
+        "case_needs_review", title=f"Tax Return needs OG review — {student.name}",
+        body="Complex/foreign/unclear situation — pricing requires manual review.",
+        entity_type="tax_case", entity_id=tax.id, case_id=tax.case_id, customer_id=student.id,
+        link_url=notif.safe_url("admin.tax_case", case_id=tax.id),
+        dedupe_key=f"case_needs_review:tax:{tax.id}:{tax.submitted_at.isoformat() if tax.submitted_at else ''}",
+    )
 
 
 # ------------------------------------------------------------------ workflow (staff)

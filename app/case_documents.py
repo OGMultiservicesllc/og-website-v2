@@ -282,7 +282,27 @@ def upload_for_requirement(req, file_storage, *, uploaded_by="customer", uploade
     _attach(req, doc, reason_for_previous="replaced")
     _event(req, "case_document_uploaded", actor or uploaded_by, uploaded_by_id, {"filename": doc.original_filename})
     db.session.commit()
+    if uploaded_by == "customer":
+        _notify_admin_upload(req)
     return doc
+
+
+def _notify_admin_upload(req):
+    """One notification per case per day (not per file) — a customer uploading several documents for the
+    same requested batch collapses into a single admin alert, per the task's explicit anti-spam instruction."""
+    from datetime import date
+
+    from app import notifications as notif
+
+    case = req.case
+    customer = case.customer
+    notif.notify(
+        "documents_uploaded", title=f"Documents uploaded — {customer.name}",
+        body=f"{customer.name} uploaded document(s) for case {case.case_number}.",
+        entity_type="case", entity_id=case.id, case_id=case.id, customer_id=customer.id,
+        link_url=notif.safe_url("admin.ocase_detail", case_id=case.id),
+        dedupe_key=f"documents_uploaded:{case.id}:{date.today().isoformat()}",
+    )
 
 
 def find_reusable_elsewhere(case, person, category):

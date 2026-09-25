@@ -101,6 +101,14 @@ def register(lang):
         session.clear()  # new session on sign-up: never reuse a pre-login session id
         session["student_id"] = student.id
         log_event(student.id, "account_created")
+        from app import notifications as notif
+
+        notif.notify(
+            "new_account", title="New customer account created", body=f"{student.name} ({student.email})",
+            entity_type="student", entity_id=student.id, customer_id=student.id,
+            link_url=notif.safe_url("admin.customer_detail", student_id=student.id),
+            dedupe_key=f"new_account:{student.id}",
+        )
         from app import verification
 
         verification.issue_code(student, "verify", lang=lang)

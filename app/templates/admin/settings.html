@@ -100,6 +100,49 @@
 
 <div class="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 max-w-2xl mt-6">
     <div class="flex items-center justify-between mb-1">
+        <h2 class="font-semibold text-slate-900">Notifications</h2>
+        <a href="{{ url_for('admin.notifications_center') }}" class="text-xs font-medium text-accent-600 hover:underline">View Notification Center &rarr;</a>
+    </div>
+    <p class="text-xs text-slate-500 mb-4">Choose which events raise a bell notification and/or an admin email. These apply to everyone signed into this Admin.</p>
+
+    <form method="POST" action="{{ url_for('admin.notification_settings') }}" class="space-y-4">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Default notification recipient email</label>
+            <input type="email" name="notification_recipient_email" value="{{ site_settings.notification_recipient_email or '' }}" placeholder="info@ogmultiservicesllc.com"
+                   class="w-full max-w-xs rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500">
+            <p class="text-xs text-slate-400 mt-1">Leave blank to use the default business email.</p>
+        </div>
+
+        <div class="overflow-x-auto -mx-2">
+            <table class="w-full text-sm min-w-[420px]">
+                <thead>
+                    <tr class="text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                        <th class="px-2 py-2">Event</th>
+                        <th class="px-2 py-2 text-center">Admin 🔔</th>
+                        <th class="px-2 py-2 text-center">Email ✉️</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    {% for key, label, group, row in notification_rows %}
+                    <tr>
+                        <td class="px-2 py-2.5 text-slate-700">{{ label }}<span class="block text-[11px] text-slate-400">{{ group|capitalize }}</span></td>
+                        <td class="px-2 py-2.5 text-center"><input type="checkbox" name="admin_{{ key }}" {{ 'checked' if row and row.admin_enabled else '' }}></td>
+                        <td class="px-2 py-2.5 text-center"><input type="checkbox" name="email_{{ key }}" {{ 'checked' if row and row.email_enabled else '' }}></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <button type="submit" class="rounded-lg bg-accent-600 text-white font-semibold px-6 py-2.5 text-sm hover:bg-accent-700 transition">
+            Save Notification Settings
+        </button>
+    </form>
+</div>
+
+<div class="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 max-w-2xl mt-6">
+    <div class="flex items-center justify-between mb-1">
         <h2 class="font-semibold text-slate-900">Admin Users</h2>
     </div>
     <p class="text-xs text-slate-500 mb-4">Everyone here has full access to this admin panel — there are no restricted roles.</p>

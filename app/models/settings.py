@@ -27,6 +27,11 @@ class SiteSettings(db.Model):
     search_console_verification = db.Column(db.String(200))
     block_search_indexing = db.Column(db.Boolean, nullable=False, default=False)
 
+    # Admin Notification Center (2026-09-24) — the recipient for administrative alert emails, configurable
+    # from Admin -> Settings -> Notifications. Empty = falls back to business_info.EMAIL (the same
+    # "empty field = built-in default" convention as cash_app_tag above), never hardcoded in notify logic.
+    notification_recipient_email = db.Column(db.String(200))
+
     @staticmethod
     def get():
         settings = SiteSettings.query.get(1)
