@@ -169,15 +169,19 @@
                     <a href="{{ url_for('account.dashboard', lang=lang) }}" class="hidden sm:inline text-sm font-medium text-slate-600 hover:text-accent-700 transition">
                         {{ t('acct_dashboard_title') }}
                     </a>
+                    <a href="{{ url_for('account.dashboard', lang=lang) }}"
+                       class="hidden sm:inline-flex items-center rounded-xl bg-accent-600 text-white text-sm font-semibold px-4 py-2 hover:bg-accent-700 transition shadow-sm shadow-accent-600/25">
+                        {{ t('acct_dashboard_title') }}
+                    </a>
                     {% else %}
                     <a href="{{ url_for('account.login', lang=lang) }}" class="hidden sm:inline text-sm font-medium text-slate-600 hover:text-accent-700 transition">
                         {{ t('nav_login') }}
                     </a>
-                    {% endif %}
-                    <a href="{{ url_for('public.contact', lang=lang) }}"
+                    <a href="{{ url_for('account.register', lang=lang) }}"
                        class="hidden sm:inline-flex items-center rounded-xl bg-accent-600 text-white text-sm font-semibold px-4 py-2 hover:bg-accent-700 transition shadow-sm shadow-accent-600/25">
-                        {{ t('nav_get_started') }}
+                        {{ t('nav_create_account') }}
                     </a>
+                    {% endif %}
                     <button id="mobile-menu-btn" type="button"
                             class="lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-xl text-brand-800 hover:bg-mist-100 transition"
                             aria-label="Menu" aria-expanded="false" aria-controls="mobile-menu">
@@ -188,6 +192,20 @@
             </div>
 
             <div id="mobile-menu" class="hidden lg:hidden pb-5 max-h-[calc(100vh-3.5rem)] overflow-y-auto overscroll-contain">
+                {% if student %}
+                <a href="{{ url_for('account.dashboard', lang=lang) }}"
+                   class="mt-1 flex items-center justify-center rounded-xl bg-accent-600 text-white text-sm font-semibold px-4 py-3 hover:bg-accent-700 transition shadow-sm shadow-accent-600/25">
+                    {{ t('acct_dashboard_title') }}
+                </a>
+                {% else %}
+                <a href="{{ url_for('account.register', lang=lang) }}"
+                   class="mt-1 flex items-center justify-center rounded-xl bg-accent-600 text-white text-sm font-semibold px-4 py-3 hover:bg-accent-700 transition shadow-sm shadow-accent-600/25">
+                    {{ t('nav_create_account') }}
+                </a>
+                <a href="{{ url_for('account.login', lang=lang) }}" class="mt-2 flex items-center justify-center text-sm font-medium text-slate-600 hover:text-accent-700 transition">
+                    {{ t('nav_login') }}
+                </a>
+                {% endif %}
                 {% if nav_categories %}
                 <div class="grid grid-cols-2 gap-2 pt-1">
                     {% for c in nav_categories %}
@@ -213,11 +231,6 @@
                     {% for p in services_pages %}<a href="{{ url_for('public.page_view', lang=lang, slug=p.slug) }}" class="px-2 py-2.5 rounded-lg hover:bg-fog-50">{{ p.title(lang) }}</a>{% endfor %}
                     {% for p in resources_pages %}<a href="{{ url_for('public.page_view', lang=lang, slug=p.slug) }}" class="px-2 py-2.5 rounded-lg hover:bg-fog-50">{{ p.title(lang) }}</a>{% endfor %}
                     {% for p in academy_pages %}<a href="{{ url_for('public.page_view', lang=lang, slug=p.slug) }}" class="px-2 py-2.5 rounded-lg hover:bg-fog-50">{{ p.title(lang) }}</a>{% endfor %}
-                    {% if student %}
-                    <a href="{{ url_for('account.dashboard', lang=lang) }}" class="px-2 py-2.5 rounded-lg hover:bg-fog-50">{{ t('acct_dashboard_title') }}</a>
-                    {% else %}
-                    <a href="{{ url_for('account.login', lang=lang) }}" class="px-2 py-2.5 rounded-lg hover:bg-fog-50">{{ t('nav_login') }}</a>
-                    {% endif %}
                 </nav>
             </div>
         </div>

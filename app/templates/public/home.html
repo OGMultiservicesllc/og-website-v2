@@ -21,9 +21,16 @@
                 <p class="mt-3 sm:mt-4 text-[15px] sm:text-lg text-slate-600 leading-relaxed max-w-xl">{{ st('home_subtitle') }}</p>
 
                 <div class="mt-5 flex flex-col sm:flex-row sm:flex-wrap gap-2.5">
-                    {{ btn(st('home_cta_start'), '#help', 'primary', None, 'lg', False, trailing_icon='arrow-right') }}
+                    {% if student %}
+                    {{ btn(t('home_cta_account_in'), url_for('account.dashboard', lang=lang), 'primary', None, 'lg', False, trailing_icon='arrow-right') }}
+                    {% else %}
+                    {{ btn(t('home_cta_account_out'), url_for('account.register', lang=lang), 'primary', None, 'lg', False, trailing_icon='arrow-right') }}
+                    {% endif %}
                     {{ btn(st('home_cta_primary'), biz.WHATSAPP_LINK, 'whatsapp', 'whatsapp', 'lg', True) }}
                 </div>
+                {% if not student %}
+                <p class="mt-3 text-[13px] text-slate-500">{{ t('home_have_account_q') }} <a href="{{ url_for('account.login', lang=lang) }}" class="font-semibold text-accent-700 hover:underline">{{ t('home_login_link') }}</a></p>
+                {% endif %}
 
                 <dl class="mt-6 grid grid-cols-3 gap-3 max-w-md">
                     {% for k in ['year', 'lang', 'mode'] %}
