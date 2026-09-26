@@ -1,0 +1,53 @@
+# Production Nginx server blocks — ogmultiservicesllc.com / www.ogmultiservicesllc.com
+#
+# NOT ACTIVE. This file lives in the repo only. It is not installed to
+# /etc/nginx/sites-available/ and not symlinked into sites-enabled/ — writing it there and
+# reloading nginx is a launch-day step, done only after DNS for both hostnames points at this
+# server's IP (see docs/PRODUCTION_CUTOVER.md). Loading this on the VPS before DNS cutover is
+# harmless (nginx will just never receive traffic for these hostnames yet) but there is no
+# reason to do it early.
+#
+# Mirrors /etc/nginx/sites-available/ogwebsite (staging) exactly for body-size/proxy/timeout
+# settings and proxies to the SAME backend (127.0.0.1:8000) — production and staging are the
+# same running application right now (see the cutover doc for why, and for the indexing-
+# separation blocker that must be resolved before both hostnames are allowed to serve
+# simultaneously with different indexing states).
+#
+# Deliberately does NOT include any `listen 443 ssl` / ssl_certificate directive — those don't
+# exist yet for this domain. Launch-day step 5 runs
+#   sudo certbot --nginx -d ogmultiservicesllc.com -d www.ogmultiservicesllc.com
+# which edits this file in place to add them (identical to how the existing staging block was
+# obtained — every "# managed by Certbot" line there was added the same way, not hand-written).
+
+# Canonical host.
+server {
+    listen 80;
+    listen [::]:80;
+    server_name www.ogmultiservicesllc.com;
+
+    client_max_body_size 50M;
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+}
+
+# Apex host — permanent redirect to the canonical www host, path and query preserved.
+# (After certbot adds SSL to the block above, also re-run certbot for this block, or add
+# `return 301 https://www.ogmultiservicesllc.com$request_uri;` under a matching 443 server —
+# see docs/PRODUCTION_CUTOVER.md step 5 for the exact sequence.)
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ogmultiservicesllc.com;
+
+    return 301 https://www.ogmultiservicesllc.com$request_uri;
+}
