@@ -89,6 +89,10 @@ def create_app(config_class=Config):
     app.register_blueprint(admin_bp)
     app.register_blueprint(account_bp)
 
+    from app.legacy_redirects import register_legacy_redirects
+
+    register_legacy_redirects(app)
+
     @app.route("/")
     def root_redirect():
         return redirect(f"/{DEFAULT_LANGUAGE}/", code=301)
