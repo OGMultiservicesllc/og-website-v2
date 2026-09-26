@@ -1,10 +1,11 @@
 """Explicit, per-request `<meta name="robots">` control for public_bp pages that must never be
 indexed although they don't live under the `account` blueprint (which already gets an
 unconditional `noindex, nofollow` from base.html) and aren't covered by the site-wide
-`SiteSettings.block_search_indexing` staging toggle.
+`SiteSettings.block_search_indexing` toggle.
 
 Three ways a page ends up noindexed, in the order base.html checks them:
-  1. `SiteSettings.block_search_indexing` (staging-wide kill switch) -> noindex, nofollow.
+  1. `should_block_search_indexing()` (staging's permanent override, or the shared
+     `SiteSettings.block_search_indexing` toggle for every other host) -> noindex, nofollow.
   2. `request.blueprint == 'account'` -> noindex, nofollow.
   3. `g.robots_directive`, set by one of the helpers below -> whatever directive was set.
 Otherwise no robots meta tag is emitted at all (the page is indexable).
@@ -13,7 +14,48 @@ Otherwise no robots meta tag is emitted at all (the page is indexable).
 """
 from functools import wraps
 
-from flask import g
+from flask import g, request
+
+#: The exact staging hostname — see `should_block_search_indexing()`. Never matched by substring;
+#: a request host merely *containing* "staging" is not staging.
+STAGING_HOSTNAME = "staging.ogmultiservicesllc.com"
+
+
+def _current_hostname():
+    """`request.host` normalized for comparison: lowercase, no port. `request.host` includes a
+    port whenever the request didn't arrive on the scheme's default port (e.g. a local `:5001`
+    dev server, or a test client's `:80`) — stripped here so that can never accidentally defeat
+    (or accidentally trigger) the staging match."""
+    host = request.host or ""
+    return host.split(":", 1)[0].strip().lower()
+
+
+def is_staging_host():
+    return _current_hostname() == STAGING_HOSTNAME
+
+
+def should_block_search_indexing():
+    """The single source of truth for "should THIS request's host be fully blocked from search
+    indexing" (robots.txt Disallow: / and a sitewide noindex,nofollow) — independent of, and
+    checked before, any page-specific noindex_* mechanism below.
+
+    staging.ogmultiservicesllc.com is ALWAYS blocked, permanently, regardless of the shared
+    `SiteSettings.block_search_indexing` value — staging and the eventual production domain(s)
+    run the same Flask app against the same database and therefore the same SiteSettings
+    singleton row (see docs/PRODUCTION_CUTOVER.md), so that one toggle can never by itself
+    distinguish "block staging" from "block production". Every other host (the real production
+    domain(s), a local dev server, this app's own test suites) follows the toggle normally —
+    production is never hardcoded as permanently indexable; it is only ever as indexable as the
+    admin setting says.
+
+    Reused as the one place both `/robots.txt` (app/__init__.py) and the html <meta name="robots">
+    (base.html, via `seo_block_indexing` in inject_globals) make this decision, so they can never
+    disagree with each other."""
+    if is_staging_host():
+        return True
+    from app.models import SiteSettings
+
+    return SiteSettings.get().block_search_indexing
 
 
 def mark_noindex(follow=False):

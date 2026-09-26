@@ -7,7 +7,7 @@
     <title>{% block title %}OG Multiservices LLC{% endblock %}</title>
     {% set _description = page_description if page_description is defined else t('seo_default_description') %}
     <meta name="description" content="{{ _description }}">
-    {% if site_settings.block_search_indexing or request.blueprint == 'account' %}
+    {% if seo_block_indexing or request.blueprint == 'account' %}
     <meta name="robots" content="noindex, nofollow">
     {% elif seo_robots %}
     <meta name="robots" content="{{ seo_robots }}">
@@ -70,7 +70,7 @@
     </script>
     {% include "partials/tailwind_head.html" %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
-    {% if site_settings.ga_measurement_id and not site_settings.block_search_indexing %}
+    {% if site_settings.ga_measurement_id and not seo_block_indexing %}
     <script async src="https://www.googletagmanager.com/gtag/js?id={{ site_settings.ga_measurement_id }}"></script>
     <script>
         window.dataLayer = window.dataLayer || [];

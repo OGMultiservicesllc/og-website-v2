@@ -100,11 +100,9 @@ def create_app(config_class=Config):
     @app.route("/robots.txt")
     def robots_txt():
         from flask import Response
-        from app.models import SiteSettings
-        from app.seo import WORKFLOW_DISALLOW_PATHS
+        from app.seo import WORKFLOW_DISALLOW_PATHS, should_block_search_indexing
 
-        settings = SiteSettings.get()
-        if settings.block_search_indexing:
+        if should_block_search_indexing():
             lines = ["User-agent: *", "Disallow: /"]
         else:
             lines = ["User-agent: *", "Allow: /", "Disallow: /admin/", "Disallow: /*/account/"]
@@ -276,7 +274,7 @@ def create_app(config_class=Config):
             return action_count(student, lang)
 
         from app.admin_case_nav import admin_case_url
-        from app.seo import current_robots_directive
+        from app.seo import current_robots_directive, should_block_search_indexing
 
         return {
             "lang": lang,
@@ -285,6 +283,7 @@ def create_app(config_class=Config):
             "account_action_count": account_action_count,
             "admin_case_url": admin_case_url,
             "seo_robots": current_robots_directive(),
+            "seo_block_indexing": should_block_search_indexing(),
             "admin_alert_count": admin_alert_count,
             "admin_recent_notifications": admin_recent_notifications,
             "site_asset": site_asset,
