@@ -10,6 +10,7 @@ from app.extensions import db
 from app.i18n import get_text
 from app.models import Person
 from app.ratelimit import allow
+from app.seo import noindex_page
 from app.student_auth import current_student, student_required
 from app.tax import docs, people, pricing, service, summary, terms
 from datetime import date
@@ -56,6 +57,7 @@ def tax_start(lang):
 
 
 @public_bp.route("/tax/terms")
+@noindex_page
 def tax_terms(lang):
     year = request.args.get("year", type=int) or 2025
     return render_template("tax/terms.html", sections=terms.SECTIONS, version=terms.version_for(year), year=year, cert=terms.CERTIFICATION, accept=terms.ACCEPTANCE)

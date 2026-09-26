@@ -20,6 +20,7 @@ from app.i18n import get_text
 from app.intake import owned_submission, purge_hidden_values
 from app.reopen import is_reopened, record_resubmission
 from app.intake_engine import answers_for, build_snapshot, context_map, problems, progress_for, review_sections
+from app.seo import noindex_if_service_intake
 from app.intake_shared import set_name_tokens, supplement_map
 from app.models import Form, SubmissionFile
 from app.student_auth import current_student
@@ -65,6 +66,7 @@ def _review_groups(form, lang):
 
 
 @public_bp.route("/f/<slug>/review")
+@noindex_if_service_intake
 def og_form_review(lang, slug):
     form = _intake_form(slug)
     submission, response = _owned_draft_or_redirect(form, lang)
@@ -91,6 +93,7 @@ def og_form_review(lang, slug):
 
 
 @public_bp.route("/f/<slug>/check")
+@noindex_if_service_intake
 def og_form_check(lang, slug):
     """Completeness Check: what is finished and what still needs attention, before the
     final review. Only for intakes that enable it."""
@@ -248,6 +251,7 @@ def og_form_file_upload(lang, slug):
 
 
 @public_bp.route("/f/<slug>/passport", methods=["GET", "POST"])
+@noindex_if_service_intake
 def og_form_passport(lang, slug):
     """ITIN / W-7 passport step: upload the photo page (now or later), see what was found on it and CONFIRM or CORRECT it. Works for a draft and for an application that is
     already with OG (a passport uploaded later). Nothing becomes a confirmed Person fact before the customer confirms."""

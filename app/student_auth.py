@@ -37,6 +37,15 @@ def current_student():
 def student_required(view_func):
     @wraps(view_func)
     def wrapped(*args, **kwargs):
+        # Every @student_required page is an authenticated workflow page, never marketing
+        # content — this is the single choke point for noindexing all of them (Tax/NJ Driver
+        # License/Consent to Travel case screens, Knowledge Test practice attempts, Academy
+        # self-study, My Account...), whether the request ends in the real page, a login
+        # redirect, or a verify-email redirect (see app/seo.py: relying on the auth redirect
+        # alone is not enough SEO protection on its own).
+        from app.seo import mark_noindex
+
+        mark_noindex()
         lang = kwargs.get("lang", "en")
         student = current_student()
         if not student:

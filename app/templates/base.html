@@ -9,6 +9,8 @@
     <meta name="description" content="{{ _description }}">
     {% if site_settings.block_search_indexing or request.blueprint == 'account' %}
     <meta name="robots" content="noindex, nofollow">
+    {% elif seo_robots %}
+    <meta name="robots" content="{{ seo_robots }}">
     {% endif %}
     {% if site_settings.search_console_verification %}
     <meta name="google-site-verification" content="{{ site_settings.search_console_verification }}">

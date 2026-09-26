@@ -12,6 +12,7 @@ from app.blueprints.public.routes import public_bp
 from app.extensions import db
 from app.i18n import get_text
 from app.ratelimit import allow
+from app.seo import noindex_page
 from app.student_auth import current_student, student_required
 from app.driver_license import docs, pricing, service, summary, terms
 from app.driver_license.config import CONFIG
@@ -56,6 +57,7 @@ def dl_start(lang):
 
 
 @public_bp.route("/nj-driver-license/terms")
+@noindex_page
 def dl_terms(lang):
     return render_template("driver_license/terms.html", sections=terms.SECTIONS, version=terms.version_for(), cert=terms.CERTIFICATION, accept=terms.ACCEPTANCE)
 

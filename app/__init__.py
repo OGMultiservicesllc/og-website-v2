@@ -97,18 +97,15 @@ def create_app(config_class=Config):
     def robots_txt():
         from flask import Response
         from app.models import SiteSettings
+        from app.seo import WORKFLOW_DISALLOW_PATHS
 
         settings = SiteSettings.get()
         if settings.block_search_indexing:
             lines = ["User-agent: *", "Disallow: /"]
         else:
-            lines = [
-                "User-agent: *",
-                "Allow: /",
-                "Disallow: /admin/",
-                "Disallow: /*/account/",
-                f"Sitemap: {request.url_root.rstrip('/')}/sitemap.xml",
-            ]
+            lines = ["User-agent: *", "Allow: /", "Disallow: /admin/", "Disallow: /*/account/"]
+            lines += [f"Disallow: {p}" for p in WORKFLOW_DISALLOW_PATHS]
+            lines.append(f"Sitemap: {request.url_root.rstrip('/')}/sitemap.xml")
         return Response("\n".join(lines), mimetype="text/plain")
 
     @app.route("/webhooks/square", methods=["POST"])
@@ -143,6 +140,12 @@ def create_app(config_class=Config):
             "public.home", "public.services", "public.courses",
             "public.blog", "public.about", "public.contact", "public.resources",
             "public.locations_hub", "public.location_paterson", "public.location_spring",
+            # NJ Knowledge Test practice: the explainer page is genuinely public (no account
+            # required, meaningful standalone content) and worth its own sitemap entry.
+            # `/practice/modes` and everything past it (@student_required) is deliberately NOT
+            # sitemapped — it has no content for an anonymous visitor/crawler, it only ever
+            # redirects them to sign in.
+            "public.dl_practice_home",
         ]
         urls = []
         for lang in ("en", "es"):
@@ -269,6 +272,7 @@ def create_app(config_class=Config):
             return action_count(student, lang)
 
         from app.admin_case_nav import admin_case_url
+        from app.seo import current_robots_directive
 
         return {
             "lang": lang,
@@ -276,6 +280,7 @@ def create_app(config_class=Config):
             "st": st,
             "account_action_count": account_action_count,
             "admin_case_url": admin_case_url,
+            "seo_robots": current_robots_directive(),
             "admin_alert_count": admin_alert_count,
             "admin_recent_notifications": admin_recent_notifications,
             "site_asset": site_asset,

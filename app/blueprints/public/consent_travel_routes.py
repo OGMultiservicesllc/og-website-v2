@@ -14,6 +14,7 @@ from app.consent_travel.config import CONFIG
 from app.extensions import db
 from app.i18n import get_text
 from app.ratelimit import allow
+from app.seo import noindex_page
 from app.student_auth import current_student, student_required
 from app.tax.questions import STATES, pick
 
@@ -55,6 +56,7 @@ def ct_start(lang):
 
 
 @public_bp.route("/consent-to-travel/terms")
+@noindex_page
 def ct_terms(lang):
     return render_template("consent_travel/terms.html", sections=terms.SECTIONS, version=terms.VERSION, cert=terms.CERTIFICATION, accept=terms.ACCEPTANCE)
 

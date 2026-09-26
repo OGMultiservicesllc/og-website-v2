@@ -41,6 +41,7 @@ from app.intake_engine import validate_value
 from app.models import Form, FormField, FormSubmission, Service, SubmissionFile, SubmissionValue
 from app.ratelimit import allow
 from app.progress import course_progress, is_lesson_completed, unlocked_lesson_ids
+from app.seo import noindex_if_service_intake, noindex_page
 from app.student_auth import current_student
 from app.uploads import course_media_full_path, delete_course_media, save_course_media, save_data_url_image
 from app.video_embed import to_embed_url
@@ -447,6 +448,7 @@ def page_section_asset(lang, section_id, stored_path):
 
 
 @public_bp.route("/forms/<slug>")
+@noindex_page(follow=True)
 def form_view(lang, slug):
     custom_form = CustomForm.query.filter_by(slug=slug, is_active=True).first_or_404()
     return render_template("public/custom_form.html", form=custom_form)
@@ -839,6 +841,7 @@ def _intake_submission(form, lang, token):
 
 
 @public_bp.route("/f/<slug>")
+@noindex_if_service_intake
 def og_form_view(lang, slug):
     form = Form.query.filter_by(slug=slug, status="published").first_or_404()
     if not form.pages:
@@ -1205,6 +1208,7 @@ def _block_with_conflicts(form, submission, page):
 
 
 @public_bp.route("/f/<slug>/conflicts", methods=["GET", "POST"])
+@noindex_if_service_intake
 def og_form_conflicts(lang, slug):
     """WE FOUND DIFFERENT INFORMATION: the customer chooses which value is correct (or types another). Nothing is pre-selected and
     no application answer is rewritten; both sources keep their provenance."""
@@ -1286,6 +1290,7 @@ def og_form_conflicts(lang, slug):
 
 
 @public_bp.route("/f/<slug>/setup", methods=["GET", "POST"])
+@noindex_if_service_intake
 def og_form_setup(lang, slug):
     """Who is this application for, and in which case? (forms whose applicant is chosen, like Form I-485)"""
     from datetime import date
