@@ -5,13 +5,7 @@
     <title>{{ form.name_admin }} — OG Forms Builder</title>
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo.png') }}">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = { theme: { extend: { colors: {
-            brand: { 800: '#0f1829', 700: '#141f38' },
-            accent: { 50: '#e6fbff', 500: '#12c0ee', 600: '#0aa3cf', 700: '#0a83a8' },
-        } } } }
-    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css') }}">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
     <style>
         body { font-family: -apple-system, 'Segoe UI', sans-serif; }

@@ -100,6 +100,17 @@ LEGACY_REDIRECTS = {
     # ---- Terms ----
     "/og-ai-terms": "/en/page/terms-of-service",
     "/notaryterms": "/en/page/terms-of-service",
+
+    # ---- Found during the pre-launch SEO audit (2026-09-26): real, currently-live Wix urls
+    # missed by the original list, either linked from the old site's own nav/footer or reachable
+    # only through one of Wix's own internal redirects (which won't exist once Wix is gone) ----
+    "/income-tax-services": "/es/services/taxes-itin/tax-preparation",
+    "/legal-document-translation-paterson-nj": "/en/services/certified-translations/legal-document-translation",
+    "/notario": "/es/services/notary",
+    "/cursos": "/es/courses",
+    "/traducciones": "/es/services/certified-translations",
+    "/servicios": "/es/locations/paterson-nj",
+    "/contact": "/en/contact",
 }
 
 #: Real old urls with NO equivalent new content yet — explicitly left unimplemented per the task

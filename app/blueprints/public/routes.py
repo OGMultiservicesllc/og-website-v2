@@ -38,7 +38,7 @@ from app.forms_engine import (
 from app.activity import log_event
 from app.intake import owned_submission, purge_hidden_values, start_or_resume
 from app.intake_engine import validate_value
-from app.models import Form, FormField, FormSubmission, Service, SubmissionFile, SubmissionValue
+from app.models import Form, FormField, FormSubmission, Service, ServiceCategory, SubmissionFile, SubmissionValue
 from app.ratelimit import allow
 from app.progress import course_progress, is_lesson_completed, unlocked_lesson_ids
 from app.seo import noindex_if_service_intake, noindex_page
@@ -193,7 +193,12 @@ def immigration_inquiry(lang):
 
 @public_bp.route("/resources")
 def resources(lang):
-    return render_template("public/resources.html")
+    # A small, curated set of the categories a visitor looking for "resources/guides" is most
+    # likely to actually need — real ServiceCategory records (title/url stay in sync with Admin
+    # automatically), never a full duplicate of the Services hub.
+    slugs = ["taxes-itin", "certified-translations", "immigration", "notary", "nj-driver-license"]
+    cats = [c for slug in slugs for c in [ServiceCategory.query.filter_by(slug=slug, is_published=True).first()] if c]
+    return render_template("public/resources.html", resource_categories=cats)
 
 
 @public_bp.route("/courses")
@@ -1395,6 +1400,14 @@ def blog(lang):
     posts = query.order_by(BlogPost.published_at.desc()).all()
     categories = sorted({p.category for p in BlogPost.query.filter_by(is_published=True).all() if p.category})
     return render_template("public/blog_list.html", posts=posts, categories=categories, active_category=category)
+
+
+@public_bp.route("/blog/5-documents-you-need-for-an-itin-application")
+def blog_post_redirect_itin_slug(lang):
+    """Temporary/internal redirect for this new site's OWN pre-launch slug correction (see
+    app/seed_seo_fixes.py ensure_itin_blog_slug_fix — the old slug never matched the post's real
+    title/content) — NOT a legacy Wix redirect, do not add this pattern to app/legacy_redirects.py."""
+    return redirect(url_for("public.blog_post", lang=lang, slug="what-is-an-itin-and-who-needs-one"), code=301)
 
 
 @public_bp.route("/blog/<slug>")

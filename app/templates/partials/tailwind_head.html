@@ -1,47 +1,8 @@
 <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo.png') }}">
-<script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+{# Compiled Tailwind build (see docs/TAILWIND_BUILD.md) — replaces the Play CDN script that used
+   to load https://cdn.tailwindcss.com?plugins=typography at runtime. Design tokens now live in
+   tailwind.config.js, the single source rebuilt into this file; nothing here should hardcode a
+   color/radius/shadow value again. #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css') }}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script>
-    /* OG design tokens — one source for colour / radius / shadow across the public site.
-       Component classes and Jinja macros live in static/css/custom.css and
-       templates/partials/ui.html and only consume these tokens. */
-    tailwind.config = {
-        theme: {
-            extend: {
-                fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
-                colors: {
-                    /* Deep navy — headings, navigation, dark surfaces, trust */
-                    brand: {
-                        50: '#eef1f6', 100: '#d7deea', 300: '#8b9bbd',
-                        500: '#2d3f61', 600: '#1c2c4a', 700: '#141f38',
-                        800: '#0f1829', 900: '#0a1120'
-                    },
-                    /* OG cyan — primary actions, selected states, icons, accents */
-                    accent: {
-                        50: '#e6fbff', 100: '#c6f4fe', 200: '#93e8fb', 400: '#3fd0f3', 500: '#12c0ee',
-                        600: '#0aa3cf', 700: '#0a83a8'
-                    },
-                    /* Very light cyan/blue — secondary surfaces, grouped cards */
-                    mist: {
-                        50: '#f4fbfd', 100: '#e8f6fb', 200: '#d3edf6', 300: '#b7e0ee'
-                    },
-                    /* Neutral light grey — section separation */
-                    fog: { 50: '#f7f9fb', 100: '#f0f3f7', 200: '#e4e9f0' },
-                    /* WhatsApp green — WhatsApp actions only */
-                    wa: { DEFAULT: '#25D366', 600: '#1fbd5a', 700: '#128C4A' },
-                    /* Warm gold — OG Academy sub-brand only */
-                    academy: {
-                        50: '#fdf6e8', 100: '#f7e6bb', 500: '#b8860b',
-                        600: '#9a6f09', 700: '#7c5907'
-                    }
-                },
-                borderRadius: { card: '1rem', panel: '1.25rem' },
-                boxShadow: {
-                    card: '0 1px 2px rgba(15,24,41,.04), 0 4px 14px -6px rgba(15,24,41,.10)',
-                    pop: '0 10px 30px -12px rgba(15,24,41,.25)'
-                }
-            }
-        }
-    }
-</script>

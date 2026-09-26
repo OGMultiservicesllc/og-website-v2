@@ -1802,3 +1802,19 @@ TRANSLATIONS["es"].update({
     "activate_mismatch": "Las contraseñas no coinciden.",
     "activate_success": "Tu cuenta ya está activa. ¡Bienvenido/a a OG Multiservices!",
 })
+
+# Pre-launch SEO fixes (2026-09-26) — Home title, ITIN blog CTA, Resources links
+TRANSLATIONS["en"].update({
+    "seo_home_title": "Taxes, ITIN, Certified Translations & Notary | OG Multiservices",
+    "blog_itin_cta_title": "Need help with your ITIN?",
+    "blog_itin_cta_body": "OG Multiservices is an IRS Certified Acceptance Agent — we can help you apply for or renew your ITIN without mailing your original documents.",
+    "blog_itin_cta_link": "Start your ITIN application",
+    "resources_links_title": "Popular Services",
+})
+TRANSLATIONS["es"].update({
+    "seo_home_title": "Taxes, ITIN, Traducciones Certificadas y Notaría | OG Multiservices",
+    "blog_itin_cta_title": "¿Necesitas ayuda con tu ITIN?",
+    "blog_itin_cta_body": "OG Multiservices es un Agente Certificado de Aceptación del IRS — podemos ayudarte a solicitar o renovar tu ITIN sin enviar tus documentos originales por correo.",
+    "blog_itin_cta_link": "Comienza tu solicitud de ITIN",
+    "resources_links_title": "Servicios Populares",
+})

@@ -11,5 +11,16 @@
         <div class="w-14 h-14 mx-auto rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center font-bold text-xl mb-4">OG</div>
         <p class="text-slate-600 max-w-md mx-auto">{{ t('resources_coming_soon') }}</p>
     </div>
+
+    {% if resource_categories %}
+    <div class="mt-12">
+        <h2 class="text-lg font-bold text-brand-800">{{ t('resources_links_title') }}</h2>
+        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {% for cat in resource_categories %}
+            <a href="{{ url_for(cat.endpoint, lang=lang) }}" class="rounded-xl border border-slate-100 p-4 text-sm font-medium text-slate-800 hover:border-accent-300 hover:text-accent-600 transition">{{ cat.title(lang) }}</a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 </section>
 {% endblock %}

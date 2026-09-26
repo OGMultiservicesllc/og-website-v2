@@ -183,4 +183,16 @@
 </section>
 {% endif %}
 </div>
+
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "Course",
+ "name": {{ course.title(lang)|tojson }},
+ "description": {{ (course.description(lang) or course.subtitle(lang) or '')|tojson }},
+ "url": {{ request.url|tojson }},
+ "inLanguage": {{ lang|tojson }},
+ "provider": {"@type": "Organization", "name": "OG Academy", "sameAs": {{ url_for('public.courses', lang=lang, _external=True)|tojson }}}
+ {%- if course.price_cents %},
+ "offers": {"@type": "Offer", "price": {{ ('%.2f' % (course.price_cents / 100))|tojson }}, "priceCurrency": "USD", "url": {{ request.url|tojson }}, "availability": "https://schema.org/InStock"}
+ {%- endif %}}
+</script>
 {% endblock %}

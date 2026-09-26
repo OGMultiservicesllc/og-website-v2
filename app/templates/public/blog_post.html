@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "partials/ui.html" import info_panel %}
 {% block title %}{{ post.title(lang) }} — OG Blog{% endblock %}
 {% set page_description = post.excerpt(lang) or t('seo_default_description') %}
 {% if post.cover_image %}{% set page_image = url_for('public.blog_asset', lang=lang, post_id=post.id, stored_path=post.cover_image, _external=True) %}{% endif %}
@@ -23,6 +24,12 @@
     <div class="prose prose-slate max-w-none">
         {{ post.content(lang)|safe }}
     </div>
+
+    {% if post.category == "ITIN" %}
+    <div class="mt-8">
+        {{ info_panel(t('blog_itin_cta_title'), (t('blog_itin_cta_body') ~ ' <a href="' ~ url_for('public.taxes_subpage', lang=lang, slug='itin-application') ~ '" class="font-semibold underline hover:no-underline">' ~ t('blog_itin_cta_link') ~ '</a>')|safe) }}
+    </div>
+    {% endif %}
 
     {% if post.media %}
     <div class="mt-10 space-y-8">
@@ -63,4 +70,17 @@
     </div>
 </section>
 {% endif %}
+
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "BlogPosting",
+ "headline": {{ post.title(lang)|tojson }},
+ "description": {{ (post.excerpt(lang) or '')|tojson }},
+ {% if post.cover_image %}"image": {{ url_for('public.blog_asset', lang=lang, post_id=post.id, stored_path=post.cover_image, _external=True)|tojson }},{% endif %}
+ {% if post.published_at %}"datePublished": {{ post.published_at.isoformat()|tojson }},{% endif %}
+ "dateModified": {{ (post.updated_at or post.published_at or post.created_at).isoformat()|tojson }},
+ "author": {"@type": {{ ("Person" if post.author_name else "Organization")|tojson }}, "name": {{ (post.author_name or "OG Multiservices LLC")|tojson }}},
+ "publisher": {"@type": "Organization", "name": "OG Multiservices LLC", "logo": {"@type": "ImageObject", "url": {{ logo_url(external=True)|tojson }}}},
+ "mainEntityOfPage": {"@type": "WebPage", "@id": {{ request.url|tojson }}},
+ "inLanguage": {{ lang|tojson }}}
+</script>
 {% endblock %}

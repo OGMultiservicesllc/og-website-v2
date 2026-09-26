@@ -1,0 +1,6 @@
+/* Source input for the compiled Tailwind build (see docs/TAILWIND_BUILD.md).
+   Everything else the site needs (component classes, image-slot crops, safe-area) lives in
+   custom.css, loaded separately — this file is Tailwind's own three layers only. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

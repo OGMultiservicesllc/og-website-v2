@@ -360,6 +360,9 @@ def ensure_seeded():
 
         seeded = ensure_ct() or seeded
         seeded = ensure_blog_categories() or seeded
+        from app.seed_seo_fixes import ensure_seo_fixes
+
+        seeded = ensure_seo_fixes() or seeded
         from app import notifications as notif
 
         notif.ensure_seed()
