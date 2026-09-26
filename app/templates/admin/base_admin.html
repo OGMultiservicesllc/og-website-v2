@@ -25,7 +25,7 @@
     <!-- Mobile top bar -->
     <div class="lg:hidden sticky top-0 z-40 flex items-center justify-between h-14 px-4 bg-[#0B1220] text-white">
         <a href="{{ url_for('admin.dashboard') }}" class="flex items-center gap-2">
-            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="OG" class="h-6 w-auto">
+            <img src="{{ admin_logo_url() }}" alt="OG" class="h-6 w-auto">
             <span class="font-bold text-sm">OG Admin</span>
         </a>
         <button id="admin-menu-btn" type="button" class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10" aria-label="Menu" aria-expanded="false">
@@ -41,7 +41,7 @@
            class="fixed lg:static inset-y-0 left-0 z-50 w-[17rem] shrink-0 bg-[#0B1220] text-slate-300 flex flex-col transform -translate-x-full lg:translate-x-0 transition-transform duration-200">
         <div class="hidden lg:flex items-center justify-between px-4 h-16 border-b border-white/10 shrink-0">
             <a href="{{ url_for('admin.dashboard') }}" class="flex items-center gap-2 min-w-0">
-                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="OG" class="h-7 w-auto shrink-0">
+                <img src="{{ admin_logo_url() }}" alt="OG" class="h-7 w-auto shrink-0">
                 <span id="admin-sidebar-brand-text" class="font-bold text-white text-sm truncate">OG Multiservices</span>
             </a>
             <button id="admin-collapse-btn" type="button" class="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-white/10 hover:text-white transition" aria-label="Collapse sidebar">

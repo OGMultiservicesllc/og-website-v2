@@ -4,8 +4,22 @@ from werkzeug.security import generate_password_hash
 from app.auth import admin_required, validate_csrf
 from app.blueprints.admin.routes import admin_bp
 from app.extensions import db
-from app.models import AdminUser, NOTIFICATION_EVENTS, NotificationSetting, SiteSettings
+from app.models import AdminUser, MediaAsset, NOTIFICATION_EVENTS, NotificationSetting, SiteSettings
 from app.uploads import delete_course_media, save_course_media
+
+#: The 4 new branding slots (2026-09-26, see docs/BRANDING.md) — each a nullable MediaAsset
+#: reference, submitted by the shared image_slot()/_media_modal.html picker as a hidden input
+#: named "<field>". Listed once here so the POST handler and the GET render context can never
+#: drift apart on which fields exist.
+BRANDING_MEDIA_FIELDS = ("admin_logo_media_id", "favicon_media_id", "email_logo_media_id", "social_logo_media_id")
+
+
+def _branding_assets(settings):
+    """{field_name: MediaAsset or None} for the current settings row — passed to settings.html so
+    each image_slot() can render its own preview."""
+    ids = {f: getattr(settings, f) for f in BRANDING_MEDIA_FIELDS}
+    assets = {a.id: a for a in MediaAsset.query.filter(MediaAsset.id.in_([v for v in ids.values() if v])).all()}
+    return {f: assets.get(v) for f, v in ids.items()}
 
 
 def _notification_settings_rows():
@@ -44,17 +58,20 @@ def settings():
             except ValueError as exc:
                 flash(str(exc), "error")
                 return render_template("admin/settings.html", settings=settings, admin_users=AdminUser.query.order_by(AdminUser.created_at).all(),
-                                      notification_rows=_notification_settings_rows())
+                                      notification_rows=_notification_settings_rows(), branding_assets=_branding_assets(settings))
             if settings.logo_filename:
                 delete_course_media(settings.logo_filename)
             settings.logo_filename = new_logo
+
+        for field in BRANDING_MEDIA_FIELDS:
+            setattr(settings, field, request.form.get(field, type=int) or None)
 
         db.session.commit()
         flash("Settings saved.", "success")
         return redirect(url_for("admin.settings"))
 
     return render_template("admin/settings.html", settings=settings, admin_users=AdminUser.query.order_by(AdminUser.created_at).all(),
-                          notification_rows=_notification_settings_rows())
+                          notification_rows=_notification_settings_rows(), branding_assets=_branding_assets(settings))
 
 
 @admin_bp.route("/settings/notifications", methods=["POST"])

@@ -1,4 +1,5 @@
 {% extends "admin/base_admin.html" %}
+{% from "admin/_media_slot.html" import image_slot %}
 {% block title %}Settings{% endblock %}
 
 {% block content %}
@@ -41,16 +42,44 @@
     </div>
 
     <div class="pt-4 border-t border-slate-100">
-        <h2 class="font-semibold text-slate-900 mb-3">Branding — Logo</h2>
-        <p class="text-xs text-slate-500 mb-3">Replaces the logo shown in the header, footer, and mobile menu across the whole site.</p>
-        <div class="flex flex-wrap items-center gap-4">
-            <img src="{{ logo_url() }}" alt="Current logo" class="h-12 w-auto bg-slate-50 rounded-lg border border-slate-100 p-1.5">
-            <input type="file" name="logo" accept="image/*"
-                   class="min-w-0 max-w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 file:px-3 file:py-2 file:font-medium">
+        <h2 class="font-semibold text-slate-900 mb-3">Branding</h2>
+        <p class="text-xs text-slate-500 mb-4">Each of these controls a different part of the application — see the caption under each one. Leaving one unset falls back to the Primary Website Logo (or the built-in default), so nothing changes anywhere until you deliberately pick something.</p>
+
+        <div class="mb-5">
+            <p class="text-sm font-medium text-slate-800 mb-1">Primary Website Logo</p>
+            <p class="text-xs text-slate-500 mb-3">Public site header, footer, mobile menu, and the customer My Account header.</p>
+            <div class="flex flex-wrap items-center gap-4">
+                <img src="{{ logo_url() }}" alt="Current logo" class="h-12 w-auto bg-slate-50 rounded-lg border border-slate-100 p-1.5">
+                <input type="file" name="logo" accept="image/*"
+                       class="min-w-0 max-w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 file:px-3 file:py-2 file:font-medium">
+            </div>
+            {% if settings.logo_filename %}
+            <button type="submit" form="logo-remove-form" class="mt-2 text-sm font-medium text-red-500 hover:text-red-700">Remove custom logo (use default)</button>
+            {% endif %}
         </div>
-        {% if settings.logo_filename %}
-        <button type="submit" form="logo-remove-form" class="mt-2 text-sm font-medium text-red-500 hover:text-red-700">Remove custom logo (use default)</button>
-        {% endif %}
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <p class="text-sm font-medium text-slate-800 mb-1">Admin / App Logo</p>
+                <p class="text-xs text-slate-500 mb-2">The Admin dashboard sidebar and the Admin login page. Falls back to the Primary Website Logo.</p>
+                {{ image_slot("admin_logo_media_id", "Admin / App Logo", branding_assets.admin_logo_media_id, "4:3", hint="Falls back to the Primary Website Logo above when not set.") }}
+            </div>
+            <div>
+                <p class="text-sm font-medium text-slate-800 mb-1">Favicon</p>
+                <p class="text-xs text-slate-500 mb-2">The browser-tab icon, shown on every public, Admin, and customer-account page. PNG recommended (square, at least 64×64px).</p>
+                {{ image_slot("favicon_media_id", "Favicon", branding_assets.favicon_media_id, "4:3", hint="Falls back to the built-in default when not set.") }}
+            </div>
+            <div>
+                <p class="text-sm font-medium text-slate-800 mb-1">Email Logo</p>
+                <p class="text-xs text-slate-500 mb-2">Shown at the top of every transactional email (activation, receipts, case updates). Falls back to the Primary Website Logo.</p>
+                {{ image_slot("email_logo_media_id", "Email Logo", branding_assets.email_logo_media_id, "4:3", hint="Falls back to the Primary Website Logo above when not set.") }}
+            </div>
+            <div>
+                <p class="text-sm font-medium text-slate-800 mb-1">Social / Organization Logo</p>
+                <p class="text-xs text-slate-500 mb-2">Used when a page is shared on social media (Open Graph image) and in the site's Organization/Article structured data. Falls back to the Primary Website Logo.</p>
+                {{ image_slot("social_logo_media_id", "Social / Organization Logo", branding_assets.social_logo_media_id, "4:3", hint="Falls back to the Primary Website Logo above when not set.") }}
+            </div>
+        </div>
     </div>
 
     <div class="pt-4 border-t border-slate-100">

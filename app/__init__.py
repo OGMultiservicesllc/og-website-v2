@@ -274,6 +274,7 @@ def create_app(config_class=Config):
             return action_count(student, lang)
 
         from app.admin_case_nav import admin_case_url
+        from app.branding import admin_logo_url, favicon_url, social_logo_url
         from app.seo import current_robots_directive, should_block_search_indexing
 
         return {
@@ -284,6 +285,9 @@ def create_app(config_class=Config):
             "admin_case_url": admin_case_url,
             "seo_robots": current_robots_directive(),
             "seo_block_indexing": should_block_search_indexing(),
+            "admin_logo_url": admin_logo_url,
+            "favicon_url": favicon_url,
+            "social_logo_url": social_logo_url,
             "admin_alert_count": admin_alert_count,
             "admin_recent_notifications": admin_recent_notifications,
             "site_asset": site_asset,

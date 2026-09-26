@@ -24,14 +24,14 @@
     <meta property="og:description" content="{{ _description }}">
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ request.url }}">
-    <meta property="og:image" content="{{ page_image if page_image is defined else logo_url(external=True) }}">
+    <meta property="og:image" content="{{ page_image if page_image is defined else social_logo_url() }}">
     <meta name="twitter:card" content="summary_large_image">
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
         "@type": "ProfessionalService",
         "name": "OG Multiservices LLC",
-        "image": "{{ logo_url(external=True) }}",
+        "image": "{{ social_logo_url() }}",
         "telephone": "{{ biz.PHONE_TEL }}",
         "email": "{{ biz.EMAIL }}",
         "founder": {"@type": "Person", "name": "{{ biz.FOUNDER_NAME }}"},

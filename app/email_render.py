@@ -46,6 +46,8 @@ class EmailContent:
 
 
 def render_email(content: EmailContent, lang: str, *, public_url: str):
+    from app.branding import email_logo_abs_url
+
     html = render_template(
         "emails/base.html",
         lang=lang,
@@ -58,6 +60,7 @@ def render_email(content: EmailContent, lang: str, *, public_url: str):
         footnote=content.footnote,
         biz=business_info,
         site_url=public_url,
+        logo_url=email_logo_abs_url(public_url),
     )
 
     lines = [content.heading, ""]

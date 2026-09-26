@@ -79,7 +79,7 @@
  {% if post.published_at %}"datePublished": {{ post.published_at.isoformat()|tojson }},{% endif %}
  "dateModified": {{ (post.updated_at or post.published_at or post.created_at).isoformat()|tojson }},
  "author": {"@type": {{ ("Person" if post.author_name else "Organization")|tojson }}, "name": {{ (post.author_name or "OG Multiservices LLC")|tojson }}},
- "publisher": {"@type": "Organization", "name": "OG Multiservices LLC", "logo": {"@type": "ImageObject", "url": {{ logo_url(external=True)|tojson }}}},
+ "publisher": {"@type": "Organization", "name": "OG Multiservices LLC", "logo": {"@type": "ImageObject", "url": {{ social_logo_url()|tojson }}}},
  "mainEntityOfPage": {"@type": "WebPage", "@id": {{ request.url|tojson }}},
  "inLanguage": {{ lang|tojson }}}
 </script>

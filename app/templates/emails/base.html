@@ -13,7 +13,11 @@
 
 <tr>
 <td style="background-color:#0b1d3a; padding:24px 32px;">
+{% if logo_url %}
+<img src="{{ logo_url }}" alt="OG Multiservices LLC" height="28" style="height:28px; width:auto; display:block; border:0;">
+{% else %}
 <span style="display:inline-block; font-size:18px; font-weight:700; color:#ffffff; letter-spacing:0.3px;">OG Multiservices LLC</span>
+{% endif %}
 </td>
 </tr>
 
