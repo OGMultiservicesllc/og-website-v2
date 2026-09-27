@@ -93,6 +93,10 @@ def create_app(config_class=Config):
 
     register_legacy_redirects(app)
 
+    from app.url_normalize import register_trailing_slash_normalization
+
+    register_trailing_slash_normalization(app)
+
     @app.route("/")
     def root_redirect():
         return redirect(f"/{DEFAULT_LANGUAGE}/", code=301)
