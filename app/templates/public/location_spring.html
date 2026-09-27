@@ -16,7 +16,7 @@
 <!-- Hero -->
 <section class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-14">
     <span class="inline-flex items-center rounded-full bg-slate-100 text-slate-700 text-xs font-bold px-3 py-1">{{ t('loc_spring_badge') }}</span>
-    <h1 class="mt-4 text-3xl sm:text-4xl font-extrabold text-brand-800 leading-tight">{{ t('loc_spring_title') }}</h1>
+    <h1 class="mt-4 text-3xl sm:text-4xl font-extrabold text-brand-800 leading-tight">{{ t('loc_spring_h1') }}</h1>
     <p class="mt-4 text-lg text-slate-600 max-w-2xl leading-relaxed">{{ t('loc_spring_intro') }}</p>
     <p class="mt-3 text-sm text-slate-400 italic">{{ t('loc_spring_not_storefront') }}</p>
 </section>
@@ -31,7 +31,7 @@
         </div>
         <div>
             <p class="text-xs font-semibold uppercase tracking-wide text-accent-300 mb-2">{{ t('contact_hours') }}</p>
-            <p class="font-medium">{{ t('footer_hours_value') }}</p>
+            <p class="font-medium">{{ t('loc_spring_hours_value') }}</p>
             <p class="text-slate-400 text-sm">{{ t('footer_hours_closed') }}</p>
         </div>
         <div>
@@ -44,21 +44,40 @@
     </div>
 </section>
 
-<!-- Services available here -->
-<section class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-14">
-    <h2 class="text-2xl font-bold text-brand-800 mb-8 text-center">{{ t('loc_spring_services_title') }}</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {% for s in services %}
-        <a href="{{ s.url }}" class="rounded-xl border border-slate-100 p-4 text-sm font-medium text-slate-800 hover:border-accent-300 hover:text-accent-600 transition">{{ s.title }}</a>
+<!-- Primary services (Google Business Profile order: Translation, Tax & ITIN, Notary) -->
+<section class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
+    <h2 class="text-2xl font-bold text-brand-800 mb-8 text-center">{{ t('loc_spring_primary_title') }}</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {% for c in links.primary %}
+        <a href="{{ c.url }}" class="rounded-2xl border border-slate-100 p-6 hover:border-accent-300 hover:shadow-card transition">
+            <span class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-accent-50 text-accent-600 mb-3">{{ icon(c.icon, 'w-5 h-5') }}</span>
+            <p class="font-bold text-brand-800">{{ c.title }}</p>
+            {% if c.text %}<p class="mt-1 text-sm text-slate-500 leading-relaxed">{{ c.text }}</p>{% endif %}
+        </a>
         {% endfor %}
     </div>
 </section>
 
-<!-- Nearby areas -->
+<!-- Secondary services (remote-available to Texas clients) -->
+{% if links.secondary %}
+<section class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-14">
+    <h2 class="text-lg font-bold text-brand-800 mb-5 text-center">{{ t('loc_spring_secondary_title') }}</h2>
+    <div class="flex flex-wrap justify-center gap-3">
+        {% for c in links.secondary %}
+        <a href="{{ c.url }}" class="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:border-accent-300 hover:text-accent-600 transition">
+            {{ icon(c.icon, 'w-4 h-4') }} {{ c.title }}
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<!-- Local area -->
 <section class="bg-brand-50/60 py-14">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <h2 class="text-xl font-bold text-brand-800 mb-4">{{ t('loc_spring_areas_title') }}</h2>
-        <p class="text-slate-700">{{ loc.service_cities|join(', ') }}, TX</p>
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <h2 class="text-xl font-bold text-brand-800 mb-4">{{ t('loc_spring_local_title') }}</h2>
+        <p class="text-slate-700 leading-relaxed">{{ t('loc_spring_local_body') }}</p>
+        <p class="mt-4 text-sm text-slate-500">{{ t('loc_spring_areas_secondary_intro') }} {{ loc.service_cities[2:]|join(', ') }}, TX.</p>
     </div>
 </section>
 
@@ -103,7 +122,7 @@
         "@type": "OpeningHoursSpecification",
         "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
         "opens": "09:00",
-        "closes": "17:00"
+        "closes": "16:00"
     },
     "areaServed": [
         {% for city in loc.service_cities %}{"@type": "City", "name": {{ (city ~ ', TX')|tojson }}}{{ ", " if not loop.last else "" }}{% endfor %}

@@ -332,6 +332,33 @@ def services_in_scope(lang, flag):
     return [{"title": s.title(lang), "url": url_for(s.category.subpage_endpoint, lang=lang, slug=s.slug)} for s in rows if s.category.subpage_endpoint]
 
 
+# Curated for the Spring, TX location page (2026-09-26): the Google Business Profile for this
+# location lists Translation as the PRIMARY category and Tax preparation / Notary public as
+# additional categories, in that order — this deliberately overrides the generic
+# ServiceCategory.sort_order (which is Taxes-first, tuned for the Paterson/NJ side of the site)
+# so the Spring page reflects the real GBP positioning without touching sitewide ordering.
+SPRING_PRIMARY_CATEGORY_SLUGS = ["certified-translations", "taxes-itin", "notary"]
+# Secondary categories a Texas client can still reach OG for, even without an in-person Spring
+# office visit (document prep / apostille are remote-nationwide; Document & Office Services'
+# in-person items — passport photos — are also tx_in_person, see app/business_info.py).
+SPRING_SECONDARY_CATEGORY_SLUGS = ["immigration", "apostille", "document-office-services"]
+
+
+def _spring_category_link(cat, lang):
+    return {"title": cat.title(lang), "text": cat.short(lang), "url": url_for(cat.endpoint, lang=lang), "icon": cat.icon}
+
+
+def spring_service_links(lang):
+    """Category-level canonical links for the Spring, TX location page: primary (Translations,
+    Taxes & ITIN, Notary — GBP order) and secondary (Immigration, Apostille, Document & Office
+    Services). Missing/unpublished categories are skipped, never a broken link."""
+    cats = {c.slug: c for c in ServiceCategory.query.filter_by(is_published=True).all()}
+    return {
+        "primary": [_spring_category_link(cats[s], lang) for s in SPRING_PRIMARY_CATEGORY_SLUGS if s in cats],
+        "secondary": [_spring_category_link(cats[s], lang) for s in SPRING_SECONDARY_CATEGORY_SLUGS if s in cats],
+    }
+
+
 def home_context(lang):
     """Everything the Home page needs, all from the CMS records."""
     from app.models import Course

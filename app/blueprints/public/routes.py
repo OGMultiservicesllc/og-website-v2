@@ -55,7 +55,7 @@ def check_lang(endpoint, values):
         abort(404)
 
 
-from app.service_public import get_category, home_context, render_category, render_service, services_in_scope
+from app.service_public import get_category, home_context, render_category, render_service, services_in_scope, spring_service_links
 
 
 @public_bp.route("/")
@@ -156,7 +156,7 @@ def location_paterson(lang):
 
 @public_bp.route("/locations/spring-tx")
 def location_spring(lang):
-    return render_template("public/location_spring.html", services=services_in_scope(lang, "tx_in_person"))
+    return render_template("public/location_spring.html", links=spring_service_links(lang))
 
 
 @public_bp.route("/services/immigration/inquiry", methods=["POST"])

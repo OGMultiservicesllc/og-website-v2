@@ -116,9 +116,12 @@
         <h2 class="font-bold text-brand-800 text-[15px] mb-1.5">{{ t('svc_areas_title') }}</h2>
         {% if svc.remote_nationwide and (svc.nj_in_person or svc.tx_in_person) %}
             <p>{{ t('svc_areas_both_bases_nationwide') if (svc.nj_in_person and svc.tx_in_person) else t('svc_areas_nj_base_nationwide') }}</p>
+            {% if svc.remote_nationwide and svc.nj_in_person and not svc.tx_in_person %}
+            <p class="mt-1">{{ t('svc_areas_tx_remote_note') }}</p>
+            {% endif %}
             <p class="mt-2 flex flex-wrap gap-x-3 text-xs font-medium">
                 {% if svc.nj_in_person %}<a href="{{ url_for('public.location_paterson', lang=lang) }}" class="text-accent-700 hover:underline">{{ t('svc_areas_paterson_link') }}</a>{% endif %}
-                {% if svc.tx_in_person %}<a href="{{ url_for('public.location_spring', lang=lang) }}" class="text-accent-700 hover:underline">{{ t('svc_areas_spring_link') }}</a>{% endif %}
+                {% if svc.tx_in_person or (svc.remote_nationwide and svc.nj_in_person and not svc.tx_in_person) %}<a href="{{ url_for('public.location_spring', lang=lang) }}" class="text-accent-700 hover:underline">{{ t('svc_areas_spring_link') }}</a>{% endif %}
             </p>
         {% else %}
             {% if svc.nj_in_person %}<p><span class="font-medium text-slate-700">{{ t('svc_areas_nj_intro') }}</span> {{ biz.NJ_SERVICE_CITIES|join(', ') }}, NJ. <a href="{{ url_for('public.location_paterson', lang=lang) }}" class="text-accent-700 hover:underline">{{ t('svc_areas_paterson_link') }}</a></p>{% endif %}

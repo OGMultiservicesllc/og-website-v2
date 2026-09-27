@@ -66,8 +66,25 @@ def ensure_home_hero_alt():
     return True
 
 
+def ensure_consent_to_travel_tx_scope():
+    """Consent to Travel Authorization for Minors is a notarized document, exactly like General
+    Document Notarization (`notarization`, already `tx_in_person=True`) — but it was never flagged
+    as available in the Spring/Texas service area. Confirmed as a legitimate Texas offering during
+    the Spring, TX local-SEO pass (2026-09-26); only flips the flag if it is still unset, so a later
+    admin change is never overwritten."""
+    from app.models import Service
+
+    svc = Service.query.filter_by(slug="consent-to-travel-authorization").first()
+    if not svc or svc.tx_in_person:
+        return False
+    svc.tx_in_person = True
+    db.session.commit()
+    return True
+
+
 def ensure_seo_fixes():
     changed = ensure_nj_dl_hub_seo_title()
     changed = ensure_itin_blog_slug_fix() or changed
     changed = ensure_home_hero_alt() or changed
+    changed = ensure_consent_to_travel_tx_scope() or changed
     return changed

@@ -78,6 +78,9 @@ CASH_APP_RECIPIENT = BUSINESS_NAME
 
 HOURS_DISPLAY = "Mon–Fri 9:00 AM – 5:00 PM"
 HOURS_CLOSED_DISPLAY = "Sat–Sun Closed"
+# Texas hours per the OG Multiservices Google Business Profile for Spring, TX (confirmed
+# 2026-09-26) — genuinely different from the shared Paterson/company hours above, not a typo.
+HOURS_DISPLAY_TX = "Mon–Fri 9:00 AM – 4:00 PM"
 
 # Back-compat: several templates (footer, contact page, the old sitewide
 # JSON-LD) already reference these directly as "the" business address.
@@ -94,7 +97,10 @@ NJ_SERVICE_CITIES = [
     "Wayne", "Hackensack", "Garfield", "Totowa", "Lodi", "Fair Lawn",
 ]
 TX_SERVICE_CITIES = [
-    "Spring", "Houston", "The Woodlands", "Conroe", "Tomball", "Cypress", "Klein",
+    # Order matches the OG Multiservices Google Business Profile's own service-area list for
+    # Texas (confirmed 2026-09-26): Spring/Klein are the primary local focus, the rest are
+    # secondary Greater Houston-area cities — never re-sort this alphabetically.
+    "Spring", "Klein", "Tomball", "The Woodlands", "Cypress", "Houston", "Humble", "Conroe",
 ]
 
 LOCATIONS = {
@@ -124,7 +130,7 @@ LOCATIONS = {
         "phone_display": PHONE_DISPLAY,
         "phone_tel": PHONE_TEL,
         "whatsapp_link": WHATSAPP_LINK,
-        "hours_display": HOURS_DISPLAY,
+        "hours_display": HOURS_DISPLAY_TX,
         "hours_closed_display": HOURS_CLOSED_DISPLAY,
         "service_cities": TX_SERVICE_CITIES,
     },
