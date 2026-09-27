@@ -4,6 +4,7 @@ from datetime import datetime
 from flask import abort, flash, redirect, render_template, request, url_for
 
 from app.auth import admin_required, validate_csrf
+from app.blog_analytics import bulk_view_counts, post_stats
 from app.blueprints.admin.routes import admin_bp
 from app.extensions import db
 from app.models import BLOG_CATEGORIES, BlogMedia, BlogPost
@@ -48,7 +49,8 @@ def _swap_sort_order(siblings, item, direction):
 @admin_required
 def blog_list():
     posts = BlogPost.query.order_by(BlogPost.created_at.desc()).all()
-    return render_template("admin/blog_list.html", posts=posts)
+    view_counts = bulk_view_counts([p.id for p in posts])
+    return render_template("admin/blog_list.html", posts=posts, view_counts=view_counts)
 
 
 @admin_bp.route("/blog/new", methods=["GET", "POST"])
@@ -103,6 +105,7 @@ def blog_new():
 @admin_required
 def blog_edit(post_id):
     post = BlogPost.query.get_or_404(post_id)
+    stats = post_stats(post.id)
 
     if request.method == "POST":
         if not validate_csrf(request.form.get("csrf_token")):
@@ -112,10 +115,10 @@ def blog_edit(post_id):
         category = request.form.get("category", "").strip()
         if not title_en or not title_es:
             flash("Title (EN and ES) is required.", "error")
-            return render_template("admin/blog_form.html", post=post, categories=BLOG_CATEGORIES)
+            return render_template("admin/blog_form.html", post=post, categories=BLOG_CATEGORIES, stats=stats)
         if category not in BLOG_CATEGORIES:
             flash("Choose a category.", "error")
-            return render_template("admin/blog_form.html", post=post, categories=BLOG_CATEGORIES)
+            return render_template("admin/blog_form.html", post=post, categories=BLOG_CATEGORIES, stats=stats)
 
         cover = request.files.get("cover_image")
         if cover and cover.filename:
@@ -123,7 +126,7 @@ def blog_edit(post_id):
                 new_cover = save_course_media(cover, "image")
             except ValueError as exc:
                 flash(str(exc), "error")
-                return render_template("admin/blog_form.html", post=post, categories=BLOG_CATEGORIES)
+                return render_template("admin/blog_form.html", post=post, categories=BLOG_CATEGORIES, stats=stats)
             if post.cover_image:
                 delete_course_media(post.cover_image)
             post.cover_image = new_cover
@@ -144,7 +147,7 @@ def blog_edit(post_id):
         flash("Post updated.", "success")
         return redirect(url_for("admin.blog_edit", post_id=post.id))
 
-    return render_template("admin/blog_form.html", post=post, categories=BLOG_CATEGORIES)
+    return render_template("admin/blog_form.html", post=post, categories=BLOG_CATEGORIES, stats=stats)
 
 
 @admin_bp.route("/blog/<int:post_id>/cover/delete", methods=["POST"])

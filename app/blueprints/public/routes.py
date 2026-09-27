@@ -1419,6 +1419,9 @@ def blog_post(lang, slug):
         .limit(3)
         .all()
     )
+    from app.blog_analytics import record_view
+
+    record_view(post)  # first-party view tracking, admin-only display — never raises, see app/blog_analytics.py
     return render_template("public/blog_post.html", post=post, related=related)
 
 
