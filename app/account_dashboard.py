@@ -28,6 +28,11 @@ def _portal_helpers():
 DOMAIN_TAX = "tax_itin"
 DOMAIN_IMMIGRATION = "immigration"
 
+#: An entry's `_entry_state()` in this set counts as "done" for both the Services page's
+#: active/completed split and the Home stat row's "Active Services" count — one definition,
+#: reused in both places rather than duplicated.
+DONE_STATES = {"completed", "closed", "archived", "accepted"}
+
 
 def _safe(fn, *args, default=None, **kw):
     """Run one aggregation step; on any unexpected error, log it and degrade to `default` instead of a 500."""
@@ -405,7 +410,6 @@ def services_data(student, lang):
     all_entries = _sort_entries(orphan_entries + entries)
 
     needs_attention = [e for e in all_entries if e["is_action"]]
-    done_states = {"completed", "closed", "archived", "accepted"}
     rest = [e for e in all_entries if not e["is_action"]]
 
     families = []
@@ -414,8 +418,8 @@ def services_data(student, lang):
         if not fam_entries:
             continue
         families.append({"key": key, "title": title_es if lang == "es" else title_en, "icon": icon,
-                         "active": [e for e in fam_entries if _entry_state(e) not in done_states],
-                         "completed": [e for e in fam_entries if _entry_state(e) in done_states]})
+                         "active": [e for e in fam_entries if _entry_state(e) not in DONE_STATES],
+                         "completed": [e for e in fam_entries if _entry_state(e) in DONE_STATES]})
 
     categories = ServiceCategory.query.filter_by(is_published=True).order_by(ServiceCategory.sort_order, ServiceCategory.id).all()
     return {"needs_attention": needs_attention, "families": families, "categories": categories}
@@ -480,3 +484,110 @@ def messages_data(student, lang):
                 msgs.append({"text": f"{title}: {r.review_message}", "at": r.reviewed_at or r.updated_at, "href": _url("account.my_case_detail", lang=lang, case_id=case.id) + "#documents", "title": type_title(case.case_type, lang)})
     msgs.sort(key=lambda m: m["at"] or datetime.min, reverse=True)
     return msgs
+
+
+# ------------------------------------------------------------------ Home stat row + Recent Activity (2026-09-27
+# My Account visual redesign). Both are pure presentation over data every other function on this page already
+# reads — no new state, no new queries beyond what's already needed for Home/Services/Payments/Courses.
+def stat_counts(student, lang, home):
+    """The four tiles at the top of Home. Every number is real:
+      - active_services: cases/orphan applications not yet in a DONE_STATES status
+      - documents: total Document Vault requirements across the customer's cases (same number
+        already shown as "Documents you sent" elsewhere)
+      - payments: total Charges ever created for this customer (payable + paid + history)
+      - courses: Academy enrollments that are currently active (not expired/revoked)
+    `home` is the already-computed `home_data()` dict, reused rather than re-queried."""
+    from app import payments_dashboard
+    from app.blueprints.account.portal_routes import course_cards
+    from app.models import Charge
+
+    cases = Case.query.filter_by(customer_id=student.id).all()
+    orphan_count = FormSubmission.query.filter_by(student_id=student.id, case_id=None).count()
+    active_cases = sum(1 for c in cases if c.status not in DONE_STATES)
+    payments_total = _safe(lambda: Charge.query.filter_by(customer_id=student.id).count(), default=0)
+    courses_active = _safe(lambda: sum(1 for c in course_cards(student, lang) if c["enrollment"].is_active), default=0)
+    return {
+        "active_services": active_cases + orphan_count,
+        "documents": home.get("docs_total", 0),
+        "payments": payments_total,
+        "courses": courses_active,
+    }
+
+
+def _entry_group_key(e):
+    """What "the same service" means for an activity event, so repeats of it can be collapsed (item 37,
+    2026-09-27 UX fix). A case's own type (e.g. every completed Naturalization case groups together); an
+    orphan application groups by its form, since it has no case."""
+    if e.get("case") is not None:
+        return ("case", e["case"].case_type)
+    if e.get("sub") is not None:
+        return ("application", e["sub"].form_id)
+    return ("other", e.get("title"))
+
+
+def _entry_activity_events(entries):
+    events = []
+    for e in entries:
+        if not e.get("updated_at"):
+            continue
+        events.append({"kind": "status", "text": f"{e['title']}: {e['label']}", "at": e["updated_at"], "href": e["view_url"],
+                       "tone": e.get("tone"), "is_action": bool(e.get("is_action")), "group_key": _entry_group_key(e)})
+    return events
+
+
+def _cap_repetitive_status_events(events):
+    """Item 37 (2026-09-27 UX fix — acct_suite.py test L): several idle/completed cases of the same
+    service must never crowd Recent Activity with repeated, low-value status lines (e.g. 4 completed
+    Naturalization cases each contributing their own "Naturalization: Completed" row). A DONE,
+    no-longer-actionable case is genuinely newsworthy on its own — but once there is more than one
+    completed case of the SAME service, repeating that same fact several times is the flooding this
+    exists to stop (the family card section elsewhere on Home already represents a few of them), so the
+    whole repeated group is left out of Recent Activity rather than picking one arbitrary survivor.
+    Action-required and still-in-progress events are never capped, so nothing genuinely important is
+    ever hidden. Messages and payments are untouched (each is already its own real, non-repeating
+    event)."""
+    done_group_counts = {}
+    for e in events:
+        if e["kind"] == "status" and not e["is_action"] and e.get("tone") == "done":
+            done_group_counts[e["group_key"]] = done_group_counts.get(e["group_key"], 0) + 1
+    out = []
+    for e in events:
+        if (e["kind"] == "status" and not e["is_action"] and e.get("tone") == "done"
+                and done_group_counts.get(e["group_key"], 0) > 1):
+            continue
+        out.append(e)
+    return out
+
+
+def recent_activity(student, lang, limit=5):
+    """A real, chronological "what's happened lately" feed — merged from data every other Home/
+    Payments/Messages function already computes, never a fabricated event. Sources: a case/
+    application's own last status change (updated_at), an OG message (SubmissionNote / reopen /
+    tax message), and a completed payment. Repeated completed-case status lines of the same service
+    are collapsed to their most recent one (`_cap_repetitive_status_events`) before capping to `limit`,
+    most recent first — so a customer with several old completed cases still sees real variety instead
+    of one service flooding the feed."""
+    from app import payments_dashboard
+
+    cases = Case.query.filter_by(customer_id=student.id).all()
+    orphan_subs = FormSubmission.query.filter_by(student_id=student.id, case_id=None).all()
+    entries = [x for x in (_normalize_case(c, lang) for c in cases) if x is not None]
+    orphan_entries = [x for x in (_safe(_app_entry, s, lang) for s in orphan_subs) if x is not None]
+    events = _entry_activity_events(entries + orphan_entries)
+
+    for m in _safe(messages_data, student, lang, default=[]):
+        events.append({"kind": "message", "text": m["text"], "at": m["at"], "href": m["href"], "is_action": False, "group_key": None})
+
+    pay_data = _safe(payments_dashboard.data, student, lang, default={"history": []})
+    en = lang != "es"
+    for p in pay_data.get("history", []):
+        if p["payment"].status != "completed":
+            continue
+        label = f"{'Payment received' if en else 'Pago recibido'}: {p['service']} ({p['amount']})"
+        events.append({"kind": "payment", "text": label, "at": p["date"], "href": p["receipt_url"], "is_action": False, "group_key": None})
+
+    from datetime import datetime as _dt
+
+    events.sort(key=lambda x: x["at"] or _dt.min, reverse=True)
+    events = _cap_repetitive_status_events(events)
+    return events[:limit]

@@ -25,31 +25,127 @@
 {% endmacro %}
 
 {% block account_body %}
-    <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-brand-800">{{ 'Hi' if en else 'Hola' }}, {{ student.name.split(' ')[0] }}! 👋</h1>
-    <p class="mt-1 text-slate-500 text-[14px] sm:text-[15px]">{{ "Here's what's happening with your services." if en else 'Esto es lo que está pasando con tus servicios.' }}</p>
+    <div class="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
+        <div class="lg:w-3/4">
+            <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-brand-800">{{ 'Welcome back,' if en else 'Bienvenido(a) de nuevo,' }} {{ student.name.split(' ')[0] }} 👋</h1>
+            <p class="mt-1.5 text-slate-500 text-[15px] sm:text-base">{{ "Here's an overview of your activity with OG Multiservices." if en else 'Este es un resumen de tu actividad con OG Multiservices.' }}</p>
+        </div>
+        <div class="lg:w-1/4 lg:shrink-0 flex items-center gap-3 rounded-2xl border border-slate-100 bg-white shadow-card pl-3.5 pr-4 py-3">
+            {% if student.photo_filename %}
+            <img src="{{ url_for('account.photo', lang=lang, v=student.photo_filename[-8:]) }}" alt="" class="w-11 h-11 rounded-full object-cover border border-slate-200 shrink-0">
+            {% else %}
+            <span class="w-11 h-11 rounded-full bg-brand-800 text-white flex items-center justify-center text-[15px] font-bold shrink-0" aria-hidden="true">{{ student.initials }}</span>
+            {% endif %}
+            <div class="min-w-0 flex-1">
+                <p class="font-bold text-brand-800 text-[14px] leading-snug truncate">{{ student.name }}</p>
+                {% if student.created_at %}<p class="text-[12px] text-slate-500 leading-snug">{{ 'Customer since' if en else 'Cliente desde' }} {{ student.created_at.strftime('%b %Y') }}</p>{% endif %}
+            </div>
+            <a href="{{ url_for('account.profile', lang=lang) }}" class="shrink-0 ml-1 text-[12.5px] font-bold text-accent-700 hover:underline">{{ 'Edit' if en else 'Editar' }}</a>
+        </div>
+    </div>
+
+    <!-- Stat row: every number is real — see app/account_dashboard.py stat_counts() -->
+    <div class="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        {% set stat_tiles = [
+            ('grid', stats.active_services, 'Active Services' if en else 'Servicios Activos', url_for('account.services', lang=lang)),
+            ('documents', stats.documents, 'Documents' if en else 'Documentos', url_for('account.documents', lang=lang)),
+            ('card', stats.payments, 'Payments' if en else 'Pagos', url_for('account.payments', lang=lang)),
+            ('academy', stats.courses, 'Courses' if en else 'Cursos', url_for('account.courses', lang=lang)),
+        ] %}
+        {% for ic, value, label, href in stat_tiles %}
+        <a href="{{ href }}" class="rounded-card bg-white border border-slate-100 shadow-card p-4 sm:p-5 lg:p-6 flex items-center gap-3 sm:gap-4 hover:border-accent-300 hover:shadow-pop transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500">
+            <span class="w-11 h-11 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-2xl bg-mist-100 text-accent-600 flex items-center justify-center shrink-0" aria-hidden="true">{{ icon(ic, 'w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7') }}</span>
+            <div class="min-w-0">
+                <p class="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-brand-800 leading-none">{{ value }}</p>
+                <p class="mt-1.5 text-[12px] sm:text-[13.5px] font-semibold text-slate-500 truncate">{{ label }}</p>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
 
     {% if actions %}
-    <div class="mt-5">
-        <h2 class="text-xs font-bold uppercase tracking-wider text-amber-800 mb-2">{{ ('Action Required — %d thing%s' % (actions|length, '' if actions|length == 1 else 's')) if en else ('Requiere Acción — %d cosa%s' % (actions|length, '' if actions|length == 1 else 's')) }}</h2>
-        <ul class="space-y-2">
+    <div class="mt-8">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-amber-800 mb-3">{{ ('Action Required — %d thing%s' % (actions|length, '' if actions|length == 1 else 's')) if en else ('Requiere Acción — %d cosa%s' % (actions|length, '' if actions|length == 1 else 's')) }}</h2>
+        <ul class="space-y-2.5">
             {% for a in actions[:4] %}
             <li>
-                <a href="{{ a.href }}" class="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3.5 hover:border-amber-300 hover:bg-amber-100/70 transition group">
-                    <span class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0" aria-hidden="true">{{ icon('alert', 'w-[18px] h-[18px]') }}</span>
-                    <span class="min-w-0 flex-1 text-[14px] font-semibold text-amber-900 leading-snug">{{ a.text }}</span>
-                    <span class="shrink-0 inline-flex items-center gap-1 text-[13px] font-bold text-amber-900 group-hover:underline">{{ a.get('verb') or ('Continue' if en else 'Continuar') }} {{ icon('arrow-right', 'w-3.5 h-3.5') }}</span>
+                <a href="{{ a.href }}" class="flex items-center gap-4 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 hover:border-amber-300 hover:bg-amber-100/70 transition group">
+                    <span class="w-11 h-11 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0" aria-hidden="true">{{ icon('alert', 'w-5 h-5') }}</span>
+                    <span class="min-w-0 flex-1 text-[15px] font-semibold text-amber-900 leading-snug">{{ a.text }}</span>
+                    <span class="shrink-0 inline-flex items-center gap-1.5 text-[14px] font-bold text-amber-900 group-hover:underline">{{ a.get('verb') or ('Continue' if en else 'Continuar') }} {{ icon('arrow-right', 'w-4 h-4') }}</span>
                 </a>
             </li>
             {% endfor %}
         </ul>
         {% if actions|length > 4 %}
-        <a href="{{ url_for('account.services', lang=lang) }}" class="mt-2.5 inline-flex items-center text-sm font-bold text-amber-900 hover:underline">{{ 'View All Tasks' if en else 'Ver Todas las Tareas' }} &rarr;</a>
+        <a href="{{ url_for('account.services', lang=lang) }}" class="mt-3 inline-flex items-center text-sm font-bold text-amber-900 hover:underline">{{ 'View All Tasks' if en else 'Ver Todas las Tareas' }} &rarr;</a>
         {% endif %}
     </div>
     {% endif %}
 
-    <div class="mt-7 grid sm:grid-cols-2 gap-4">
-        <div class="rounded-card bg-white border border-slate-100 shadow-card p-4 sm:p-5">
+    <!-- Quick Actions: only real, existing customer actions -->
+    <div class="mt-8">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">{{ 'Quick Actions' if en else 'Acciones Rápidas' }}</h2>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {% set quick_actions = [
+                ('documents', 'Start a New Inquiry' if en else 'Iniciar una Consulta', 'Get help with your next service' if en else 'Recibe ayuda con tu próximo servicio', url_for('public.services', lang=lang)),
+                ('upload', 'Upload a Document' if en else 'Subir un Documento', 'Send us your documents securely' if en else 'Envíanos tus documentos de forma segura', url_for('account.documents', lang=lang)),
+                ('academy', 'Access My Courses' if en else 'Ver Mis Cursos', 'Go to OG Academy' if en else 'Ir a OG Academy', url_for('account.courses', lang=lang)),
+                ('chat', 'Contact OG Multiservices' if en else 'Contactar a OG Multiservices', 'WhatsApp, phone or a message' if en else 'WhatsApp, teléfono o un mensaje', url_for('account.messages', lang=lang)),
+            ] %}
+            {% for ic, title, sub, href in quick_actions %}
+            <a href="{{ href }}" class="group relative rounded-card bg-white border border-slate-100 shadow-card p-5 hover:border-accent-300 hover:shadow-pop transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500">
+                <span class="absolute top-5 right-5 text-slate-300 group-hover:text-accent-600 group-focus-visible:text-accent-600 transition" aria-hidden="true">{{ icon('chevron-right', 'w-4 h-4') }}</span>
+                <span class="w-12 h-12 rounded-2xl bg-mist-100 text-accent-600 flex items-center justify-center shrink-0" aria-hidden="true">{{ icon(ic, 'w-6 h-6') }}</span>
+                <p class="mt-4 pr-5 text-[15px] font-bold text-brand-800 leading-snug">{{ title }}</p>
+                <p class="mt-1 pr-5 text-[13px] text-slate-500 leading-snug">{{ sub }}</p>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Recent Activity (real, merged from case/message/payment records — see recent_activity() in
+         app/account_dashboard.py) + Help/Contact card -->
+    <div class="mt-8 grid lg:grid-cols-3 gap-5 items-start">
+        <div class="lg:col-span-2 rounded-card bg-white border border-slate-100 shadow-card p-5 sm:p-7">
+            <h2 class="font-bold text-lg text-brand-800 mb-4">{{ 'Recent Activity' if en else 'Actividad Reciente' }}</h2>
+            {% if activity %}
+            <ul class="divide-y divide-slate-100">
+                {% for ev in activity %}
+                <li>
+                    <a href="{{ ev.href }}" class="flex items-start gap-4 py-4 hover:bg-fog-50 -mx-3 px-3 rounded-xl transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500">
+                        <span class="w-10 h-10 rounded-xl bg-mist-100 text-accent-600 flex items-center justify-center shrink-0" aria-hidden="true">
+                            {{ icon('card' if ev.kind == 'payment' else ('chat' if ev.kind == 'message' else 'clock'), 'w-[18px] h-[18px]') }}
+                        </span>
+                        <span class="min-w-0 flex-1">
+                            <span class="block text-[14.5px] font-semibold text-brand-800 leading-snug">{{ ev.text }}</span>
+                            <span class="block text-[12.5px] text-slate-400 mt-1">{{ ev.at.strftime('%b %d, %Y') if ev.at else '' }}</span>
+                        </span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-[14px] text-slate-500 rounded-card border border-dashed border-slate-200 bg-fog-50 p-6 text-center">{{ "Nothing to show yet — activity will appear here as your services progress." if en else 'Todavía no hay nada que mostrar — la actividad aparecerá aquí a medida que avancen tus servicios.' }}</p>
+            {% endif %}
+        </div>
+        <div class="rounded-2xl bg-brand-800 text-white p-6 sm:p-7 shadow-card">
+            <h2 class="font-bold text-lg">{{ 'Need help with your next step?' if en else '¿Necesitas ayuda con tu próximo paso?' }}</h2>
+            <p class="mt-2 text-[13.5px] text-slate-300 leading-relaxed">{{ 'Our team is here to help with taxes, ITIN, immigration, translations, notary and more.' if en else 'Nuestro equipo está aquí para ayudarte con impuestos, ITIN, inmigración, traducciones, notaría y más.' }}</p>
+            <a href="{{ biz.WHATSAPP_LINK }}" target="_blank" rel="noopener" class="mt-5 flex items-center justify-center gap-2 rounded-xl bg-[#25D366] text-white text-[14.5px] font-bold px-5 py-3.5 hover:bg-[#1fbd5a] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
+                {{ icon('whatsapp', 'w-[18px] h-[18px]') }} {{ 'Chat on WhatsApp' if en else 'Chatea por WhatsApp' }}
+            </a>
+            <a href="tel:{{ biz.PHONE_TEL }}" class="mt-2.5 flex items-center justify-center gap-2 rounded-xl border border-white/25 text-white text-[14px] font-semibold px-5 py-3.5 hover:bg-white/10 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
+                {{ icon('phone', 'w-[18px] h-[18px]') }} {{ 'Call Us' if en else 'Llámanos' }}
+            </a>
+            <a href="{{ url_for('account.messages', lang=lang) }}" class="mt-2.5 flex items-center justify-center gap-2 rounded-xl border border-white/25 text-white text-[14px] font-semibold px-5 py-3.5 hover:bg-white/10 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
+                {{ icon('mail', 'w-[18px] h-[18px]') }} {{ 'Send a Message' if en else 'Enviar un Mensaje' }}
+            </a>
+        </div>
+    </div>
+
+    <div class="mt-8 grid sm:grid-cols-2 gap-5">
+        <div class="rounded-card bg-white border border-slate-100 shadow-card p-5 sm:p-6">
             <div class="flex items-center gap-2.5 mb-1">
                 <span class="w-9 h-9 rounded-xl bg-mist-100 text-accent-600 flex items-center justify-center shrink-0">{{ icon('immigration', 'w-4.5 h-4.5') }}</span>
                 <h2 class="font-bold text-brand-800">{{ 'Immigration' if en else 'Inmigración' }}</h2>
@@ -61,7 +157,7 @@
             <div class="space-y-3 mt-2">{% for e in immigration_entries %}{{ entry_card(e, en) }}{% endfor %}</div>
             {% endif %}
         </div>
-        <div class="rounded-card bg-white border border-slate-100 shadow-card p-4 sm:p-5">
+        <div class="rounded-card bg-white border border-slate-100 shadow-card p-5 sm:p-6">
             <div class="flex items-center gap-2.5 mb-1">
                 <span class="w-9 h-9 rounded-xl bg-mist-100 text-accent-600 flex items-center justify-center shrink-0">{{ icon('taxes', 'w-4.5 h-4.5') }}</span>
                 <h2 class="font-bold text-brand-800">{{ 'Taxes & ITIN' if en else 'Impuestos e ITIN' }}</h2>
@@ -76,7 +172,7 @@
     </div>
 
     {% if dl_entries %}
-    <div class="mt-6">
+    <div class="mt-7">
         <div class="flex items-center gap-2.5 mb-2">
             <span class="w-7 h-7 rounded-lg bg-mist-100 text-accent-600 flex items-center justify-center shrink-0">{{ icon('license', 'w-4 h-4') }}</span>
             <h2 class="font-bold text-brand-800">{{ 'NJ Driver License' if en else 'Licencia de Conducir de NJ' }}</h2>
@@ -86,7 +182,7 @@
     {% endif %}
 
     {% if active_course %}
-    <div class="mt-6">
+    <div class="mt-7">
         <div class="flex items-center gap-2.5 mb-2">
             <span class="w-7 h-7 rounded-lg bg-academy-50 text-academy-600 flex items-center justify-center shrink-0">{{ icon('academy', 'w-4 h-4') }}</span>
             <h2 class="font-bold text-brand-800">{{ 'OG Academy' if en else 'OG Academy' }}</h2>
@@ -100,7 +196,7 @@
     {% endif %}
 
     {% if other_entries %}
-    <div class="mt-6">
+    <div class="mt-7">
         <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">{{ 'Other Services' if en else 'Otros Servicios' }}</h2>
         <div class="grid sm:grid-cols-2 gap-4">{% for e in other_entries %}{{ entry_card(e, en) }}{% endfor %}</div>
     </div>
@@ -108,8 +204,8 @@
 
     {% if more_services %}<a href="{{ url_for('account.services', lang=lang) }}" class="mt-4 inline-flex items-center text-sm font-semibold text-accent-700 hover:underline">{{ 'View all services' if en else 'Ver todos los servicios' }} &rarr;</a>{% endif %}
 
-    <div class="mt-8 grid sm:grid-cols-2 gap-4 items-start">
-        <div class="rounded-card bg-white border border-slate-100 shadow-card p-4 sm:p-5">
+    <div class="mt-8 grid sm:grid-cols-2 gap-5 items-start">
+        <div class="rounded-card bg-white border border-slate-100 shadow-card p-5 sm:p-6">
             <div class="flex items-center gap-2.5 mb-1">
                 <span class="w-9 h-9 rounded-xl bg-mist-100 text-accent-600 flex items-center justify-center shrink-0">{{ icon('folder', 'w-4.5 h-4.5') }}</span>
                 <h2 class="font-bold text-brand-800">{{ 'Files from OG' if en else 'Archivos de OG' }}</h2>
@@ -122,7 +218,7 @@
             <p class="text-[13px] text-slate-500 mt-1">{{ 'When OG prepares a file for you, it will appear here.' if en else 'Cuando OG prepare un archivo para ti, aparecerá aquí.' }}</p>
             {% endif %}
         </div>
-        <div class="rounded-card bg-white border border-slate-100 shadow-card p-4 sm:p-5">
+        <div class="rounded-card bg-white border border-slate-100 shadow-card p-5 sm:p-6">
         <div class="flex items-center justify-between mb-2">
             <h2 class="font-bold text-brand-800">{{ t('acct_documents') }}</h2>
             <a href="{{ url_for('account.documents', lang=lang) }}" class="text-sm font-semibold text-accent-700 hover:underline">{{ 'View' if en else 'Ver' }} &rarr;</a>
@@ -156,29 +252,4 @@
         <a href="{{ url_for('public.services', lang=lang) }}" class="mt-4 inline-flex items-center justify-center min-h-[44px] rounded-xl bg-accent-600 text-white text-sm font-semibold px-6 hover:bg-accent-700 transition">{{ 'Explore Services' if en else 'Explorar Servicios' }}</a>
     </div>
     {% endif %}
-{% endblock %}
-
-{% block account_aside %}
-<aside class="hidden xl:block w-72 shrink-0 mt-1">
-    <div class="rounded-2xl border border-slate-100 bg-white shadow-card p-5 sticky top-[4.75rem]">
-        <div class="flex items-center gap-3">
-            {% if student.photo_filename %}
-            <img src="{{ url_for('account.photo', lang=lang, v=student.photo_filename[-8:]) }}" alt="" class="w-14 h-14 rounded-full object-cover border border-slate-200 shrink-0">
-            {% else %}
-            <span class="w-14 h-14 rounded-full bg-brand-800 text-white flex items-center justify-center text-lg font-bold shrink-0" aria-hidden="true">{{ student.initials }}</span>
-            {% endif %}
-            <div class="min-w-0">
-                <p class="font-bold text-brand-800 truncate">{{ student.name }}</p>
-                <p class="text-[12px] text-slate-500 truncate">{{ student.email }}</p>
-            </div>
-        </div>
-        <dl class="mt-4 space-y-2 text-[13px]">
-            {% if student.phone %}
-            <div class="flex items-center gap-2 text-slate-600"><span class="text-slate-400 shrink-0">{{ icon('phone', 'w-4 h-4') }}</span><dd>{{ student.phone }}</dd></div>
-            {% endif %}
-            <div class="flex items-center gap-2 text-slate-600"><span class="text-slate-400 shrink-0">{{ icon('globe', 'w-4 h-4') }}</span><dd>{{ 'English' if (student.preferred_language or lang) == 'en' else 'Español' }}</dd></div>
-        </dl>
-        <a href="{{ url_for('account.profile', lang=lang) }}" class="mt-4 inline-flex items-center justify-center w-full min-h-[40px] rounded-xl border border-slate-200 text-[13px] font-semibold text-brand-800 hover:border-accent-300 transition">{{ 'Edit Profile' if en else 'Editar Perfil' }}</a>
-    </div>
-</aside>
 {% endblock %}

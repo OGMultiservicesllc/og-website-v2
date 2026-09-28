@@ -166,7 +166,10 @@ def dashboard(lang):
     greeting = "acct_good_morning" if hour < 12 else ("acct_good_afternoon" if hour < 18 else "acct_good_evening")
     data = account_dashboard.home_data(student, lang)
     active_course = next((c for c in course_cards(student, lang) if c["status"] == "in_progress"), None)
-    return render_template("account/dashboard.html", section="overview", greeting=greeting, active_course=active_course, **data)
+    stats = account_dashboard.stat_counts(student, lang, data)
+    activity = account_dashboard.recent_activity(student, lang)
+    return render_template("account/dashboard.html", section="overview", greeting=greeting, active_course=active_course,
+                           stats=stats, activity=activity, **data)
 
 
 def _new_expiry(course):
