@@ -3,253 +3,229 @@
 {% set en = lang == 'en' %}
 {% block title %}{{ t('acct_dashboard_title') }}{% endblock %}
 
-{% macro entry_card(e, en) %}
-<div class="rounded-card bg-white border border-slate-100 shadow-card p-4">
-    <div class="flex flex-wrap items-start justify-between gap-2">
-        <p class="font-semibold text-brand-800 leading-snug min-w-0">{{ e.title }}{% if e.extra_count %} <span class="text-xs font-normal text-slate-400">{{ ('+ %d more' % e.extra_count) if en else ('+ %d más' % e.extra_count) }}</span>{% endif %}</p>
+{% macro status_pill(e) %}
+<span class="shrink-0 inline-flex items-center rounded-full text-[11px] font-bold px-2.5 py-1 {{ {'action': 'bg-amber-50 text-amber-800', 'problem': 'bg-red-50 text-red-700', 'processing': 'bg-accent-50 text-accent-700', 'done': 'bg-emerald-50 text-emerald-700', 'neutral': 'bg-fog-100 text-slate-600'}[e.tone] }}">{{ e.label }}</span>
+{% endmacro %}
+
+{# Compact single-line service row for the Home summary cards (My Services / 50% width) — title, status,
+   one action. Deliberately simpler than the Services page's own richer row: Home is a summary. #}
+{% macro summary_row(e, en) %}
+<div class="flex items-center gap-3 py-2.5 border-b border-slate-100 last:border-0">
+    <span class="w-8 h-8 rounded-lg bg-mist-100 text-accent-600 flex items-center justify-center shrink-0" aria-hidden="true">{{ icon(e.get('type_icon') or 'documents', 'w-4 h-4') }}</span>
+    <div class="min-w-0 flex-1">
+        <p class="font-semibold text-brand-800 text-[13.5px] leading-snug truncate">{{ e.title }}</p>
+        {{ status_pill(e) }}
     </div>
-    <p class="mt-1.5 inline-flex items-center gap-1.5 text-[13px] font-semibold {{ {'action': 'text-amber-800', 'problem': 'text-red-700', 'processing': 'text-accent-700', 'done': 'text-emerald-700', 'neutral': 'text-slate-500'}[e.tone] }}">
-        <span class="w-2 h-2 rounded-full shrink-0 {{ {'action': 'bg-amber-500', 'problem': 'bg-red-500', 'processing': 'bg-accent-500', 'done': 'bg-emerald-500', 'neutral': 'bg-slate-300'}[e.tone] }}" aria-hidden="true"></span>
-        {{ e.label }}
-    </p>
-    {% if e.percent is not none %}
-    <div class="mt-2.5 h-1.5 rounded-full bg-fog-200 overflow-hidden" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ e.percent }}" aria-label="{{ e.title }}"><div class="h-full rounded-full bg-accent-600" style="width: {{ e.percent }}%"></div></div>
-    {% endif %}
-    {% if e.docs_total %}<p class="mt-2 text-[13px] text-slate-500">{% if e.docs_missing %}{{ ('%d document(s) needed' % e.docs_missing) if en else ('%d documento(s) necesarios' % e.docs_missing) }}{% else %}{{ ('All documents received' if en else 'Todos los documentos recibidos') }}{% endif %}</p>{% endif %}
-    {% if e.get('price') and e.price.get('final') %}<p class="mt-1 text-[13px] font-semibold text-brand-800">{{ e.price.final }}</p>{% endif %}
-    <div class="mt-3 flex flex-wrap gap-2">
-        {% if e.continue_url %}<a href="{{ e.continue_url }}" class="inline-flex items-center justify-center min-h-[42px] rounded-xl bg-accent-600 text-white text-sm font-semibold px-4 hover:bg-accent-700 transition">{{ 'Continue' if en else 'Continuar' }} &rarr;</a>{% endif %}
-        <a href="{{ e.view_url }}" class="inline-flex items-center justify-center min-h-[42px] rounded-xl border border-slate-200 text-sm font-semibold text-brand-800 px-4 hover:border-accent-300 transition">{{ 'View' if en else 'Ver' }}</a>
-    </div>
+    {% if e.continue_url %}<a href="{{ e.continue_url }}" class="shrink-0 text-[12.5px] font-bold text-accent-700 hover:underline">{{ 'Continue' if en else 'Continuar' }} &rarr;</a>
+    {% else %}<a href="{{ e.view_url }}" class="shrink-0 text-[12.5px] font-bold text-accent-700 hover:underline">{{ 'View' if en else 'Ver' }} &rarr;</a>{% endif %}
 </div>
 {% endmacro %}
 
 {% block account_body %}
-    <div class="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
-        <div class="lg:w-3/4">
-            <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-brand-800">{{ 'Welcome back,' if en else 'Bienvenido(a) de nuevo,' }} {{ student.name.split(' ')[0] }} 👋</h1>
-            <p class="mt-1.5 text-slate-500 text-[15px] sm:text-base">{{ "Here's an overview of your activity with OG Multiservices." if en else 'Este es un resumen de tu actividad con OG Multiservices.' }}</p>
-        </div>
-        <div class="lg:w-1/4 lg:shrink-0 flex items-center gap-3 rounded-2xl border border-slate-100 bg-white shadow-card pl-3.5 pr-4 py-3">
-            {% if student.photo_filename %}
-            <img src="{{ url_for('account.photo', lang=lang, v=student.photo_filename[-8:]) }}" alt="" class="w-11 h-11 rounded-full object-cover border border-slate-200 shrink-0">
-            {% else %}
-            <span class="w-11 h-11 rounded-full bg-brand-800 text-white flex items-center justify-center text-[15px] font-bold shrink-0" aria-hidden="true">{{ student.initials }}</span>
-            {% endif %}
-            <div class="min-w-0 flex-1">
-                <p class="font-bold text-brand-800 text-[14px] leading-snug truncate">{{ student.name }}</p>
-                {% if student.created_at %}<p class="text-[12px] text-slate-500 leading-snug">{{ 'Customer since' if en else 'Cliente desde' }} {{ student.created_at.strftime('%b %Y') }}</p>{% endif %}
-            </div>
-            <a href="{{ url_for('account.profile', lang=lang) }}" class="shrink-0 ml-1 text-[12.5px] font-bold text-accent-700 hover:underline">{{ 'Edit' if en else 'Editar' }}</a>
-        </div>
+<div class="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
+    <div class="lg:w-3/4">
+        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-brand-800">{{ 'Welcome back,' if en else 'Bienvenido(a) de nuevo,' }} {{ student.name.split(' ')[0] }} 👋</h1>
+        <p class="mt-1.5 text-slate-500 text-[15px] sm:text-base">{{ "Here's an overview of your activity with OG Multiservices." if en else 'Este es un resumen de tu actividad con OG Multiservices.' }}</p>
     </div>
+    <div class="lg:w-1/4 lg:shrink-0 flex items-center gap-3 rounded-2xl border border-slate-100 bg-white shadow-card pl-3.5 pr-4 py-3">
+        {% if student.photo_filename %}
+        <img src="{{ url_for('account.photo', lang=lang, v=student.photo_filename[-8:]) }}" alt="" class="w-11 h-11 rounded-full object-cover border border-slate-200 shrink-0">
+        {% else %}
+        <span class="w-11 h-11 rounded-full bg-brand-800 text-white flex items-center justify-center text-[15px] font-bold shrink-0" aria-hidden="true">{{ student.initials }}</span>
+        {% endif %}
+        <div class="min-w-0 flex-1">
+            <p class="font-bold text-brand-800 text-[14px] leading-snug truncate">{{ student.name }}</p>
+            {% if student.created_at %}<p class="text-[12px] text-slate-500 leading-snug">{{ 'Customer since' if en else 'Cliente desde' }} {{ student.created_at.strftime('%b %Y') }}</p>{% endif %}
+        </div>
+        <a href="{{ url_for('account.profile', lang=lang) }}" class="shrink-0 ml-1 text-[12.5px] font-bold text-accent-700 hover:underline">{{ 'Edit' if en else 'Editar' }}</a>
+    </div>
+</div>
 
-    <!-- Stat row: every number is real — see app/account_dashboard.py stat_counts() -->
-    <div class="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-        {% set stat_tiles = [
-            ('grid', stats.active_services, 'Active Services' if en else 'Servicios Activos', url_for('account.services', lang=lang)),
-            ('documents', stats.documents, 'Documents' if en else 'Documentos', url_for('account.documents', lang=lang)),
-            ('card', stats.payments, 'Payments' if en else 'Pagos', url_for('account.payments', lang=lang)),
-            ('academy', stats.courses, 'Courses' if en else 'Cursos', url_for('account.courses', lang=lang)),
+<!-- Stat row: every number is real — see app/account_dashboard.py stat_counts() -->
+<div class="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+    {% set stat_tiles = [
+        ('grid', stats.active_services, 'Active Services' if en else 'Servicios Activos', url_for('account.services', lang=lang)),
+        ('documents', stats.documents, 'Documents' if en else 'Documentos', url_for('account.documents', lang=lang)),
+        ('card', stats.payments, 'Payments' if en else 'Pagos', url_for('account.payments', lang=lang)),
+        ('academy', stats.courses, 'Courses' if en else 'Cursos', url_for('account.courses', lang=lang)),
+    ] %}
+    {% for ic, value, label, href in stat_tiles %}
+    <a href="{{ href }}" class="group rounded-card bg-white border border-slate-100 shadow-card p-4 sm:p-5 flex items-center gap-3 sm:gap-4 hover:border-accent-300 hover:shadow-pop transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500">
+        <span class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-mist-100 text-accent-600 flex items-center justify-center shrink-0" aria-hidden="true">{{ icon(ic, 'w-5 h-5 sm:w-6 sm:h-6') }}</span>
+        <div class="min-w-0 flex-1">
+            <p class="text-2xl sm:text-3xl font-extrabold text-brand-800 leading-none">{{ value }}</p>
+            <p class="mt-1.5 text-[11.5px] sm:text-[12.5px] font-semibold text-slate-500 leading-tight">{{ label }}</p>
+        </div>
+        <span class="hidden sm:inline-flex text-slate-300 group-hover:text-accent-600 transition shrink-0" aria-hidden="true">{{ icon('chevron-right', 'w-4 h-4') }}</span>
+    </a>
+    {% endfor %}
+</div>
+
+<!-- Action Required: ONE compact card, max 3 tasks shown, real total preserved — see app/account_dashboard.py action_items() -->
+{% if actions %}
+<div class="mt-6 rounded-card border border-amber-200 bg-amber-50 p-4 sm:p-5">
+    <div class="flex items-center justify-between gap-3 mb-1">
+        <h2 class="font-bold text-brand-800 text-[15px]">{{ ('Action Required — %d' % actions|length) if en else ('Acción Requerida — %d' % actions|length) }}</h2>
+        <a href="{{ url_for('account.services', lang=lang) }}" class="shrink-0 inline-flex items-center gap-1 text-[12.5px] font-bold text-amber-900 hover:underline">{{ 'View all' if en else 'Ver todo' }} {{ icon('arrow-right', 'w-3.5 h-3.5') }}</a>
+    </div>
+    <ul class="mt-2 divide-y divide-amber-100">
+        {% for a in actions[:3] %}
+        <li>
+            <a href="{{ a.href }}" class="flex items-center gap-3 py-2.5 group">
+                <span class="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0" aria-hidden="true">{{ icon('alert', 'w-4 h-4') }}</span>
+                <span class="min-w-0 flex-1 text-[13.5px] font-semibold text-amber-900 leading-snug truncate">{{ a.text }}</span>
+                <span class="shrink-0 inline-flex items-center gap-1 text-[12.5px] font-bold text-amber-900 group-hover:underline">{{ a.get('verb') or ('Continue' if en else 'Continuar') }} {{ icon('arrow-right', 'w-3.5 h-3.5') }}</span>
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+    {% if actions|length > 3 %}
+    <a href="{{ url_for('account.services', lang=lang) }}" class="mt-1.5 inline-block text-[12.5px] font-bold text-amber-900 hover:underline">{{ ('+ %d more task%s requiring attention' % (actions|length - 3, '' if actions|length - 3 == 1 else 's')) if en else ('+ %d tarea%s más que requiere%s atención' % (actions|length - 3, 's' if actions|length - 3 != 1 else '', 'n' if actions|length - 3 != 1 else '')) }}</a>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Quick Actions: only real, existing customer actions -->
+<div class="mt-6">
+    <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">{{ 'Quick Actions' if en else 'Acciones Rápidas' }}</h2>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {% set quick_actions = [
+            ('documents', 'Start a New Inquiry' if en else 'Iniciar una Consulta', 'Get help with your next service' if en else 'Recibe ayuda con tu próximo servicio', url_for('public.services', lang=lang)),
+            ('upload', 'Upload a Document' if en else 'Subir un Documento', 'Send us your documents securely' if en else 'Envíanos tus documentos de forma segura', url_for('account.documents', lang=lang)),
+            ('academy', 'Access My Courses' if en else 'Ver Mis Cursos', 'Go to OG Academy' if en else 'Ir a OG Academy', url_for('account.courses', lang=lang)),
+            ('chat', 'Contact OG Multiservices' if en else 'Contactar a OG Multiservices', 'WhatsApp, phone or a message' if en else 'WhatsApp, teléfono o un mensaje', url_for('account.messages', lang=lang)),
         ] %}
-        {% for ic, value, label, href in stat_tiles %}
-        <a href="{{ href }}" class="rounded-card bg-white border border-slate-100 shadow-card p-4 sm:p-5 lg:p-6 flex items-center gap-3 sm:gap-4 hover:border-accent-300 hover:shadow-pop transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500">
-            <span class="w-11 h-11 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-2xl bg-mist-100 text-accent-600 flex items-center justify-center shrink-0" aria-hidden="true">{{ icon(ic, 'w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7') }}</span>
-            <div class="min-w-0">
-                <p class="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-brand-800 leading-none">{{ value }}</p>
-                <p class="mt-1.5 text-[12px] sm:text-[13.5px] font-semibold text-slate-500 truncate">{{ label }}</p>
-            </div>
+        {% for ic, title, sub, href in quick_actions %}
+        <a href="{{ href }}" class="group relative rounded-card bg-white border border-slate-100 shadow-card p-5 hover:border-accent-300 hover:shadow-pop transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500">
+            <span class="absolute top-5 right-5 text-slate-300 group-hover:text-accent-600 group-focus-visible:text-accent-600 transition" aria-hidden="true">{{ icon('chevron-right', 'w-4 h-4') }}</span>
+            <span class="w-12 h-12 rounded-2xl bg-mist-100 text-accent-600 flex items-center justify-center shrink-0" aria-hidden="true">{{ icon(ic, 'w-6 h-6') }}</span>
+            <p class="mt-4 pr-5 text-[15px] font-bold text-brand-800 leading-snug">{{ title }}</p>
+            <p class="mt-1 pr-5 text-[13px] text-slate-500 leading-snug">{{ sub }}</p>
         </a>
         {% endfor %}
     </div>
+</div>
 
-    {% if actions %}
-    <div class="mt-8">
-        <h2 class="text-xs font-bold uppercase tracking-wider text-amber-800 mb-3">{{ ('Action Required — %d thing%s' % (actions|length, '' if actions|length == 1 else 's')) if en else ('Requiere Acción — %d cosa%s' % (actions|length, '' if actions|length == 1 else 's')) }}</h2>
-        <ul class="space-y-2.5">
-            {% for a in actions[:4] %}
+<!-- Recent Activity (~65-70%, max 5 — see recent_activity() in app/account_dashboard.py) + Help (~30-35%) -->
+<div class="mt-6 grid lg:grid-cols-3 gap-4 items-start">
+    <div class="lg:col-span-2 rounded-card bg-white border border-slate-100 shadow-card p-5 sm:p-6">
+        <h2 class="font-bold text-brand-800 mb-3">{{ 'Recent Activity' if en else 'Actividad Reciente' }}</h2>
+        {% if activity %}
+        <ul class="divide-y divide-slate-100">
+            {% for ev in activity %}
             <li>
-                <a href="{{ a.href }}" class="flex items-center gap-4 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 hover:border-amber-300 hover:bg-amber-100/70 transition group">
-                    <span class="w-11 h-11 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0" aria-hidden="true">{{ icon('alert', 'w-5 h-5') }}</span>
-                    <span class="min-w-0 flex-1 text-[15px] font-semibold text-amber-900 leading-snug">{{ a.text }}</span>
-                    <span class="shrink-0 inline-flex items-center gap-1.5 text-[14px] font-bold text-amber-900 group-hover:underline">{{ a.get('verb') or ('Continue' if en else 'Continuar') }} {{ icon('arrow-right', 'w-4 h-4') }}</span>
+                <a href="{{ ev.href }}" class="flex items-start gap-3 py-3 hover:bg-fog-50 -mx-2 px-2 rounded-xl transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500">
+                    <span class="w-8 h-8 rounded-lg bg-mist-100 text-accent-600 flex items-center justify-center shrink-0 mt-0.5" aria-hidden="true">
+                        {{ icon('card' if ev.kind == 'payment' else ('chat' if ev.kind == 'message' else 'clock'), 'w-4 h-4') }}
+                    </span>
+                    <span class="min-w-0 flex-1">
+                        <span class="block text-[13.5px] font-semibold text-brand-800 leading-snug">{{ ev.text }}</span>
+                        <span class="block text-[12px] text-slate-400 mt-0.5">{{ ev.at.strftime('%b %d, %Y') if ev.at else '' }}</span>
+                    </span>
                 </a>
             </li>
             {% endfor %}
         </ul>
-        {% if actions|length > 4 %}
-        <a href="{{ url_for('account.services', lang=lang) }}" class="mt-3 inline-flex items-center text-sm font-bold text-amber-900 hover:underline">{{ 'View All Tasks' if en else 'Ver Todas las Tareas' }} &rarr;</a>
+        {% else %}
+        <p class="text-[13.5px] text-slate-500 rounded-card border border-dashed border-slate-200 bg-fog-50 p-5 text-center">{{ "Nothing to show yet — activity will appear here as your services progress." if en else 'Todavía no hay nada que mostrar — la actividad aparecerá aquí a medida que avancen tus servicios.' }}</p>
         {% endif %}
     </div>
-    {% endif %}
-
-    <!-- Quick Actions: only real, existing customer actions -->
-    <div class="mt-8">
-        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">{{ 'Quick Actions' if en else 'Acciones Rápidas' }}</h2>
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {% set quick_actions = [
-                ('documents', 'Start a New Inquiry' if en else 'Iniciar una Consulta', 'Get help with your next service' if en else 'Recibe ayuda con tu próximo servicio', url_for('public.services', lang=lang)),
-                ('upload', 'Upload a Document' if en else 'Subir un Documento', 'Send us your documents securely' if en else 'Envíanos tus documentos de forma segura', url_for('account.documents', lang=lang)),
-                ('academy', 'Access My Courses' if en else 'Ver Mis Cursos', 'Go to OG Academy' if en else 'Ir a OG Academy', url_for('account.courses', lang=lang)),
-                ('chat', 'Contact OG Multiservices' if en else 'Contactar a OG Multiservices', 'WhatsApp, phone or a message' if en else 'WhatsApp, teléfono o un mensaje', url_for('account.messages', lang=lang)),
-            ] %}
-            {% for ic, title, sub, href in quick_actions %}
-            <a href="{{ href }}" class="group relative rounded-card bg-white border border-slate-100 shadow-card p-5 hover:border-accent-300 hover:shadow-pop transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500">
-                <span class="absolute top-5 right-5 text-slate-300 group-hover:text-accent-600 group-focus-visible:text-accent-600 transition" aria-hidden="true">{{ icon('chevron-right', 'w-4 h-4') }}</span>
-                <span class="w-12 h-12 rounded-2xl bg-mist-100 text-accent-600 flex items-center justify-center shrink-0" aria-hidden="true">{{ icon(ic, 'w-6 h-6') }}</span>
-                <p class="mt-4 pr-5 text-[15px] font-bold text-brand-800 leading-snug">{{ title }}</p>
-                <p class="mt-1 pr-5 text-[13px] text-slate-500 leading-snug">{{ sub }}</p>
+    <div class="rounded-2xl bg-brand-800 text-white p-5 shadow-card">
+        <h2 class="font-bold text-[14.5px]">{{ 'Need help with your next step?' if en else '¿Necesitas ayuda con tu próximo paso?' }}</h2>
+        <p class="mt-1 text-[12.5px] text-slate-300 leading-snug">{{ 'Our team is here to help with taxes, ITIN, immigration, translations, notary and more.' if en else 'Nuestro equipo está aquí para ayudarte con impuestos, ITIN, inmigración, traducciones, notaría y más.' }}</p>
+        <a href="{{ biz.WHATSAPP_LINK }}" target="_blank" rel="noopener" class="mt-3 flex items-center justify-center gap-2 rounded-xl bg-[#25D366] text-white text-[13px] font-bold px-4 py-2.5 hover:bg-[#1fbd5a] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
+            {{ icon('whatsapp', 'w-4 h-4') }} {{ 'Chat on WhatsApp' if en else 'Chatea por WhatsApp' }}
+        </a>
+        <div class="mt-2 grid grid-cols-2 gap-2">
+            <a href="tel:{{ biz.PHONE_TEL }}" class="flex items-center justify-center gap-1.5 rounded-xl border border-white/25 text-white text-[12.5px] font-semibold px-2 py-2 hover:bg-white/10 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
+                {{ icon('phone', 'w-3.5 h-3.5') }} {{ 'Call Us' if en else 'Llámanos' }}
             </a>
+            <a href="{{ url_for('account.messages', lang=lang) }}" class="flex items-center justify-center gap-1.5 rounded-xl border border-white/25 text-white text-[12.5px] font-semibold px-2 py-2 hover:bg-white/10 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
+                {{ icon('mail', 'w-3.5 h-3.5') }} {{ 'Message' if en else 'Mensaje' }}
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Row: My Services summary + My Documents summary (~50/50) -->
+<div class="mt-6 grid lg:grid-cols-2 gap-4">
+    <div class="rounded-card bg-white border border-slate-100 shadow-card p-5 sm:p-6">
+        <div class="flex items-center justify-between gap-3 mb-1">
+            <h2 class="font-bold text-brand-800">{{ 'My Services' if en else 'Mis Servicios' }}</h2>
+            <a href="{{ url_for('account.services', lang=lang) }}" class="shrink-0 text-[12.5px] font-bold text-accent-700 hover:underline">{{ 'View all services' if en else 'Ver todos los servicios' }} &rarr;</a>
+        </div>
+        {% if my_services.summary %}
+        <div class="mt-2">{% for e in my_services.summary %}{{ summary_row(e, en) }}{% endfor %}</div>
+        {% else %}
+        <p class="text-[13px] text-slate-500 mt-3">{{ "You don't have any services yet." if en else 'Todavía no tienes servicios.' }}</p>
+        {% endif %}
+    </div>
+
+    <div class="rounded-card bg-white border border-slate-100 shadow-card p-5 sm:p-6">
+        <div class="flex items-center justify-between gap-3 mb-1">
+            <h2 class="font-bold text-brand-800">{{ t('acct_documents') }}</h2>
+            <a href="{{ url_for('account.documents', lang=lang) }}" class="shrink-0 text-[12.5px] font-bold text-accent-700 hover:underline">{{ ('View all %d documents' % docs_total) if en else ('Ver los %d documentos' % docs_total) }} &rarr;</a>
+        </div>
+        {% if docs_preview %}
+        <div class="mt-2 space-y-2">
+            {% for r in docs_preview[:4] %}
+            <div class="flex items-center gap-3 py-1.5">
+                <span class="w-8 h-8 rounded-lg bg-mist-100 text-accent-600 flex items-center justify-center shrink-0">{{ icon('documents', 'w-4 h-4') }}</span>
+                <div class="min-w-0 flex-1">
+                    <p class="text-[13.5px] font-semibold text-brand-800 truncate">{{ r.title }}</p>
+                    <p class="text-[11.5px] {{ {'action': 'text-amber-700', 'problem': 'text-red-700', 'processing': 'text-accent-700', 'done': 'text-emerald-700', 'neutral': 'text-slate-500'}[r.tone] }} font-semibold">{{ '✓ ' if r.tone == 'done' else ('⚠ ' if r.tone in ('action', 'problem') else '') }}{{ r.label }}</p>
+                </div>
+                {% if r.can_upload %}<a href="{{ url_for('account.my_case_detail', lang=lang, case_id=r.case.id, _anchor='req-' ~ r.req.id) }}" class="shrink-0 text-[12.5px] font-bold text-accent-700 hover:underline">{{ 'Upload' if en else 'Subir' }}</a>{% endif %}
+            </div>
             {% endfor %}
         </div>
+        {% else %}
+        <p class="text-[13px] text-slate-500 mt-3">{{ 'No documents yet.' if en else 'Todavía no hay documentos.' }}</p>
+        {% endif %}
     </div>
+</div>
 
-    <!-- Recent Activity (real, merged from case/message/payment records — see recent_activity() in
-         app/account_dashboard.py) + Help/Contact card -->
-    <div class="mt-8 grid lg:grid-cols-3 gap-5 items-start">
-        <div class="lg:col-span-2 rounded-card bg-white border border-slate-100 shadow-card p-5 sm:p-7">
-            <h2 class="font-bold text-lg text-brand-800 mb-4">{{ 'Recent Activity' if en else 'Actividad Reciente' }}</h2>
-            {% if activity %}
-            <ul class="divide-y divide-slate-100">
-                {% for ev in activity %}
-                <li>
-                    <a href="{{ ev.href }}" class="flex items-start gap-4 py-4 hover:bg-fog-50 -mx-3 px-3 rounded-xl transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500">
-                        <span class="w-10 h-10 rounded-xl bg-mist-100 text-accent-600 flex items-center justify-center shrink-0" aria-hidden="true">
-                            {{ icon('card' if ev.kind == 'payment' else ('chat' if ev.kind == 'message' else 'clock'), 'w-[18px] h-[18px]') }}
-                        </span>
-                        <span class="min-w-0 flex-1">
-                            <span class="block text-[14.5px] font-semibold text-brand-800 leading-snug">{{ ev.text }}</span>
-                            <span class="block text-[12.5px] text-slate-400 mt-1">{{ ev.at.strftime('%b %d, %Y') if ev.at else '' }}</span>
-                        </span>
-                    </a>
-                </li>
-                {% endfor %}
-            </ul>
-            {% else %}
-            <p class="text-[14px] text-slate-500 rounded-card border border-dashed border-slate-200 bg-fog-50 p-6 text-center">{{ "Nothing to show yet — activity will appear here as your services progress." if en else 'Todavía no hay nada que mostrar — la actividad aparecerá aquí a medida que avancen tus servicios.' }}</p>
-            {% endif %}
-        </div>
-        <div class="rounded-2xl bg-brand-800 text-white p-6 sm:p-7 shadow-card">
-            <h2 class="font-bold text-lg">{{ 'Need help with your next step?' if en else '¿Necesitas ayuda con tu próximo paso?' }}</h2>
-            <p class="mt-2 text-[13.5px] text-slate-300 leading-relaxed">{{ 'Our team is here to help with taxes, ITIN, immigration, translations, notary and more.' if en else 'Nuestro equipo está aquí para ayudarte con impuestos, ITIN, inmigración, traducciones, notaría y más.' }}</p>
-            <a href="{{ biz.WHATSAPP_LINK }}" target="_blank" rel="noopener" class="mt-5 flex items-center justify-center gap-2 rounded-xl bg-[#25D366] text-white text-[14.5px] font-bold px-5 py-3.5 hover:bg-[#1fbd5a] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
-                {{ icon('whatsapp', 'w-[18px] h-[18px]') }} {{ 'Chat on WhatsApp' if en else 'Chatea por WhatsApp' }}
-            </a>
-            <a href="tel:{{ biz.PHONE_TEL }}" class="mt-2.5 flex items-center justify-center gap-2 rounded-xl border border-white/25 text-white text-[14px] font-semibold px-5 py-3.5 hover:bg-white/10 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
-                {{ icon('phone', 'w-[18px] h-[18px]') }} {{ 'Call Us' if en else 'Llámanos' }}
-            </a>
-            <a href="{{ url_for('account.messages', lang=lang) }}" class="mt-2.5 flex items-center justify-center gap-2 rounded-xl border border-white/25 text-white text-[14px] font-semibold px-5 py-3.5 hover:bg-white/10 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
-                {{ icon('mail', 'w-[18px] h-[18px]') }} {{ 'Send a Message' if en else 'Enviar un Mensaje' }}
-            </a>
-        </div>
-    </div>
-
-    <div class="mt-8 grid sm:grid-cols-2 gap-5">
-        <div class="rounded-card bg-white border border-slate-100 shadow-card p-5 sm:p-6">
-            <div class="flex items-center gap-2.5 mb-1">
-                <span class="w-9 h-9 rounded-xl bg-mist-100 text-accent-600 flex items-center justify-center shrink-0">{{ icon('immigration', 'w-4.5 h-4.5') }}</span>
-                <h2 class="font-bold text-brand-800">{{ 'Immigration' if en else 'Inmigración' }}</h2>
-            </div>
-            {% if not immigration_entries %}
-            <p class="text-[13px] text-slate-500 mb-3">{{ 'Family petitions, green cards, work permits, naturalization and more.' if en else 'Peticiones familiares, tarjetas verdes, permisos de trabajo, naturalización y más.' }}</p>
-            <a href="{{ url_for('public.immigration', lang=lang) }}" class="inline-flex items-center justify-center min-h-[44px] rounded-xl bg-accent-600 text-white text-sm font-semibold px-5 hover:bg-accent-700 transition">{{ 'Get Started' if en else 'Comenzar' }} &rarr;</a>
-            {% else %}
-            <div class="space-y-3 mt-2">{% for e in immigration_entries %}{{ entry_card(e, en) }}{% endfor %}</div>
-            {% endif %}
-        </div>
-        <div class="rounded-card bg-white border border-slate-100 shadow-card p-5 sm:p-6">
-            <div class="flex items-center gap-2.5 mb-1">
-                <span class="w-9 h-9 rounded-xl bg-mist-100 text-accent-600 flex items-center justify-center shrink-0">{{ icon('taxes', 'w-4.5 h-4.5') }}</span>
-                <h2 class="font-bold text-brand-800">{{ 'Taxes & ITIN' if en else 'Impuestos e ITIN' }}</h2>
-            </div>
-            {% if not tax_entries %}
-            <p class="text-[13px] text-slate-500 mb-3">{{ 'Tax preparation, ITIN applications and related services.' if en else 'Preparación de impuestos, solicitudes de ITIN y servicios relacionados.' }}</p>
-            <a href="{{ url_for('public.taxes_itin', lang=lang) }}" class="inline-flex items-center justify-center min-h-[44px] rounded-xl bg-accent-600 text-white text-sm font-semibold px-5 hover:bg-accent-700 transition">{{ 'Get Started' if en else 'Comenzar' }} &rarr;</a>
-            {% else %}
-            <div class="space-y-3 mt-2">{% for e in tax_entries %}{{ entry_card(e, en) }}{% endfor %}</div>
-            {% endif %}
-        </div>
-    </div>
-
-    {% if dl_entries %}
-    <div class="mt-7">
+<!-- Row: Files from OG summary + OG Academy summary (~50/50) -->
+<div class="mt-4 grid lg:grid-cols-2 gap-4 items-start">
+    <div class="rounded-card bg-white border border-slate-100 shadow-card p-5 sm:p-6">
         <div class="flex items-center gap-2.5 mb-2">
-            <span class="w-7 h-7 rounded-lg bg-mist-100 text-accent-600 flex items-center justify-center shrink-0">{{ icon('license', 'w-4 h-4') }}</span>
-            <h2 class="font-bold text-brand-800">{{ 'NJ Driver License' if en else 'Licencia de Conducir de NJ' }}</h2>
+            <span class="w-9 h-9 rounded-xl bg-mist-100 text-accent-600 flex items-center justify-center shrink-0">{{ icon('folder', 'w-4.5 h-4.5') }}</span>
+            <h2 class="font-bold text-brand-800">{{ 'Files from OG' if en else 'Archivos de OG' }}</h2>
         </div>
-        <div class="grid sm:grid-cols-2 gap-4">{% for e in dl_entries %}{{ entry_card(e, en) }}{% endfor %}</div>
+        {% if files_from_og.count %}
+        <p class="text-[13px] text-slate-500 mt-1">{{ ('%d file%s available' % (files_from_og.count, '' if files_from_og.count == 1 else 's')) if en else ('%d archivo%s disponible%s' % (files_from_og.count, 's' if files_from_og.count != 1 else '', 's' if files_from_og.count != 1 else '')) }}{% if files_from_og.new_count %} &middot; <span class="font-semibold text-accent-700">{{ ('%d new' % files_from_og.new_count) if en else ('%d nuevo(s)' % files_from_og.new_count) }}</span>{% endif %}</p>
+        {% if files_from_og.latest %}<p class="text-[13px] text-slate-500 mt-1">{{ 'Latest' if en else 'Más reciente' }}: <span class="font-semibold text-brand-800">{{ files_from_og.latest.title }}</span></p>{% endif %}
+        <a href="{{ url_for('account.files_from_og', lang=lang) }}" class="mt-3 inline-flex items-center justify-center min-h-[40px] rounded-xl bg-accent-600 text-white text-[13px] font-semibold px-5 hover:bg-accent-700 transition">{{ 'View Files' if en else 'Ver Archivos' }} &rarr;</a>
+        {% else %}
+        <p class="text-[13px] text-slate-500 mt-1">{{ 'When OG prepares a file for you, it will appear here.' if en else 'Cuando OG prepare un archivo para ti, aparecerá aquí.' }}</p>
+        {% endif %}
     </div>
-    {% endif %}
 
-    {% if active_course %}
-    <div class="mt-7">
+    <div class="rounded-card bg-white border border-slate-100 shadow-card p-5 sm:p-6">
         <div class="flex items-center gap-2.5 mb-2">
-            <span class="w-7 h-7 rounded-lg bg-academy-50 text-academy-600 flex items-center justify-center shrink-0">{{ icon('academy', 'w-4 h-4') }}</span>
+            <span class="w-9 h-9 rounded-xl bg-academy-50 text-academy-600 flex items-center justify-center shrink-0">{{ icon('academy', 'w-4.5 h-4.5') }}</span>
             <h2 class="font-bold text-brand-800">{{ 'OG Academy' if en else 'OG Academy' }}</h2>
         </div>
-        <div class="rounded-card bg-white border border-slate-100 shadow-card p-4 sm:max-w-sm">
-            <p class="font-semibold text-brand-800 leading-snug min-w-0 flex-1">{{ active_course.course.title(lang) }}</p>
-            <div class="mt-2.5 h-1.5 rounded-full bg-fog-200 overflow-hidden" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ active_course.progress.percent }}"><div class="h-full rounded-full bg-academy-500" style="width: {{ active_course.progress.percent }}%"></div></div>
-            <a href="{{ active_course.continue_url }}" class="mt-3 inline-flex items-center justify-center min-h-[42px] rounded-xl bg-academy-500 text-white text-sm font-semibold px-4 hover:bg-academy-600 transition">{{ t('acct_continue_course') }} &rarr;</a>
-        </div>
-    </div>
-    {% endif %}
-
-    {% if other_entries %}
-    <div class="mt-7">
-        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">{{ 'Other Services' if en else 'Otros Servicios' }}</h2>
-        <div class="grid sm:grid-cols-2 gap-4">{% for e in other_entries %}{{ entry_card(e, en) }}{% endfor %}</div>
-    </div>
-    {% endif %}
-
-    {% if more_services %}<a href="{{ url_for('account.services', lang=lang) }}" class="mt-4 inline-flex items-center text-sm font-semibold text-accent-700 hover:underline">{{ 'View all services' if en else 'Ver todos los servicios' }} &rarr;</a>{% endif %}
-
-    <div class="mt-8 grid sm:grid-cols-2 gap-5 items-start">
-        <div class="rounded-card bg-white border border-slate-100 shadow-card p-5 sm:p-6">
-            <div class="flex items-center gap-2.5 mb-1">
-                <span class="w-9 h-9 rounded-xl bg-mist-100 text-accent-600 flex items-center justify-center shrink-0">{{ icon('folder', 'w-4.5 h-4.5') }}</span>
-                <h2 class="font-bold text-brand-800">{{ 'Files from OG' if en else 'Archivos de OG' }}</h2>
-            </div>
-            {% if files_from_og.count %}
-            <p class="text-[13px] text-slate-500 mt-1">{{ ('%d file%s available' % (files_from_og.count, '' if files_from_og.count == 1 else 's')) if en else ('%d archivo%s disponible%s' % (files_from_og.count, 's' if files_from_og.count != 1 else '', 's' if files_from_og.count != 1 else '')) }}{% if files_from_og.new_count %} &middot; <span class="font-semibold text-accent-700">{{ ('%d new' % files_from_og.new_count) if en else ('%d nuevo(s)' % files_from_og.new_count) }}</span>{% endif %}</p>
-            {% if files_from_og.latest %}<p class="text-[13px] text-slate-500 mt-1">{{ 'Latest' if en else 'Más reciente' }}: <span class="font-semibold text-brand-800">{{ files_from_og.latest.title }}</span></p>{% endif %}
-            <a href="{{ url_for('account.files_from_og', lang=lang) }}" class="mt-3 inline-flex items-center justify-center min-h-[42px] rounded-xl bg-accent-600 text-white text-sm font-semibold px-5 hover:bg-accent-700 transition">{{ 'View Files' if en else 'Ver Archivos' }} &rarr;</a>
-            {% else %}
-            <p class="text-[13px] text-slate-500 mt-1">{{ 'When OG prepares a file for you, it will appear here.' if en else 'Cuando OG prepare un archivo para ti, aparecerá aquí.' }}</p>
-            {% endif %}
-        </div>
-        <div class="rounded-card bg-white border border-slate-100 shadow-card p-5 sm:p-6">
-        <div class="flex items-center justify-between mb-2">
-            <h2 class="font-bold text-brand-800">{{ t('acct_documents') }}</h2>
-            <a href="{{ url_for('account.documents', lang=lang) }}" class="text-sm font-semibold text-accent-700 hover:underline">{{ 'View' if en else 'Ver' }} &rarr;</a>
-        </div>
-        {% if docs_total %}
-        <p class="text-[13px] text-slate-500 mb-3">{{ ('%d document(s) requested' % docs_total) if en else ('%d documento(s) solicitados' % docs_total) }}</p>
-        {% endif %}
-        {% if docs_preview %}
-        <ul class="grid sm:grid-cols-2 gap-2.5">
-            {% for r in docs_preview %}
-            <li class="flex items-center gap-3 rounded-xl bg-white border border-slate-100 shadow-card px-3.5 py-3">
-                <span class="w-9 h-9 rounded-lg bg-mist-100 text-accent-600 flex items-center justify-center shrink-0">{{ icon('documents', 'w-4 h-4') }}</span>
-                <div class="min-w-0 flex-1">
-                    <p class="text-[14px] font-semibold text-brand-800 truncate">{{ r.title }}</p>
-                    <p class="text-[12px] {{ {'action': 'text-amber-700', 'problem': 'text-red-700', 'processing': 'text-accent-700', 'done': 'text-emerald-700', 'neutral': 'text-slate-500'}[r.tone] }} font-semibold">{{ '✓ ' if r.tone == 'done' else ('⚠ ' if r.tone in ('action', 'problem') else '') }}{{ r.label }}</p>
-                </div>
-                {% if r.can_upload %}<a href="{{ url_for('account.my_case_detail', lang=lang, case_id=r.case.id, _anchor='req-' ~ r.req.id) }}" class="text-[13px] font-semibold text-accent-700 shrink-0 hover:underline">{{ 'Upload' if en else 'Subir' }}</a>{% endif %}
-            </li>
-            {% endfor %}
-        </ul>
+        {% if academy.total %}
+        <p class="text-[13px] text-slate-500 mt-1">{{ ('%d course%s · %d in progress' % (academy.total, '' if academy.total == 1 else 's', academy.in_progress)) if en else ('%d curso%s · %d en progreso' % (academy.total, 's' if academy.total != 1 else '', academy.in_progress)) }}</p>
+        {% if academy.active_course %}
+        <p class="text-[13px] font-semibold text-brand-800 mt-1 truncate">{{ academy.active_course.course.title(lang) }}</p>
+        <a href="{{ academy.active_course.continue_url }}" class="mt-3 inline-flex items-center justify-center min-h-[40px] rounded-xl bg-academy-500 text-white text-[13px] font-semibold px-5 hover:bg-academy-600 transition">{{ t('acct_continue_course') }} &rarr;</a>
         {% else %}
-        <p class="text-[14px] text-slate-500 rounded-card border border-dashed border-slate-200 bg-fog-50 p-5 text-center">{{ 'No documents yet.' if en else 'Todavía no hay documentos.' }}</p>
+        <a href="{{ url_for('account.courses', lang=lang) }}" class="mt-3 inline-flex items-center justify-center min-h-[40px] rounded-xl border border-slate-200 text-brand-800 text-[13px] font-semibold px-5 hover:border-accent-300 transition">{{ 'View My Courses' if en else 'Ver Mis Cursos' }} &rarr;</a>
         {% endif %}
-        </div>
+        {% else %}
+        <p class="text-[13px] text-slate-500 mt-1">{{ "You're not enrolled in any courses yet." if en else 'Todavía no estás inscrito en ningún curso.' }}</p>
+        <a href="{{ url_for('public.courses', lang=lang) }}" class="mt-3 inline-flex items-center justify-center min-h-[40px] rounded-xl border border-slate-200 text-brand-800 text-[13px] font-semibold px-5 hover:border-accent-300 transition">{{ 'Explore OG Academy' if en else 'Explorar OG Academy' }} &rarr;</a>
+        {% endif %}
     </div>
+</div>
 
-    {% if not has_services and not actions %}
-    <div class="mt-10 text-center rounded-card border border-dashed border-slate-200 bg-fog-50 p-10">
-        <p class="font-semibold text-brand-800">{{ 'Welcome to OG Multiservices.' if en else 'Bienvenido(a) a OG Multiservices.' }}</p>
-        <p class="mt-1 text-sm text-slate-500">{{ "You don't have any active services right now." if en else 'No tienes ningún servicio activo en este momento.' }}</p>
-        <a href="{{ url_for('public.services', lang=lang) }}" class="mt-4 inline-flex items-center justify-center min-h-[44px] rounded-xl bg-accent-600 text-white text-sm font-semibold px-6 hover:bg-accent-700 transition">{{ 'Explore Services' if en else 'Explorar Servicios' }}</a>
-    </div>
-    {% endif %}
+{% if not has_services and not actions %}
+<div class="mt-8 text-center rounded-card border border-dashed border-slate-200 bg-fog-50 p-10">
+    <p class="font-semibold text-brand-800">{{ 'Welcome to OG Multiservices.' if en else 'Bienvenido(a) a OG Multiservices.' }}</p>
+    <p class="mt-1 text-sm text-slate-500">{{ "You don't have any active services right now." if en else 'No tienes ningún servicio activo en este momento.' }}</p>
+    <a href="{{ url_for('public.services', lang=lang) }}" class="mt-4 inline-flex items-center justify-center min-h-[44px] rounded-xl bg-accent-600 text-white text-sm font-semibold px-6 hover:bg-accent-700 transition">{{ 'Explore Services' if en else 'Explorar Servicios' }}</a>
+</div>
+{% endif %}
 {% endblock %}

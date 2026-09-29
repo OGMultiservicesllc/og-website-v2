@@ -591,3 +591,50 @@ def recent_activity(student, lang, limit=5):
     events.sort(key=lambda x: x["at"] or _dt.min, reverse=True)
     events = _cap_repetitive_status_events(events)
     return events[:limit]
+
+
+# ------------------------------------------------------------------ Home "My Services" panel (2026-09-28 redesign).
+# A flat, recency-sorted Active/Completed split across EVERY case/application the customer has — unlike
+# `services_data()`'s family-grouped view (which pulls action-required entries out into their own
+# "Needs Your Attention" list), an entry needing action still appears here in Active with its real tone/
+# label, exactly like the Services page's own rows. No new state: same entries every other Home/Services
+# function already builds.
+def my_services_lists(student, lang):
+    cases = Case.query.filter_by(customer_id=student.id).order_by(Case.updated_at.desc(), Case.id.desc()).all()
+    cases = [c for c in cases if not (c.status == "closed" and not c.applications)]
+    orphan_subs = (FormSubmission.query.filter_by(student_id=student.id, case_id=None)
+                   .order_by(FormSubmission.is_complete.asc(), FormSubmission.updated_at.desc()).all())
+    entries = [x for x in (_normalize_case(c, lang) for c in cases) if x is not None]
+    orphan_entries = [x for x in (_safe(_app_entry, s, lang) for s in orphan_subs) if x is not None]
+    all_entries = _sort_entries(orphan_entries + entries)
+    family_icon = {key: icon for key, _title, icon in FAMILIES}
+    for e in all_entries:
+        e["type_icon"] = family_icon.get(_family_of(e), "documents")
+    # Same anti-flooding rule as Recent Activity (item 37), applied by TONE rather than by the active/
+    # completed split below: several old "done" cases of the SAME service (e.g. 4 completed Naturalization
+    # cases) collapse to their single most recent one on Home's summary — action-required and still-
+    # in-progress entries are never touched, so nothing genuinely important is ever hidden. The full,
+    # uncollapsed history remains on the Services page itself.
+    done_group_counts = {}
+    for e in all_entries:
+        if not e["is_action"] and e.get("tone") == "done":
+            key = _entry_group_key(e)
+            done_group_counts[key] = done_group_counts.get(key, 0) + 1
+    seen_done_groups = set()
+    deduped = []
+    for e in all_entries:
+        if not e["is_action"] and e.get("tone") == "done":
+            key = _entry_group_key(e)
+            if done_group_counts.get(key, 0) > 1:
+                if key in seen_done_groups:
+                    continue
+                seen_done_groups.add(key)
+        deduped.append(e)
+    active = [e for e in deduped if _entry_state(e) not in DONE_STATES]
+    completed = [e for e in deduped if _entry_state(e) in DONE_STATES]
+    categories = ServiceCategory.query.filter_by(is_published=True).order_by(ServiceCategory.sort_order, ServiceCategory.id).all()
+    # `summary`: Home's own compact preview (item 2026-09-28 density pass) — the top few by the SAME
+    # priority order as everywhere else (action-required, then processing, then done), never a separate
+    # ranking. `total` is the real full count behind "View all N services" on Home, always the true
+    # number regardless of how many rows summary/active/completed actually render.
+    return {"active": active, "completed": completed, "summary": deduped[:4], "total": len(deduped), "categories": categories}

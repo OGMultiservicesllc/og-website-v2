@@ -28,6 +28,7 @@
 {% endmacro %}
 
 {% block account_body %}
+<div class="max-w-[1300px]">
 <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-brand-800">{{ 'Files from OG' if en else 'Archivos de OG' }}</h1>
 <p class="mt-1 text-slate-500 text-[14px] sm:text-[15px]">{{ 'Your documents from OG, all in one place.' if en else 'Tus documentos de OG, todos en un solo lugar.' }}</p>
 <p class="mt-1 text-slate-500 text-[13px]">{{ 'Find tax returns, translations, immigration documents, and other files OG has shared with you.' if en else 'Encuentra tus declaraciones de impuestos, traducciones, documentos de inmigración y otros archivos que OG ha compartido contigo.' }}</p>
@@ -76,4 +77,5 @@
 {% else %}
 {{ empty_state(('No files from OG yet.' if en else 'Todavía no hay archivos de OG.'), ('When OG prepares a file for you — like a certified translation or a copy of your tax return — it will appear here.' if en else 'Cuando OG prepare un archivo para ti — como una traducción certificada o una copia de tu declaración de impuestos — aparecerá aquí.'), 'folder') }}
 {% endif %}
+</div>
 {% endblock %}

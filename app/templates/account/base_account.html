@@ -21,24 +21,29 @@
 <div class="lg:flex lg:items-start lg:gap-8 max-w-[1600px] mx-auto lg:px-8 lg:pt-8 lg:pb-16">
 
     <!-- Desktop sidebar -->
-    <aside class="hidden lg:flex lg:flex-col lg:w-64 lg:shrink-0 lg:sticky lg:top-[4.75rem] lg:h-[calc(100vh-5.5rem)]">
-        <div class="flex items-center gap-2.5 px-3 pb-4 mb-1 border-b border-slate-100">
-            <img src="{{ logo_url() }}" alt="" class="h-7 w-auto shrink-0">
-            <span class="font-extrabold text-[15px] tracking-tight text-brand-800">{{ 'My Account' if en else 'Mi Cuenta' }}</span>
+    <aside class="hidden lg:flex lg:flex-col lg:w-64 lg:shrink-0 lg:sticky lg:top-[4.75rem] lg:h-[calc(100vh-5.5rem)] bg-brand-900 rounded-panel py-5 px-3">
+        <div class="flex items-center gap-3 px-2 pb-5 mb-2 border-b border-white/10">
+            <span class="w-10 h-10 rounded-xl bg-white flex items-center justify-center shrink-0 font-extrabold text-[15px] tracking-tight" aria-hidden="true"><span class="text-brand-800">O</span><span class="text-accent-500">G</span></span>
+            <div class="min-w-0">
+                <p class="font-extrabold text-[15px] leading-tight text-white truncate">{{ 'My Account' if en else 'Mi Cuenta' }}</p>
+                <p class="text-[12px] text-brand-300 truncate">OG Multiservices</p>
+            </div>
         </div>
         <nav class="flex-1 space-y-1" aria-label="My OG Account">
             {% for key, endpoint, label, ic in _nav_items %}
             <a href="{{ url_for(endpoint, lang=lang) }}" {% if section == key %}aria-current="page"{% endif %}
-               class="relative flex items-center gap-3 pl-3 pr-3 py-3 rounded-xl text-[14.5px] font-semibold transition border-l-[3px] {{ 'bg-mist-100 text-accent-700 border-accent-600' if section == key else 'text-slate-600 border-transparent hover:bg-fog-50 hover:text-brand-800' }}">
+               class="relative flex items-center gap-3 pl-3 pr-3 py-3 rounded-xl text-[14.5px] font-semibold transition {{ 'bg-accent-600 text-white' if section == key else 'text-brand-300 hover:bg-white/5 hover:text-white' }}">
                 {{ icon(ic, 'w-5 h-5 shrink-0') }}
                 <span class="truncate">{{ label[0] if en else label[1] }}</span>
                 {% if key == 'services' and _actions %}<span class="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center leading-none">{{ _actions if _actions < 10 else '9+' }}</span>{% endif %}
             </a>
             {% endfor %}
         </nav>
-        <a href="{{ url_for('public.home', lang=lang) }}" class="mt-4 inline-flex items-center gap-1.5 px-3 py-2 text-[12.5px] font-semibold text-slate-400 hover:text-slate-600 transition">
-            {{ icon('arrow-left', 'w-3.5 h-3.5') }} {{ 'Back to OG Website' if en else 'Volver al sitio de OG' }}
-        </a>
+        <div class="mt-3 pt-3 border-t border-white/10">
+            <a href="{{ url_for('public.home', lang=lang) }}" class="inline-flex items-center gap-1.5 px-3 py-2 text-[12.5px] font-semibold text-brand-300 hover:text-white transition">
+                {{ icon('arrow-left', 'w-3.5 h-3.5') }} {{ 'Back to Website' if en else 'Volver al Sitio' }}
+            </a>
+        </div>
     </aside>
 
     <!-- Mobile off-canvas drawer -->

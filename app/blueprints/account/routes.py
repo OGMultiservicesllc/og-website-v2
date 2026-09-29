@@ -165,11 +165,14 @@ def dashboard(lang):
     hour = datetime.now().hour
     greeting = "acct_good_morning" if hour < 12 else ("acct_good_afternoon" if hour < 18 else "acct_good_evening")
     data = account_dashboard.home_data(student, lang)
-    active_course = next((c for c in course_cards(student, lang) if c["status"] == "in_progress"), None)
+    all_courses = course_cards(student, lang)
+    active_course = next((c for c in all_courses if c["status"] == "in_progress"), None)
+    academy = {"total": len(all_courses), "in_progress": sum(1 for c in all_courses if c["status"] == "in_progress"), "active_course": active_course}
     stats = account_dashboard.stat_counts(student, lang, data)
-    activity = account_dashboard.recent_activity(student, lang)
+    activity = account_dashboard.recent_activity(student, lang, limit=4)
+    my_services = account_dashboard.my_services_lists(student, lang)
     return render_template("account/dashboard.html", section="overview", greeting=greeting, active_course=active_course,
-                           stats=stats, activity=activity, **data)
+                           stats=stats, activity=activity, my_services=my_services, academy=academy, **data)
 
 
 def _new_expiry(course):
